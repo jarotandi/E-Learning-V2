@@ -1,6 +1,6 @@
 # B0 Execution Checklist
 
-Status: **COMPLETE — READY FOR SEAL**
+Status: **B0 COMPLETE — SEALING**
 
 ## Repository
 - [x] Canonical repository identified: `jarotandi/E-Learning-V2`
@@ -35,15 +35,16 @@ Executed on 2026-09-29.
 - [x] `npm run build` PASS
 - [x] Confirm no runtime/source files changed by B0
 - [x] Review docs for contradictions (none found)
-- [x] Record final B0 HEAD: `ac2a94d4eb0ffa03855bfa5e27c4827d1e206cfb`
-- [x] Declare/tag `AKSA-B0-SEALED`
+- [x] Record final B0 HEAD before seal-fix: `b70fae297350c260af08a29623b129fed90e1c44`
+- [ ] Declare/tag `AKSA-B0-SEALED` (to be created in seal step)
 
 ## Execution evidence
 
 | Gate | Result | Notes |
 |------|--------|-------|
-| Baseline SHA | `a470402ac7263c439061c646250fbd4dade1c607` | Verified |
-| B0 HEAD (pre-seal) | `ac2a94d4eb0ffa03855bfa5e27c4827d1e206cfb` | docs(aksa): start B0 foundation audit |
+| Canonical baseline SHA | `a470402ac7263c439061c646250fbd4dade1c607` | Verified |
+| Starting B0 documentation HEAD | `ac2a94d4eb0ffa03855bfa5e27c4827d1e206cfb` | docs(aksa): start B0 foundation audit |
+| Verified final B0 HEAD (before seal-fix) | `b70fae297350c260af08a29623b129fed90e1c44` | docs(aksa): finalize B0 foundation audit |
 | Execution date | 2026-09-29 | |
 | `npm ci` | PASS | 339 packages added, vulnerabilities noted but non-blocking |
 | `npm run lint` | PASS | `tsc --noEmit` completed without errors |
@@ -59,4 +60,4 @@ Stop and report instead of adapting silently if:
 
 ## Next step after seal
 
-Open **B1 — App Foundation** only after all gates above are evidenced.
+Open **B1 — App Foundation** only after all gates above are evidenced and seal tag is created and pushed.
