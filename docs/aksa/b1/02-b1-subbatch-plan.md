@@ -15,7 +15,7 @@ Authority: `docs/aksa/10-batch-roadmap.md` (B1 definition),
 | B1.2 — Security + Build Foundation Hardening | **✅ COMPLETE** | this document, §Security |
 | B1.3 — Production Router + AKSA App Shell | **✅ COMPLETE** | `04-b1.3-router-migration.md` |
 | B1.4A — Design-System Primitives + Public Header | **✅ COMPLETE** | `06-b1.4a-design-system-public-header.md` |
-| B1.4B — `StudentDashboard` decomposition | **← NEXT** | this document, §B1.4 |
+| B1.4B — `StudentDashboard` decomposition | **✅ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
 | B1.4C — `LearningPage` decomposition | pending | this document, §B1.4 |
 | B1.4D — `AdminDashboard` split + `/admin/*` sub-routes | pending | this document, §B1.4 |
 | B1.4 (whole) | **IN PROGRESS** | this document, §B1.4 |
@@ -126,14 +126,14 @@ the 21 capabilities becomes unreachable.
 
 ### B1.4 - Design System + Monolith Decomposition — IN PROGRESS
 
-Split into four sub-batches so each is independently reviewable. B1.4A is done;
-**B1.4B is next.**
+Split into four sub-batches so each is independently reviewable. B1.4A and B1.4B are done;
+**B1.4C is next.**
 
 | Sub-batch | Scope | Status |
 |---|---|---|
 | **B1.4A** | Design-system primitives + `PublicHeader` extraction from `Navbar` | **✅ COMPLETE** |
-| **B1.4B** | Decompose `StudentDashboard.tsx` → `features/learn/*`; adopt `LearnerLayout` instead of self-chrome | **← NEXT** |
-| **B1.4C** | Decompose `LearningPage.tsx` → `features/learn/*` | pending |
+| **B1.4B** | Decompose `StudentDashboard.tsx` → `features/learn/*`; adopt `LearnerLayout` instead of self-chrome | **✅ COMPLETE** |
+| **B1.4C** | Decompose `LearningPage.tsx` → `features/learn/*` | **← NEXT** |
 | **B1.4D** | Split `AdminDashboard.tsx` (408.8 KB) → `AdminLayout` + 8 admin sections; register `/admin/*` sub-routes | pending |
 
 The ordering is deliberate: the primitives and the public header land first so
@@ -167,7 +167,55 @@ and the three NOT-VERIFIED items (no ≥1024px viewport, no screenshots) are in
 The brief's enumerated change areas did not include `src/main.tsx`; B1.4A adds
 one CSS import there and the record explains why. Flagged, not buried.
 
-#### B1.4B–D — inherited constraints
+#### B1.4B — what landed
+
+`StudentDashboard` (23.6 KB) decomposed from self-contained "The Prams" shell into:
+- Thin compatibility wrapper (`src/components/StudentDashboard.tsx`, <1 KB)
+- Feature components in `src/features/learn/dashboard/` (10 files: `LearnerDashboardPage`, `DashboardWelcome`, `DashboardStats`, `ScoreTrendCard`, `ContinueLearningCard`, `FeedbackCard`, `TodayScheduleCard`, `LearningRecommendationsCard`, `legacyLearnerAccess`, `index.ts`)
+- Entitlement logic extracted to `useLegacyLearnerAccess()` — single source of truth for dashboard + LearnerLayout profile disclosure
+
+`LearnerLayout` extended with accessible profile disclosure:
+- Avatar trigger with `aria-expanded`, `aria-controls`, `aria-label="Menu akun {name}"`
+- Menu items: Profil → `/app/profile`, Keluar → `requestLogout()` confirmation flow
+- Escape closes, focus returns to trigger, outside-click closes
+
+Shell integration:
+- `/app` moved from bare route into `LearnerLayout` (no URL change)
+- `SELF_CHROME_LEGACY_VIEWS`: `['dashboard', 'learning']` → `['learning']`
+- `NAVBAR_HIDDEN_LEGACY_VIEWS` unchanged (PublicHeader ≠ LearnerLayout)
+
+Legacy capability mapping preserved:
+| Legacy sidebar | New path |
+|---|---|
+| Overview | `/app` |
+| Kelas Saya | `/app/learn` (still self-chrome, B1.4C) |
+| Tryout | `/app/assessment` |
+| Hasil & Ranking | Via result flow (`setView('result')`) |
+| Jadwal | `/app/calendar` |
+| Profil | `/app/profile` (sidebar + header disclosure) |
+| Keluar | Header disclosure → `requestLogout()` |
+
+Entitlement/premium UI gating preserved via `useLegacyLearnerAccess()` — `theprams_demo_users` unchanged. Assessment Center & Calendar visually disabled for non-premium (opacity-40, Lock icon). No real authorization (B2).
+
+Design-system primitives used throughout (Card, Button, ButtonLink, Badge). Chart colours migrated to AKSA tokens (tealAccessible/mint). No `text-brand-blue` in new code.
+
+| Item | Status |
+|---|---|
+| Feature decomposition | Done — 10 components |
+| StudentDashboard wrapper | Done — thin compatibility layer |
+| LearnerLayout profile disclosure | Done — accessible, logout relocated |
+| `/app` in LearnerLayout | Done — no double chrome |
+| Self-chrome registry | Done — only `learning` remains |
+| Legacy capabilities | All 7 preserved |
+| Premium UI gating | Preserved (UI only) |
+| New dependencies | **None** |
+| Route contract | `verify-routes.mjs` 174/0 |
+| Design-system contract | `verify-design-system.mjs` 50/0 |
+| Lint / Build | exit 0 |
+
+Four defects from B1.4A carry forward: ≥1024px dashboard measurement (no viewport resize), visual acceptance vs designs (B1.5), `contrast.emeraldOnWhite` token correction (separate pass), B1.3 TBD spot-check on learner route.
+
+#### B1.4C–D — inherited constraints
 
 Admin decomposition targets per `03-module-boundaries.md`: platform dashboard,
 users/roles, academic/curriculum, studio/content, validation/review,
@@ -294,7 +342,7 @@ B1.3 was required to include these in its route table and to amend B0's
 | ~~`app/router/` wiring, legacy redirect/alias table~~ | **Done in B1.3** |
 | Design-system primitives | **Done in B1.4A** — `Button`, `Card`, `Badge`, `Input`, `Tabs`, `Table` + `IconButton` |
 | Navbar split | **Done in B1.4A** — `app/layouts/PublicHeader.tsx`; legacy file retained, deprecated |
-| Learner dashboard decomposition | B1.4B |
+| Learner dashboard decomposition | **Done in B1.4B** — `features/learn/dashboard/`, `LearnerLayout` profile disclosure |
 | `LearningPage` decomposition | B1.4C |
 | AdminDashboard split | B1.4D |
 | `/admin/*` sub-routes (blocked on the split) | B1.4D |

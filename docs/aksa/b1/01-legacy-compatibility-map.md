@@ -33,7 +33,7 @@ current-state ↔ target-destination record.
 | `programDetail` | `ProgramDetailPage` | 27.5 KB | Public Web / Program Detail | `/programs/:programId` | B1.3 |
 | `mentorProfile` | `MentorProfilePage` | 9.2 KB | Guru & Mentor | `/mentors/:mentorId` | B10 |
 | `tryoutListing` | `TryoutListingPage` | 7.7 KB | Assessment Center | `/app/assessment` | B3 |
-| `dashboard` | `StudentDashboard` | 23.6 KB | Learner Home | `/app` | B1.2 |
+| `dashboard` | `StudentDashboard` → `features/learn/dashboard/LearnerDashboardPage` | 23.6 KB → ~1 KB wrapper + feature components | Learner Home | `/app` | **B1.4B** |
 | `learning` | `LearningPage` | 40.1 KB | Lesson Workspace | `/app/learn/:lessonId` | B1.2 |
 | `exam` | `TryoutExamPage` | 16.7 KB | Assessment Center / Exam Runner | `/app/assessment` | B3 |
 | `result` | `TryoutResultPage` | 26.5 KB | Assessment Center / Result | `/app/assessment` | B3 |
@@ -66,7 +66,7 @@ Required by the B1 brief. Each row states the legacy owner and the AKSA target.
 | Legacy capability | Legacy owner | AKSA target | Nav group | Batch |
 |---|---|---|---|---|
 | LandingPage | `LandingPage.tsx` | Public Web home | — | B1.3 |
-| StudentDashboard | `StudentDashboard.tsx` | Learner Home (`Beranda`) | BERANDA | B1.2 |
+| StudentDashboard | `StudentDashboard.tsx` → `features/learn/dashboard/` | Learner Home (`Beranda`) | BERANDA | **B1.4B** |
 | LearningPage | `LearningPage.tsx` | Lesson Workspace | LEARN → Kelas Saya | B1.2 |
 | Tryout* (listing/exam/result) | `TryoutListingPage`, `TryoutExamPage`, `TryoutResultPage` | Assessment Center | PRACTICE | B3 |
 | MentorProfilePage | `MentorProfilePage.tsx` | Guru & Mentor | SUPPORT | B10 |
@@ -164,12 +164,17 @@ Confirmed in B1.1: no file under `src/components/`, `src/types.ts`,
 `src/integrations/`, and `src/shared/` boundaries, and are not imported by any
 rendered component.
 
-## B1.2 Verification
+## B1.4B Verification
 
-Confirmed in B1.2: no legacy component, `src/App.tsx`, `src/index.css`, or any
-runtime file was modified. Changes were confined to `vite.config.ts`,
-`tsconfig.json`, `package.json` / `package-lock.json`, `README.md`,
-`.env.example`, design tokens, and `docs/aksa/**`. The production bundle is
-byte-identical to the B1.1 build output (`index-ClsckA6U.js`, 1,474,396 bytes),
-which is direct evidence that every legacy capability listed above still behaves
-identically. All 21 legacy `View` values remain dispatchable.
+Confirmed in B1.4B: `StudentDashboard` decomposed from a 23.6 KB self-contained shell into:
+- Thin compatibility wrapper (`src/components/StudentDashboard.tsx`, <1 KB)
+- Feature components in `src/features/learn/dashboard/` (10 files)
+- `LearnerLayout` extended with accessible profile disclosure (logout relocation)
+
+**Legacy capabilities preserved:** All 7 sidebar destinations reachable via LearnerLayout sidebar or header disclosure. `theprams_demo_users` localStorage key unchanged. Entitlement logic extracted to `useLegacyLearnerAccess()` — single source of truth.
+
+**Self-chrome registry updated:** `dashboard` removed from `SELF_CHROME_LEGACY_VIEWS`; only `learning` remains. `/app` now renders inside `LearnerLayout` (no double chrome). `/app/learn` remains self-chrome (B1.4C).
+
+**Gates:** `verify-routes.mjs` 174/0, `verify-design-system.mjs` 50/0, `lint` 0, `build` 0.
+
+**Scope:** `LearningPage.tsx`, `AdminDashboard.tsx`, `LegacyRouteBridge.tsx`, `LegacyAppStateProvider.tsx` byte-identical to B1.4A baseline.
