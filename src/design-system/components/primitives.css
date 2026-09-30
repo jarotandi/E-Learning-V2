@@ -1,0 +1,104 @@
+/* ==========================================================================
+   AKSA Design-System Primitives — State Layer
+   ==========================================================================
+   B1.4A — Design System Primitives + Public Header Extraction
+
+   This file contains STATE rules only (hover, focus, active, invalid,
+   disabled). The base appearance of every primitive is an inline style whose
+   values are read from src/design-system/tokens/brand.ts.
+
+   RULES OF THIS FILE
+   1. No colour literals. Every colour is a `var(--aksa-*)` custom property
+      published by the owning component, so the token file stays the single
+      visual authority. `scripts/verify-design-system.mjs` enforces this.
+   2. Every rule is gated on a `data-aksa-*` attribute. Nothing here can
+      restyle a legacy component in src/components/.
+   3. `:focus-visible`, never `:focus`, for focus rings — a mouse click must
+      not leave a ring behind, but keyboard navigation always must.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Focus ring — shared by every interactive primitive
+   -------------------------------------------------------------------------- */
+[data-aksa-focusable]:focus-visible {
+  outline: var(--aksa-focus-width, 2px) solid
+    var(--aksa-focus-color, currentColor);
+  outline-offset: var(--aksa-focus-offset, 2px);
+}
+
+/* --------------------------------------------------------------------------
+   Button
+   -------------------------------------------------------------------------- */
+[data-aksa-button]:not([data-aksa-disabled]):hover {
+  background-color: var(--aksa-btn-bg-hover);
+  border-color: var(--aksa-btn-border-hover);
+}
+
+[data-aksa-button][data-aksa-disabled] {
+  cursor: not-allowed;
+}
+
+/* An anchor has no `disabled` attribute, so a disabled ButtonLink is marked
+   with aria-disabled instead. It must also stop being pointer-activated, and
+   it is removed from the tab order by the component. */
+[data-aksa-button][aria-disabled='true'] {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Card (interactive variant)
+   -------------------------------------------------------------------------- */
+[data-aksa-card-interactive]:hover {
+  box-shadow: var(--aksa-card-shadow-hover);
+  border-color: var(--aksa-card-border-hover);
+  transform: translateY(-1px);
+}
+
+[data-aksa-card-interactive]:active {
+  transform: translateY(0);
+}
+
+/* --------------------------------------------------------------------------
+   Input
+   -------------------------------------------------------------------------- */
+[data-aksa-input]:not([disabled]):hover {
+  border-color: var(--aksa-input-border-hover);
+}
+
+/* The input uses `:focus` rather than `:focus-visible` for its border
+   accent: the caret is the primary focus indicator for a text field, and
+   suppressing it on mouse focus would hide where typing will land. */
+[data-aksa-input]:focus {
+  border-color: var(--aksa-input-border-focus);
+}
+
+[data-aksa-input][aria-invalid='true'] {
+  border-color: var(--aksa-input-border-invalid);
+}
+
+[data-aksa-input]:disabled {
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   Tabs
+   -------------------------------------------------------------------------- */
+[data-aksa-tab]:not([disabled]):hover {
+  background-color: var(--aksa-tab-bg-hover);
+  color: var(--aksa-tab-color-hover);
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  [data-aksa-card-interactive] {
+    transition: none;
+  }
+
+  [data-aksa-card-interactive]:hover,
+  [data-aksa-card-interactive]:active {
+    transform: none;
+  }
+}
