@@ -2,9 +2,12 @@
 
 ## Purpose
 
-`src/app/router/routePaths.ts` declares 17 planned learner routes and 11 planned
-Studio routes. Each carries a `batch` field that the placeholder page renders to
-the user. Before B1.3R1, almost every one of those fields read `B2`.
+`src/app/router/routePaths.ts` declares 17 planned learner routes and 10 planned
+Studio metadata entries. The router registers 17 and 11 planned surfaces
+respectively — the extra Studio surface is `/studio/editor/:contentId`, declared
+directly in `AppRouter.tsx` rather than derived from the array. Each route
+carries a `batch` field that the placeholder page renders to the user. Before
+B1.3R1, almost every one of those fields read `B2`.
 
 That was wrong, and it was wrong in a specific, self-reinforcing way: **B2 is
 Identity & Data Authority**, not the next delivery batch. Because B2 happens to
@@ -88,27 +91,52 @@ back-filled with "whatever batch comes next" when that batch is chosen.
 
 ## Summary
 
-| | Count | Routes |
-|---|---|---|
-| **Explicit roadmap ownership** | 13 learner | path, labs, projects, ai, mentors, live, portfolio, passport, downloads |
-| | *(8 learner allocated)* | |
-| **Unallocated / TBD** | 9 learner | library, partner-practice, progress, career, community, rewards, settings, help |
-| | *(8 learner TBD)* | |
-| **Explicit roadmap ownership** | 9 studio | dashboard, editor, editor/:id, templates, media, factory, validation, review, published |
-| **Unallocated / TBD** | 2 studio | analytics, settings |
+Two different things get counted, and conflating them was the source of the
+B1.3R1 counting error. **Metadata entries** are the rows in the two arrays in
+`routePaths.ts`. **Registered route surfaces** are the URLs the router actually
+registers. The two differ for Studio, because `/studio/editor/:contentId` is
+declared directly in `AppRouter.tsx` with `batch="B4"` rather than being derived
+from the metadata array.
 
-Recount for clarity: of the 17 planned learner routes, **8** carry an explicit
-batch (B3, B9, B10 ×3, B11 ×3, B12) and **9** are `TBD`. Of the 11 planned
-Studio routes, **9** carry an explicit batch (B4 ×5, B5, B6 ×3) and **2** are
-`TBD`.
+### A. Metadata entries (`routePaths.ts`)
 
-The nine `TBD` learner routes are the substantive finding. Each one is a real
-user-facing module in the approved IA with no owner in the roadmap, and each
-previously displayed "Batch pengaktifan B2" to a user — a false delivery
-promise on a page whose entire purpose is to avoid false promises.
+| Array | Total | Explicit | TBD |
+|---|---|---|---|
+| `PLANNED_LEARNER_ROUTES` | **17** | **9** | **8** |
+| `PLANNED_STUDIO_ROUTES` | **10** | **8** | **2** |
+
+Learner explicit (9): path, labs, projects, ai, mentors, live, portfolio,
+passport, downloads.
+Learner TBD (8): library, partner-practice, progress, career, community,
+rewards, settings, help.
+Studio explicit (8): dashboard, editor, templates, media, factory, validation,
+review, published.
+Studio TBD (2): analytics, settings.
+
+### B. Registered planned route surfaces (`AppRouter.tsx`)
+
+| Surface set | Total | Explicit | TBD |
+|---|---|---|---|
+| Learner (`/app/*`) | **17** | **9** | **8** |
+| Studio (`/studio/*`) | **11** | **9** | **2** |
+| **Overall** | **28** | **18** | **10** |
+
+The Studio surface count is 11 against 10 metadata entries. The extra surface is
+`/studio/editor/:contentId`, a canonical deep link registered alongside the
+array-derived routes and rendered by the same `PlannedRoutePage` with `batch="B4"`.
+It therefore adds one explicit surface and no new TBD.
+
+## The finding
+
+The **8 `TBD` learner metadata entries** and **2 `TBD` Studio entries** are the
+substantive finding. Each is a real user-facing module in the approved IA with
+no owner in the roadmap, and each previously displayed "Batch pengaktifan B2" to
+a user — a false delivery promise on a page whose entire purpose is to avoid
+false promises.
 
 ## Carried forward
 
-Resolving the nine `TBD` allocations is roadmap work, not B1 work. It requires
-amending `10-batch-roadmap.md`, which is B0-sealed territory and outside B1's
-mandate. B1.3R1 records the gap; it does not fill it by guessing.
+Resolving the 8 learner and 2 Studio `TBD` allocations is roadmap work, not B1
+work. It requires amending `10-batch-roadmap.md`, which is B0-sealed territory
+and outside B1's mandate. B1.3R1 records the gap; B1.3R2 reconciles the counts
+against source; neither fills it by guessing.

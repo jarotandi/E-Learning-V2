@@ -40,8 +40,9 @@ export interface PlannedRoutePageProps {
   moduleName: string;
   /**
    * Owning delivery batch, e.g. "B3", or "TBD" when `docs/aksa/10-batch-roadmap.md`
-   * allocates no batch to this module. "TBD" is a truthful value, not a
-   * placeholder to default-fill.
+   * allocates no batch to this module. "TBD" is a truthful machine/audit value,
+   * not a placeholder to default-fill; it is rendered to the user as
+   * "Belum ditetapkan" because the abbreviation is internal jargon.
    */
   batch: string;
   /** One short, non-functional sentence describing intent. */
@@ -150,7 +151,11 @@ export function PlannedRoutePage({
             className="mt-0.5 text-sm font-bold"
             style={{ color: colors.brand.emerald }}
           >
-            {batch}
+            {/* `TBD` is the machine/audit value meaning "the roadmap allocates
+                no batch". Showing that internal abbreviation to a user would be
+                meaningless, so it renders as plain Indonesian. Real batch values
+                render unchanged. Presentation only — metadata is untouched. */}
+            {batch === 'TBD' ? 'Belum ditetapkan' : batch}
           </dd>
         </div>
       </dl>

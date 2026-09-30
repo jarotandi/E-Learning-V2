@@ -147,6 +147,22 @@ export const FALLBACK_TRYOUT_ID: string = TRYOUTS[0]?.id ?? 'to-1';
  * therefore have their own canonical route above):
  *   /app/learn, /app/assessment, /app/calendar, /app/profile, /app/wallet
  */
+/**
+ * Owning delivery batch for a planned route.
+ *
+ * `B${number}` matches the roadmap's batch identifiers (`B3`, `B12`). `'TBD'`
+ * means `docs/aksa/10-batch-roadmap.md` allocates NO batch to the module — a
+ * deliberate, truthful value, not a gap to be filled with "the next batch".
+ *
+ * This is a plain union, deliberately not a registry. Verified by probe: it
+ * rejects `'b3'`, `'B2x'`, `'TBDX'`, and `'Roadmap'`. It does NOT reject
+ * `'B 3'` or `'B2 '` — TypeScript's `B${number}` tolerates whitespace around
+ * the number. That residual gap is acceptable here: it is a typo class, not a
+ * correctness risk, and closing it would mean a validation layer B1 should not
+ * carry.
+ */
+export type PlannedDeliveryBatch = `B${number}` | 'TBD';
+
 export interface PlannedLearnerRoute {
   /** URL segment under `/app`. */
   segment: string;
@@ -164,7 +180,7 @@ export interface PlannedLearnerRoute {
    *
    * Full audit and per-value authority: docs/aksa/b1/05-planned-route-delivery-map.md
    */
-  batch: string;
+  batch: PlannedDeliveryBatch;
   /** Non-functional description of what the module will be. */
   intent: string;
 }
@@ -316,7 +332,14 @@ export const plannedLearnerPaths: Record<string, string> =
  *
  * B1.3 renders shell/placeholder only. No editor, no AI, no generation, no
  * validation logic, no review workflow, no publishing, no analytics.
- * Those are B4/B6 deliverables.
+ *
+ * Owning batches per `docs/aksa/10-batch-roadmap.md`:
+ *   B4 — Studio Core: dashboard, editor, templates, media
+ *   B5 — Creator AI & Content Factory: content factory
+ *   B6 — Validation Center: validation, review, publish gate
+ *   TBD — no roadmap allocation: analytics, settings
+ *
+ * Full per-route audit: docs/aksa/b1/05-planned-route-delivery-map.md
  */
 export interface PlannedStudioRoute {
   segment: string;
@@ -326,7 +349,7 @@ export interface PlannedStudioRoute {
    * `'TBD'` means the roadmap allocates no batch. Same rule and same intent as
    * `PlannedLearnerRoute['batch']`.
    */
-  batch: string;
+  batch: PlannedDeliveryBatch;
   intent: string;
 }
 

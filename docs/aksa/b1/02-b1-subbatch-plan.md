@@ -96,7 +96,7 @@ routing behaviour change:
 - **Route delivery metadata.** `PLANNED_LEARNER_ROUTES` had assigned almost every
   future surface to `B2` on the reasoning that B2 came next. B2 is Identity & Data
   Authority, not a catch-all. Every value is now traced to
-  `10-batch-roadmap.md`, and the 9 learner + 2 studio routes the roadmap does not
+  `10-batch-roadmap.md`, and the 8 learner + 2 studio routes the roadmap does not
   allocate read `TBD` rather than a guessed batch. Full audit in
   `05-planned-route-delivery-map.md`.
 - **Accessibility contract.** `brand.teal` (#009688, ~3.67:1 on white) and gold
