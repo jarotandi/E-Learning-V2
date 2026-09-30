@@ -236,10 +236,14 @@ export interface NavigationConfig {
 
 | Phase | Scope |
 |-------|-------|
-| B1.1 | Data contracts only (this doc + TypeScript files) |
-| B1.2 | Production router + learner shell + studio shell |
-| B1.3 | Sidebar components, mobile nav, header |
-| B1.4 | Role-aware navigation, guards, breadcrumbs |
+| B1.1 ✅ | Data contracts only (this doc + TypeScript files) |
+| B1.2 ✅ | Build alias realigned so `@/app/navigation` imports resolve |
+| B1.3 | Production router + learner shell + studio shell; sidebar, mobile nav, header bound to the contracts |
+| B1.4 | Guard mechanism wired to navigation `requiredCapabilities`; breadcrumbs |
+| B1.5 | Visual acceptance against the approved generated AKSA designs |
+
+> Real authorization enforcement for `requiredCapabilities` is **not** a B1
+> deliverable — it depends on B2 identity. B1.4 provides the mechanism only.
 
 ---
 

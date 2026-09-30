@@ -2,7 +2,7 @@
 
 **Status: OFFICIAL — Derived from Approved Generated AKSA Designs**
 
-This document defines the shell/layout contract for AKSA Studio. Implementation occurs in B1.2+.
+This document defines the shell/layout contract for AKSA Studio. Shell implementation occurs in B1.3; Studio's own feature surfaces (editor, validation) arrive in B4/B6 per the roadmap.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Status: OFFICIAL — Derived from Approved Generated AKSA Designs**
 
-This document defines the shell/layout contract for the Learner App. Implementation occurs in B1.2+.
+This document defines the shell/layout contract for the Learner App. Implementation occurs in B1.3 (router + shell). Component primitives it depends on land in B1.4.
 
 ---
 

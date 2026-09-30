@@ -5,8 +5,9 @@
  *
  * Authority: docs/aksa/design/02-navigation-information-architecture.md
  *
- * Import path note: the repository `@/*` alias currently resolves to the
- * project ROOT, not `src/`. Use a relative import from inside `src/`.
+ * Import path note: `@/*` resolves to `src/*` in both TypeScript
+ * (`tsconfig.json` paths) and Vite (`resolve.alias`), as of B1.2 / CONF-01.
+ * Relative imports remain valid and do not need mass migration.
  */
 
 export type {

@@ -27,7 +27,9 @@ These design contracts formalize the visual direction established in the B0 arch
 
 ## Implementation Notes
 
-- B1.1 establishes the token contracts and navigation data structures
-- B1.2+ will implement the production router and shells
-- B1.3+ will decompose monolith components
+- **B1.1** ✅ — Token contracts and navigation data structures established
+- **B1.2** ✅ — Build alias realigned to `src/*`; contrast contract corrected
+- **B1.3** — Production router and app shells
+- **B1.4** — Design-system primitives and monolith decomposition
+- **B1.5** — Regression and visual acceptance against these documents
 - Existing `src/index.css` and Tailwind config must continue working throughout B1

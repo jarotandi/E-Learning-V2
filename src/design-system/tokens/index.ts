@@ -7,8 +7,10 @@
  *            docs/aksa/design/01-design-system.md
  *            docs/aksa/design/06-responsive-accessibility.md
  *
- * Import path note: the repository `@/*` alias currently resolves to the
- * project ROOT, not `src/`. Use a relative import from inside `src/`.
+ * Import path note: `@/*` resolves to `src/*` in both TypeScript
+ * (`tsconfig.json` paths) and Vite (`resolve.alias`), as of B1.2 / CONF-01.
+ * New code may use `@/design-system/...`. Relative imports remain valid and do
+ * not need mass migration.
  */
 
 export {

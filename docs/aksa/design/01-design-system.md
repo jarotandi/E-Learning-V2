@@ -223,10 +223,11 @@ These are the foundational components to be built in B1.2+. Documented here for 
 
 ## Migration Strategy
 
-1. **B1.1** — Token contract created, existing CSS/Tailwind unchanged
-2. **B1.2** — Component primitives built, consumed by new shells
-3. **B1.3** — Legacy components incrementally migrated
-4. **B1.4** — Full design system documentation + Storybook
+1. **B1.1** ✅ — Token contract created, existing CSS/Tailwind unchanged
+2. **B1.2** ✅ — Contrast contract corrected; build alias realigned to `src/*`
+3. **B1.3** — App shells introduced; still consume legacy CSS/Tailwind
+4. **B1.4** — Component primitives built and consumed by migrated components
+5. **B1.5** — Visual acceptance audit against the approved generated AKSA designs
 
 ---
 
@@ -248,7 +249,7 @@ export const contrast = {
 
 New code in `src/app`, `src/features`, `src/studio` should import the tokens rather than hardcoding values.
 
-> **Import path note (CONF-01).** The repository `@/*` alias currently resolves to the **project root**, not `src/` (`tsconfig.json` → `"@/*": ["./*"]`, `vite.config.ts` → `path.resolve(__dirname, '.')`). Therefore `@/design-system/tokens/brand` does **not** resolve today. Until B1.2 realigns the alias to `src/*`, use a relative import — matching the existing `src/components/*` convention.
+> **Import path note (CONF-01 — RESOLVED in B1.2).** `@/*` now resolves to `src/*` in both toolchains (`tsconfig.json` → `"@/*": ["./src/*"]`, `vite.config.ts` → `path.resolve(__dirname, 'src')`). Previously it pointed at the repository root, which made `@/design-system/tokens/brand` unresolvable. Guarded by `src/app/aliasContractProof.ts`.
 
 ```typescript
 // ✅ Correct — alias now resolves to src/ (CONF-01 resolved in B1.2)

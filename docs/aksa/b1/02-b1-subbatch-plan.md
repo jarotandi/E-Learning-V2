@@ -25,7 +25,7 @@ product capability**.
 
 ## Sub-Batch Sequence
 
-### B1.1 — App Foundation Structure + Design Contract ✅ CURRENT
+### B1.1 - App Foundation Structure + Design Contract ✅ COMPLETE
 
 | Item | Status |
 |---|---|
@@ -39,7 +39,7 @@ product capability**.
 | Runtime behaviour change | **None** |
 | New dependencies | **None** |
 
-### B1.2 — Security + Build Foundation Hardening ✅ CURRENT
+### B1.2 - Security + Build Foundation Hardening ✅ COMPLETE
 
 Security and build foundation only. **No router, no shells, no feature work.**
 
@@ -56,7 +56,7 @@ Security and build foundation only. **No router, no shells, no feature work.**
 | `AdminDashboard` decomposition | **Deferred to B1.4** |
 | Runtime product behaviour change | **None** |
 
-### B1.3 — Production Router + AKSA App Shell
+### B1.3 - Production Router + AKSA App Shell ← NEXT
 
 | Item | Notes |
 |---|---|
@@ -137,7 +137,7 @@ Per instruction to report conflicts rather than silently rewriting architecture,
 the following discrepancy was found between the B0 architecture contracts and
 the actual repository. **No architecture document was rewritten in B1.1.**
 
-### CONF-01 — `@/*` path alias resolves to the repository root, not `src/`
+### CONF-01 — `@/*` path alias resolved to the repository root, not `src/` — ✅ RESOLVED in B1.2
 
 | Field | Value |
 |---|---|

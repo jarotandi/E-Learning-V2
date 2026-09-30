@@ -45,8 +45,8 @@ current-state ↔ target-destination record.
 
 | Component | Size | Future destination | Batch |
 |---|---|---|---|
-| `Navbar` | 7.4 KB | `app/layouts/PublicHeader.tsx` | B1.2 |
-| `App.tsx` | — | `app/router/` + per-surface layouts | B1.2 |
+| `Navbar` | 7.4 KB | `app/layouts/PublicHeader.tsx` | B1.4 |
+| `App.tsx` | — | `app/router/` + per-surface layouts | B1.3 |
 
 ---
 
@@ -133,12 +133,13 @@ when a migration actually needs them.
 
 ---
 
-## Known Structural Debt (Not Fixed in B1.1)
+## Known Structural Debt (Not Fixed in B1.1 or B1.2)
 
 | Debt | Size | Planned treatment |
 |---|---|---|
-| `AdminDashboard.tsx` monolith | 408.8 KB | B1.3 decomposition into `/admin/*` |
-| `App.tsx` orchestration | — | B1.2 router + layouts |
+| `AdminDashboard.tsx` monolith | 408.8 KB | B1.4 decomposition into `/admin/*` |
+| `App.tsx` orchestration | — | B1.3 router + layouts |
+| `Navbar.tsx` monolith | 7.4 KB | B1.4 split into `app/layouts/PublicHeader.tsx` |
 | `LoginPage.tsx` tri-modal | 41.9 KB | B2 identity split |
 | `constants.ts` demo data | ~36 KB | Per-domain migration B2–B3 |
 | `TestimonialsPage` unmapped in route map | 19.1 KB | Decision needed: editorial vs remove (B1.3) |
@@ -153,3 +154,13 @@ Confirmed in B1.1: no file under `src/components/`, `src/types.ts`,
 `src/app/`, `src/design-system/`, `src/core/`, `src/features/`, `src/studio/`,
 `src/integrations/`, and `src/shared/` boundaries, and are not imported by any
 rendered component.
+
+## B1.2 Verification
+
+Confirmed in B1.2: no legacy component, `src/App.tsx`, `src/index.css`, or any
+runtime file was modified. Changes were confined to `vite.config.ts`,
+`tsconfig.json`, `package.json` / `package-lock.json`, `README.md`,
+`.env.example`, design tokens, and `docs/aksa/**`. The production bundle is
+byte-identical to the B1.1 build output (`index-ClsckA6U.js`, 1,474,396 bytes),
+which is direct evidence that every legacy capability listed above still behaves
+identically. All 21 legacy `View` values remain dispatchable.

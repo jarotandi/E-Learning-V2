@@ -8,11 +8,16 @@ brand tokens, layout primitives, and framework-agnostic component contracts.
 
 ## Sub-boundaries
 
-| Directory | Responsibility | B1.1 status |
-|-----------|----------------|-------------|
-| `tokens/` | Typed design tokens (brand, color, spacing, radius, shadow, type, layout, z-index, a11y) | **Implemented (B1.1)** |
-| `components/` | Framework-agnostic component primitives (`Button`, `Card`, `Badge`, …) | Reserved — B1.2 |
-| `icons/` | AKSA icon wrappers / monogram asset | Reserved — B1.2 |
+Batch sequence: B1.1 ✅ · B1.2 ✅ · **B1.3 (next)** · B1.4 · B1.5 · `AKSA-B1-SEALED`
+
+| Directory | Responsibility | Status |
+|-----------|----------------|--------|
+| `tokens/` | Typed design tokens (brand, color, contrast, spacing, radius, shadow, type, layout, z-index, a11y) | **Implemented (B1.1), contrast corrected (B1.2)** |
+| `components/` | Framework-agnostic component primitives (`Button`, `Card`, `Badge`, …) | Reserved — B1.4 |
+| `icons/` | AKSA icon wrappers / monogram asset | Reserved — B1.4 |
+
+Component primitives and icon assets are B1.4 work. They follow the approved
+B1.4 design-system scope unless a specific earlier need is approved.
 
 ## Rules
 
@@ -30,9 +35,23 @@ brand tokens, layout primitives, and framework-agnostic component contracts.
 
 ## Contrast constraints (WCAG 2.1 AA)
 
-- `brand.emerald` (`#064e3b`) on white/mint passes AAA — safe for body text.
-- `brand.teal` (`#009688`) on white is ~3.9:1 — valid for large text and UI
-  boundaries only, **not** body text.
-- `brand.gold` (`#ffc107`) is an accent only; never body text on white.
+The approved teal / emerald / gold AKSA identity is unchanged. What follows is
+the **usage rule** for those colours, corrected in B1.2 (architect review AR-02).
+
+- `brand.emerald` (`#064e3b`) on white/mint passes AAA — safe for normal-size text.
+- `brand.teal` (`#009688`) against white is **≈ 3.67:1**. It does **not** meet
+  AA for normal-size text (4.5:1 required), in either direction: teal text on
+  white, and white normal-size text on a teal background, are both the same
+  3.67:1 pairing. Suitable for UI/graphical boundaries and for sufficiently
+  large text where the 3:1 threshold applies.
+- `brand.tealAccessible` (`#00796b`) is the correct background for a **filled
+  primary control carrying normal-size white text** — white on `#00796b` is
+  **≈ 5.32:1**, which passes AA.
+- `brand.gold` (`#ffc107`) is an accent only (spark, rewards, premium markers);
+  never normal-size text on white.
 - Minimum interactive target: 44×44px (recommended 48×48px).
-- Focus ring: 2px `#009688` with 2px offset.
+- Focus ring: 2px `#009688` with 2px offset — teal is a UI boundary, so
+  3.67:1 clears the 3:1 requirement.
+
+Quick rule: **text → emerald; non-text surface/boundary → teal; filled primary
+with normal-size white text → `#00796b`.**

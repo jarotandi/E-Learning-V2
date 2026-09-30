@@ -7,21 +7,22 @@
  *           docs/aksa/design/01-design-system.md
  *           docs/aksa/design/06-responsive-accessibility.md
  *
- * Scope note (B1.1):
+ * Scope note (B1.1, unchanged through B1.2):
  * - This module is ADDITIVE and FUTURE-FACING.
- * - It is NOT wired into any existing component in B1.1.
+ * - It is NOT wired into any existing component.
  * - `src/index.css` and the Tailwind pipeline remain the active styling
- *   authority until B1.2+ migrates consumers to these tokens.
+ *   authority until B1.4 migrates consumers to these tokens.
  * - These tokens intentionally do NOT re-declare Tailwind. Where a value
  *   already exists in Tailwind, the token references the semantic intent
  *   rather than re-implementing the scale.
  *
- * Import convention:
- * The repository `@/*` alias currently resolves to the project ROOT
- * (see tsconfig.json `paths` and vite.config.ts `resolve.alias`), not to
- * `src/`. Therefore new code under `src/` uses relative imports, matching
- * the existing `src/components/*` convention. The alias target is
- * tracked as a B1.2 follow-up in docs/aksa/b1/02-b1-subbatch-plan.md.
+ * Import convention (updated in B1.2 / CONF-01):
+ * The `@/*` alias now resolves to `src/*` in BOTH toolchains —
+ * tsconfig.json `compilerOptions.paths` -> `"@/*": ["./src/*"]` and
+ * vite.config.ts `resolve.alias` -> `path.resolve(__dirname, 'src')`.
+ * New code under `src/` may therefore use `@/design-system/...`.
+ * Relative imports remain valid and are NOT being mass-migrated for style;
+ * the existing `src/components/*` convention is untouched.
  */
 
 /* ------------------------------------------------------------------ */
@@ -42,10 +43,15 @@ export const brand = {
 /**
  * Contrast notes (WCAG 2.1 AA) are asserted in
  * docs/aksa/design/06-responsive-accessibility.md. Key facts:
- * - `brand.emerald` on white/mint passes AAA.
- * - `brand.teal` on white is ~3.9:1 and therefore ONLY valid for large
- *   text or UI boundaries. Body text on teal must use white.
- * - `brand.gold` is an accent only; never use as body text on white.
+ * - `brand.emerald` on white/mint passes AAA; safe for normal-size text.
+ * - `brand.teal` (#009688) on white is approximately 3.67:1. It does NOT meet
+ *   the 4.5:1 AA requirement for normal-size text. It is suitable for UI /
+ *   graphical boundaries and for sufficiently large text where the 3:1
+ *   threshold applies. Note that rendering white normal-size text on a
+ *   `brand.teal` background also fails, since that pairing is the same 3.67:1.
+ * - `brand.tealAccessible` (#00796b) is the correct background when a filled
+ *   primary control carries normal-size white text (~5.32:1, passes AA).
+ * - `brand.gold` is an accent only; never use as normal-size text on white.
  */
 export const colors = {
   brand: {
@@ -272,11 +278,18 @@ export type ColorToken = typeof colors;
  * teal is unchanged; consumers must select the correct token.
  */
 export const contrast = {
-  /** Primary teal on white. Fails AA for normal text; fine for large text/UI. */
+  /**
+   * Primary teal (#009688) against white. Same ratio applies to white text on
+   * a teal background. Fails AA normal text (4.5:1); passes the 3:1 threshold
+   * for large text and UI/graphical boundaries.
+   */
   tealOnWhite: 3.67,
-  /** Accessible darker teal — white text on this colour. Passes AA normal text. */
+  /**
+   * White text on accessible darker teal (#00796b). Passes AA normal text
+   * (4.5:1 required, ~5.32:1 provided).
+   */
   whiteOnTealAccessible: 5.32,
-  /** Deep emerald on white — passes AAA. Safe for body text. */
+  /** Deep emerald on white — passes AAA. Safe for normal-size text. */
   emeraldOnWhite: 8.9,
   /** White text on deep emerald — passes AAA. */
   whiteOnEmerald: 8.9,
