@@ -9,6 +9,15 @@ Authority: `docs/aksa/01-current-state-audit.md`, `docs/aksa/04-route-map.md`,
 **B1.1 rule: no legacy capability is deleted, renamed, or made unreachable.**
 B1.1 adds contracts only; every file listed below is untouched.
 
+**B1.3 status: the rule held.** All 21 `View` values are registered in
+`app/router/legacyViewRoutes.ts` exactly once, and `scripts/verify-routes.mjs`
+asserts it (174 checks, 0 failures) so a dropped capability fails the build. The
+`Route (target)` column below is now the **actual shipped route**, and the
+`Future AKSA destination` column is a later batch, not a B1.3 obligation. Where
+B1.3 shipped a route that differs from this table's draft, the difference is
+recorded in `04-b1.3-router-migration.md` §Deviations and reconciled in
+`docs/aksa/04-route-map.md`.
+
 ---
 
 ## View → Component → Future Destination

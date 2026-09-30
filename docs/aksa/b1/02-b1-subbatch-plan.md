@@ -7,6 +7,19 @@ not drift into feature work.
 Authority: `docs/aksa/10-batch-roadmap.md` (B1 definition),
 `docs/aksa/03-module-boundaries.md`.
 
+## B1 Status
+
+| Sub-batch | Status | Record |
+|---|---|---|
+| B1.1 — App Foundation Structure + Design Contract | **✅ COMPLETE** | this document, `01-legacy-compatibility-map.md`, `03-client-security-inventory.md` |
+| B1.2 — Security + Build Foundation Hardening | **✅ COMPLETE** | this document, §Security |
+| B1.3 — Production Router + AKSA App Shell | **✅ COMPLETE** | `04-b1.3-router-migration.md` |
+| B1.4 — Design System + Monolith Decomposition | **← NEXT** | this document, §B1.4 |
+| B1.5 — Regression + Visual Acceptance | **pending** | this document, §B1.5 |
+
+B1 is **not** sealed. `AKSA-B1-SEALED` may only be created after B1.4 and B1.5
+both land — see §B1 Seal Criteria.
+
 ---
 
 ## B1 Scope (from roadmap)
@@ -56,43 +69,68 @@ Security and build foundation only. **No router, no shells, no feature work.**
 | `AdminDashboard` decomposition | **Deferred to B1.4** |
 | Runtime product behaviour change | **None** |
 
-### B1.3 - Production Router + AKSA App Shell ← NEXT
+### B1.3 - Production Router + AKSA App Shell ✅ COMPLETE
 
-| Item | Notes |
+| Item | Status |
 |---|---|
-| Introduce production router | Lazy-loaded routes per `04-route-map.md` |
-| `app/router/` wiring | Router instance, route table, lazy boundaries |
-| `app/layouts/LearnerLayout.tsx` | Per `03-learner-shell.md` |
-| `app/layouts/StudioLayout.tsx` | Per `04-studio-shell.md` |
-| `app/layouts/PublicLayout.tsx` | Host legacy public pages |
-| `app/layouts/AdminLayout.tsx` | Host legacy `AdminDashboard` |
-| `app/providers/` | Session, Theme, Navigation context |
-| `app/guards/` skeleton | Placeholder contract; enforcement needs B2 |
-| Bind navigation contracts to router | `learnerNavigation`, `studioNavigation` |
-| Preserve all 21 legacy `View`s | Redirect/alias table, no dead routes |
-| Real `@/` import adoption | Alias now resolves to `src/` (CONF-01) |
+| Introduce production router | Done — `react-router-dom` 7.18.4, `app/router/` |
+| `app/router/` wiring | Done — route table, lazy boundaries, `*` → explicit 404 |
+| `app/layouts/LearnerLayout.tsx` | Done — per `03-learner-shell.md` |
+| `app/layouts/StudioLayout.tsx` | Done — shell + 10 route boundaries, all placeholders |
+| `app/layouts/PublicLayout.tsx` | Done — hosts the legacy `Navbar` as sole public chrome owner |
+| `app/layouts/AdminLayout.tsx` | Done — structural host only, `<Outlet/>` |
+| `app/providers/` | Done — `LegacyAppStateProvider`; Theme provider not needed, dark mode is B13 |
+| `app/guards/` skeleton | Done — one routing guard; **enforcement needs B2** |
+| Bind navigation contracts to router | Done — `learnerNavigation` / `studioNavigation` now render in the shells |
+| Preserve all 21 legacy `View`s | Done — all 21 in `LEGACY_VIEW_ROUTES`, no dead routes |
+| Real `@/` import adoption | Alias resolves to `src/` (CONF-01, closed in B1.2) |
+| Route contract enforcement | `scripts/verify-routes.mjs` — 174 passed, 0 failed, exit 0 |
+| Runtime smoke | Zero console errors; deep links, guards, back/forward verified in Chrome |
+| Runtime product behaviour change | **Deliberate and documented** — the 0.3s view fade-**out** is dropped (DEFECT-1, `04-b1.3-router-migration.md`) |
+| New dependencies | `react-router-dom` ^7.18.4 (lockfile delta purely additive) |
 
-Router migration is the highest-risk item in B1. It must land with the legacy
-redirect/alias table so no capability becomes unreachable.
+Full evidence, the three defects found and fixed in place, and the B1.4
+follow-ups are recorded in `04-b1.3-router-migration.md`. Implementation commit:
+`98dcbb120545829125dfdb0efe58fc4b6784226f`.
+
+Router migration was the highest-risk item in B1. It landed with the legacy
+redirect/alias table, and `scripts/verify-routes.mjs` fails the build if any of
+the 21 capabilities becomes unreachable.
+
+### B1.4 - Design System + Monolith Decomposition ← NEXT
 
 ### B1.4 — Design System + Monolith Decomposition
+
+Status: **NEXT.**
 
 | Item | Notes |
 |---|---|
 | Split `Navbar` | → `app/layouts/PublicHeader.tsx` |
 | Split `AdminDashboard.tsx` (408.8 KB) | → `app/layouts/AdminLayout.tsx` + admin sections |
-| Decompose `StudentDashboard`, `LearningPage` | → `features/learn/*` |
+| Decompose `StudentDashboard`, `LearningPage` | → `features/learn/*`; this is what lets them adopt `LearnerLayout` instead of self-chrome |
 | Decompose `LandingPage`, program pages | → `features/public/*` |
 | Build design-system primitives | `Button`, `Card`, `Badge`, `Input`, `Tabs`, `Table` |
 | Apply tokens to migrated components | Progressive; `index.css` stays authoritative meanwhile |
 | Enforce `requiredCapabilities` in navigation | Mechanism only — **real enforcement requires B2 identity** |
+| Register `/admin/*` sub-routes | Blocked on the `AdminDashboard` split above |
 | Collapsible section state, breadcrumbs, mobile bottom nav | Role-aware pieces need B2 for real capability data |
 
 Admin decomposition targets per `03-module-boundaries.md`: platform dashboard,
 users/roles, academic/curriculum, studio/content, validation/review,
 programs/commerce, analytics, configuration.
 
+B1.4 also inherits two constraints from B1.3:
+
+- The per-view exit animation must not be reintroduced until the presence
+  mechanism is reliable under `React.lazy` + `Suspense` + `StrictMode`, and only
+  behind a browser test that asserts the view actually changes (DEFECT-1).
+- The learner sidebar at ≥1024px and the bottom bar at <768px were verified
+  structurally but not measured at those widths, because the B1.3 harness viewport
+  was fixed at 1000×700. The B1.4 responsive work must close that gap.
+
 ### B1.5 — Regression + Visual Acceptance
+
+Status: **pending.**
 
 | Item | Notes |
 |---|---|
@@ -156,14 +194,24 @@ documented architecture rather than the reverse.
 
 ### CONF-02 — B0 documents list a `gems`/skill-graph-adjacent surface not present in the route map
 
+**✅ RESOLVED in B1.3.**
+
 Not reproduced as a defect: `docs/aksa/04-route-map.md` and
 `design/02-navigation-information-architecture.md` both place "My Path / Skill Map"
-at `/app/path`, consistent with each other. Recorded here only to note that the
-B0 audit did not enumerate `/app/library`, `/app/partner-practice`,
-`/app/community`, `/app/rewards`, or `/app/help`, which the B1 approved IA
-adds. Resolution: the B1 IA is additive to the route map; **B1.3's** route table
-must include these paths and B0's `04-route-map.md` should be amended at B1.3
-to reflect them.
+at `/app/path`, consistent with each other.
+
+The B0 audit also did not enumerate `/app/library`, `/app/partner-practice`,
+`/app/community`, `/app/rewards`, or `/app/help`, which the B1 approved IA adds.
+B1.3 was required to include these in its route table and to amend B0's
+`04-route-map.md`.
+
+| Field | Value |
+|---|---|
+| Resolution in B1.3 | All five paths are registered as **planned** learner routes in `app/router/routePaths.ts` (`PLANNED_LEARNER_ROUTES`) and rendered by the AKSA learner shell behind the routing guard. |
+| Documentation | `docs/aksa/04-route-map.md` now classifies every route as **canonical**, **compatibility** or **planned**, and lists all five. |
+| Enforcement | `scripts/verify-routes.mjs` asserts each planned path resolves to a placeholder. |
+| Verified in browser | `/app/library` renders the placeholder (`h1` "Library", "Belum diimplementasikan") via a real drawer click; the other planned routes were verified by cold load and redirect. |
+| B0 document rewritten? | **Amended, not restructured.** The B0 route lists were kept and extended; the classification table and the per-route guard/shell columns are additive. |
 
 ### Non-conflict recorded for visibility
 
@@ -180,17 +228,20 @@ to reflect them.
 
 | Deferred | To |
 |---|---|
-| Production router | B1.3 |
-| Shell/layout components | B1.3 |
-| `app/router/` wiring, legacy redirect/alias table | B1.3 |
+| ~~Production router~~ | **Done in B1.3** |
+| ~~Shell/layout components~~ | **Done in B1.3** |
+| ~~`app/router/` wiring, legacy redirect/alias table~~ | **Done in B1.3** |
 | Design-system primitives | B1.4 |
 | AdminDashboard split | B1.4 |
+| `/admin/*` sub-routes (blocked on the split) | B1.4 |
 | Navbar split, feature decomposition | B1.4 |
-| Guard **enforcement** (mechanism in B1.4, real authz needs B2) | B2 |
+| Responsive breakpoints verified by measurement, not just structurally | B1.4 / B1.5 |
+| Guard **enforcement** (mechanism shipped in B1.3, real authz needs B2) | B2 |
+| Educator surface (`/educator/*`) | B2 |
 | Legacy brand replacement (`The Prams` → AKSA) | Per-domain, B2+ |
 | localStorage → server authority | B2 |
-| Admin authentication | B2 |
-| AI server/edge runtime + AI Router | B5 |
+| Admin authentication (SEC-P1-03) | B2 |
+| Identity provider / server AI runtime + AI Router (SEC-P1-01) | B5 |
 | Dark mode | B13 |
 | Supabase | B2 |
 | OpenMAIC | B7 |
