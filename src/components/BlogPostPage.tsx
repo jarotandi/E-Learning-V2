@@ -66,9 +66,14 @@ export const BlogPostPage: React.FC<BlogPostPageProps> = ({ blogId, setView, set
   const hasMiddleImage = Boolean(post?.content.match(/!\[[^\]]*\]\([^)]+\)/));
   const hasRelatedBlock = Boolean(post?.content.match(/\{\{related:.+\}\}/));
   const middleContent = React.useMemo(() => post ? splitContentForMiddleInsert(post.content) : { before: '', after: '' }, [post]);
+  // B1.3: the shared link is now the canonical `/blog/<id>` path. Previously it
+  // was `${pathname}#blog-<id>`, which relied on a `hashchange` listener in
+  // App.tsx. Legacy `#blog-<id>` links are still accepted — AppRouter redirects
+  // them here — so previously shared links keep resolving.
   const shareUrl = React.useMemo(() => {
-    if (typeof window === 'undefined') return `https://theprams.id/blog/${post?.id || ''}`;
-    return `${window.location.origin}${window.location.pathname}#blog-${post?.id || ''}`;
+    const id = post?.id || '';
+    if (typeof window === 'undefined') return `https://theprams.id/blog/${id}`;
+    return `${window.location.origin}/blog/${encodeURIComponent(id)}`;
   }, [post?.id]);
   const shareText = post ? `${post.title} - ${post.excerpt}` : '';
   const copyShareLink = async () => {

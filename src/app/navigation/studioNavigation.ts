@@ -14,11 +14,18 @@
  * from Content Factory. This contract therefore has no top-level
  * "AI Creator" entry. Adding one later requires architect approval.
  *
- * B1.1 scope note:
- * - Every entry below is `status: 'planned'`. Studio itself does not
- *   exist yet (B4/B6); this is a forward contract only.
+ * B1.3 status update (routing exists; implementation still does not):
+ * - This contract IS now bound to the real router in `src/app/router/` and
+ *   rendered by `src/app/layouts/StudioLayout.tsx`.
+ * - EVERY entry below remains `status: 'planned'` after B1.3, and that is the
+ *   correct value. Each Studio route renders the neutral `PlannedRoutePage`
+ *   foundation placeholder. Not one of them performs authoring, AI generation,
+ *   validation, review, publishing, or analytics.
+ * - A resolving URL is not a shipped feature, so none of these may be marked
+ *   'available' before the corresponding B4/B5/B6 work lands.
  * - Capability values reference the B0 role-permission vocabulary and are
- *   NOT evaluated until identity exists (B2).
+ *   NOT evaluated until identity exists (B2). The 'Izin' badge in the Studio
+ *   sidebar displays declared metadata only; it enforces nothing.
  */
 
 import type { NavigationConfig } from './navigation.types';

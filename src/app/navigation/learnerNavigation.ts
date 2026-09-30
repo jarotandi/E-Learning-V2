@@ -12,13 +12,29 @@
  * first-class entry; its members are nested. This keeps the sidebar
  * scannable as the platform grows.
  *
- * B1.1 scope note:
- * - Every entry below is `status: 'planned'`. The production router does
- *   not exist yet (B1.2), so these paths are contract targets, not live
- *   routes.
- * - Nothing here is imported by a rendered component in B1.1.
+ * B1.3 status update (routing exists; implementation still does not):
+ * - This contract IS now bound to the real router in `src/app/router/` and
+ *   rendered by `src/app/layouts/LearnerLayout.tsx`.
+ * - `status: 'available'` is therefore used, but ONLY for entries whose path
+ *   resolves to a route backed by a real legacy capability that renders today.
+ * - `status: 'planned'` is retained for every entry that renders the neutral
+ *   `PlannedRoutePage` foundation placeholder. A reserved URL is not a
+ *   shipped feature, and marking one 'available' would be a false claim.
  * - Capability values reference the B0 role-permission vocabulary and are
  *   NOT evaluated until identity exists (B2).
+ *
+ * Route -> status evidence, per entry:
+ *   available : /app, /app/learn, /app/assessment, /app/calendar,
+ *               /app/profile, /app/wallet  (real legacy surface)
+ *   planned   : /app/path, /app/library, /app/labs, /app/projects,
+ *               /app/partner-practice, /app/ai, /app/mentors, /app/live,
+ *               /app/progress, /app/portfolio, /app/passport, /app/career,
+ *               /app/community, /app/rewards, /app/downloads, /app/settings,
+ *               /app/help  (placeholder only)
+ *   planned   : /app/search, /app/inbox  (header slots, no route in B1.3)
+ *
+ * `/app/ai` is NOT 'available' even though the path resolves: there is no AI
+ * runtime. SEC-P1-01 is open and `src/integrations/ai/` must stay empty until B5.
  */
 
 import type { NavigationConfig } from './navigation.types';
@@ -39,7 +55,7 @@ export const learnerNavigation: NavigationConfig = {
           label: 'Beranda',
           path: '/app',
           icon: 'House',
-          status: 'planned',
+          status: 'available',
         },
       ],
     },
@@ -62,7 +78,7 @@ export const learnerNavigation: NavigationConfig = {
           label: 'Kelas Saya',
           path: '/app/learn',
           icon: 'GraduationCap',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'learn.library',
@@ -100,7 +116,7 @@ export const learnerNavigation: NavigationConfig = {
           label: 'Assessment Center',
           path: '/app/assessment',
           icon: 'ClipboardCheck',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'practice.partner',
@@ -214,14 +230,14 @@ export const learnerNavigation: NavigationConfig = {
           label: 'Calendar',
           path: '/app/calendar',
           icon: 'CalendarDays',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'utilities.wallet',
           label: 'Wallet & Payments',
           path: '/app/wallet',
           icon: 'Wallet',
-          status: 'planned',
+          status: 'available',
         },
         {
           id: 'utilities.downloads',
@@ -270,7 +286,7 @@ export const learnerNavigation: NavigationConfig = {
       path: '/app/profile',
       icon: 'User',
       mobilePriority: 4,
-      status: 'planned',
+      status: 'available',
     },
   ],
 
@@ -281,7 +297,7 @@ export const learnerNavigation: NavigationConfig = {
       path: '/app',
       icon: 'House',
       mobilePriority: 0,
-      status: 'planned',
+      status: 'available',
     },
     {
       id: 'learn.classes',
@@ -289,7 +305,7 @@ export const learnerNavigation: NavigationConfig = {
       path: '/app/learn',
       icon: 'BookOpen',
       mobilePriority: 1,
-      status: 'planned',
+      status: 'available',
     },
     {
       id: 'learn.labs',
@@ -313,7 +329,7 @@ export const learnerNavigation: NavigationConfig = {
       path: '/app/profile',
       icon: 'User',
       mobilePriority: 4,
-      status: 'planned',
+      status: 'available',
     },
   ],
 };
