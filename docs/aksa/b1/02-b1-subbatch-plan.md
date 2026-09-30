@@ -14,11 +14,16 @@ Authority: `docs/aksa/10-batch-roadmap.md` (B1 definition),
 | B1.1 — App Foundation Structure + Design Contract | **✅ COMPLETE** | this document, `01-legacy-compatibility-map.md`, `03-client-security-inventory.md` |
 | B1.2 — Security + Build Foundation Hardening | **✅ COMPLETE** | this document, §Security |
 | B1.3 — Production Router + AKSA App Shell | **✅ COMPLETE** | `04-b1.3-router-migration.md` |
-| B1.4 — Design System + Monolith Decomposition | **← NEXT** | this document, §B1.4 |
-| B1.5 — Regression + Visual Acceptance | **pending** | this document, §B1.5 |
+| B1.4A — Design-System Primitives + Public Header | **✅ COMPLETE** | `06-b1.4a-design-system-public-header.md` |
+| B1.4B — `StudentDashboard` decomposition | **← NEXT** | this document, §B1.4 |
+| B1.4C — `LearningPage` decomposition | pending | this document, §B1.4 |
+| B1.4D — `AdminDashboard` split + `/admin/*` sub-routes | pending | this document, §B1.4 |
+| B1.4 (whole) | **IN PROGRESS** | this document, §B1.4 |
+| B1.5 — Regression + Visual Acceptance | pending | this document, §B1.5 |
 
 B1 is **not** sealed. `AKSA-B1-SEALED` may only be created after B1.4 and B1.5
-both land — see §B1 Seal Criteria.
+both land — see §B1 Seal Criteria. B1.4 is **not** complete: three of its four
+sub-batches remain, and `AdminDashboard.tsx` (408.8 KB) is still a monolith.
 
 ---
 
@@ -119,25 +124,56 @@ Router migration was the highest-risk item in B1. It landed with the legacy
 redirect/alias table, and `scripts/verify-routes.mjs` fails the build if any of
 the 21 capabilities becomes unreachable.
 
-### B1.4 - Design System + Monolith Decomposition ← NEXT
+### B1.4 - Design System + Monolith Decomposition — IN PROGRESS
 
-Status: **NEXT.**
+Split into four sub-batches so each is independently reviewable. B1.4A is done;
+**B1.4B is next.**
 
-| Item | Notes |
+| Sub-batch | Scope | Status |
+|---|---|---|
+| **B1.4A** | Design-system primitives + `PublicHeader` extraction from `Navbar` | **✅ COMPLETE** |
+| **B1.4B** | Decompose `StudentDashboard.tsx` → `features/learn/*`; adopt `LearnerLayout` instead of self-chrome | **← NEXT** |
+| **B1.4C** | Decompose `LearningPage.tsx` → `features/learn/*` | pending |
+| **B1.4D** | Split `AdminDashboard.tsx` (408.8 KB) → `AdminLayout` + 8 admin sections; register `/admin/*` sub-routes | pending |
+
+The ordering is deliberate: the primitives and the public header land first so
+the learner/admin decompositions have a design system to migrate onto instead of
+copying legacy Tailwind into new files.
+
+#### B1.4A — what landed
+
+Design-system primitives in `src/design-system/components/` (`Button`,
+`ButtonLink`, `IconButton`, `Card`, `Badge`, `Input`, `Tabs`, `Table`), built on
+the B1.1 token contract with no colour literal in the layer, plus
+`app/layouts/PublicHeader.tsx` replacing the legacy `Navbar` in `PublicLayout`.
+
+| Item | Status |
 |---|---|
-| Split `Navbar` | → `app/layouts/PublicHeader.tsx` |
-| Split `AdminDashboard.tsx` (408.8 KB) | → `app/layouts/AdminLayout.tsx` + admin sections |
-| Decompose `StudentDashboard`, `LearningPage` | → `features/learn/*`; this is what lets them adopt `LearnerLayout` instead of self-chrome |
-| Decompose `LandingPage`, program pages | → `features/public/*` |
-| Build design-system primitives | `Button`, `Card`, `Badge`, `Input`, `Tabs`, `Table` |
-| Apply tokens to migrated components | Progressive; `index.css` stays authoritative meanwhile |
-| Enforce `requiredCapabilities` in navigation | Mechanism only — **real enforcement requires B2 identity** |
-| Register `/admin/*` sub-routes | Blocked on the `AdminDashboard` split above |
-| Collapsible section state, breadcrumbs, mobile bottom nav | Role-aware pieces need B2 for real capability data |
+| `Button` / `ButtonLink` / `IconButton` | Done — 5 variants, 3 sizes; `primary` is `#00796b`, never `#009688` |
+| `Card`, `Badge`, `Input`, `Tabs`, `Table` | Done — presentational only, no domain types, no routing, no data logic |
+| `PublicHeader` extraction | Done — all 8 legacy destinations preserved, guest handling unchanged |
+| `PublicLayout` owns header + `Outlet` | Done — `showsLegacyNavbar` rule byte-identical; no double chrome |
+| `Navbar` disposition | Retained, **deprecated**, not deleted — see B1.4A record |
+| Learner / admin files touched | **None** — verified by explicit empty `git diff --stat` |
+| Runtime product behaviour change | **Deliberate and documented** — 4 defects fixed, incl. a 768–1023px navigation dead zone |
+| New dependencies | **None** |
+| Route contract | `verify-routes.mjs` 174/0; `verify-design-system.mjs` 50/0 |
+
+Four defects were found and fixed in place, and two token/accessibility
+decisions are recorded for review. Full evidence, the measured contrast audit,
+and the three NOT-VERIFIED items (no ≥1024px viewport, no screenshots) are in
+`06-b1.4a-design-system-public-header.md`.
+
+The brief's enumerated change areas did not include `src/main.tsx`; B1.4A adds
+one CSS import there and the record explains why. Flagged, not buried.
+
+#### B1.4B–D — inherited constraints
 
 Admin decomposition targets per `03-module-boundaries.md`: platform dashboard,
 users/roles, academic/curriculum, studio/content, validation/review,
 programs/commerce, analytics, configuration.
+
+`/admin/*` sub-routes stay blocked on the `AdminDashboard` split (B1.4D).
 
 B1.4 also inherits two constraints from B1.3:
 
@@ -146,7 +182,9 @@ B1.4 also inherits two constraints from B1.3:
   behind a browser test that asserts the view actually changes (DEFECT-1).
 - The learner sidebar at ≥1024px and the bottom bar at <768px were verified
   structurally but not measured at those widths, because the B1.3 harness viewport
-  was fixed at 1000×700. The B1.4 responsive work must close that gap.
+  was fixed at 1000×700. **The B1.4 responsive work must close that gap.** The
+  same harness limit blocked a ≥1024px measurement of the new public header in
+  B1.4A, so that item is carried into B1.5 rather than assumed done.
 
 ### B1.5 — Regression + Visual Acceptance
 
@@ -180,8 +218,11 @@ designs. Divergence is a defect requiring revision, not a style preference.
    (`a01a872 fix(security): remove client AI credential exposure path`), paired
    with no alias or design change, so the security delta is reviewable in
    isolation. Alias and accessibility corrections landed separately.
-4. `index.css` remains the styling authority until B1.4 primitives exist. Token
-   adoption is progressive, never a big-bang rewrite.
+4. `index.css` remains the styling authority for the legacy `src/components/`
+   tree until the primitives exist **and** consumers are migrated. Token
+   adoption is progressive, never a big-bang rewrite. B1.4A established the
+   primitive layer and the AKSA public header; `index.css` is still
+   authoritative for every unmigrated component and was not rewritten.
 5. Each sub-batch runs `npm run lint` + `npm run build` fresh and records
    evidence before commit.
 6. **B1 contains no product capability.** B1.5 proves correctness and visual
@@ -251,14 +292,17 @@ B1.3 was required to include these in its route table and to amend B0's
 | ~~Production router~~ | **Done in B1.3** |
 | ~~Shell/layout components~~ | **Done in B1.3** |
 | ~~`app/router/` wiring, legacy redirect/alias table~~ | **Done in B1.3** |
-| Design-system primitives | B1.4 |
-| AdminDashboard split | B1.4 |
-| `/admin/*` sub-routes (blocked on the split) | B1.4 |
-| Navbar split, feature decomposition | B1.4 |
-| Responsive breakpoints verified by measurement, not just structurally | B1.4 / B1.5 |
+| Design-system primitives | **Done in B1.4A** — `Button`, `Card`, `Badge`, `Input`, `Tabs`, `Table` + `IconButton` |
+| Navbar split | **Done in B1.4A** — `app/layouts/PublicHeader.tsx`; legacy file retained, deprecated |
+| Learner dashboard decomposition | B1.4B |
+| `LearningPage` decomposition | B1.4C |
+| AdminDashboard split | B1.4D |
+| `/admin/*` sub-routes (blocked on the split) | B1.4D |
+| Feature decomposition of public pages | B1.4B–D, as each surface is migrated |
+| Responsive breakpoints verified by measurement, not just structurally | B1.4B–D / B1.5 — B1.4A could not measure ≥1024px (fixed 1000px harness viewport) |
 | Guard **enforcement** (mechanism shipped in B1.3, real authz needs B2) | B2 |
 | Educator surface (`/educator/*`) | B2 |
-| Legacy brand replacement (`The Prams` → AKSA) | Per-domain, B2+ |
+| Legacy brand replacement (`The Prams` → AKSA) | **Partly done in B1.4A** — the public header shell is migrated; page content copy and the remaining surfaces are per-domain, B2+ |
 | localStorage → server authority | B2 |
 | Admin authentication (SEC-P1-03) | B2 |
 | Identity provider / server AI runtime + AI Router (SEC-P1-01) | B5 |

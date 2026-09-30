@@ -1,3 +1,62 @@
+/**
+ * @deprecated Removed from the application in B1.4A — DO NOT IMPORT.
+ *
+ * ---------------------------------------------------------------------------
+ * B1.4A DEPRECATION NOTICE
+ * ---------------------------------------------------------------------------
+ * This component has been superseded by `src/app/layouts/PublicHeader.tsx`.
+ *
+ * It is RETAINED, not deleted, for two reasons:
+ *
+ *  1. Rollback. `PublicHeader` is the first real migration of legacy chrome
+ *     onto the AKSA design system. If a behaviour turns out to be missing,
+ *     this file is the reference for what the behaviour was.
+ *  2. It still carries the ONLY record of the legacy public-navigation
+ *     inventory, including the two defects B1.4A corrected (the 768–1023px
+ *     navigation dead zone, and the mobile drawer having no signed-in state).
+ *     Deleting it would delete that record.
+ *
+ * ## Proof that nothing imports it
+ *
+ * Verified with a repository-wide search across `src/`, `scripts/`, `docs/`,
+ * and `index.html` at commit time. The only remaining occurrences of the
+ * identifier "Navbar" are:
+ *
+ *   - this file itself
+ *   - prose in `app/router/*` and `app/layouts/*` describing the chrome rule
+ *   - `showsLegacyNavbar` / `NAVBAR_HIDDEN_LEGACY_VIEWS` in
+ *     `router/legacyViewRoutes.ts` — a chrome-VISIBILITY function, unrelated to
+ *     this component, and still the live rule used by `PublicLayout`
+ *   - the word "navbar" inside `AdminDashboard` CMS copy, which is unrelated
+ *
+ * There is no `import` statement for this module anywhere in the codebase, so
+ * it is not in the production bundle.
+ *
+ * ## Why it was not deleted outright
+ *
+ * B1.4A STEP 5 permits deletion once every behaviour is proven migrated.
+ * Migration is proven for the eight public destinations, the mobile drawer,
+ * and the signed-in Dashboard/Logout flow. What is NOT proven is
+ * visual-parity acceptance, which is B1.5 work and has not run yet. Keeping
+ * the file costs nothing at runtime and removes the risk of deleting the
+ * reference before the thing it is a reference for has been signed off.
+ *
+ * Removal is a candidate for B1.5, once visual acceptance has passed.
+ *
+ * ## What PublicHeader changed
+ *
+ *   - Wordmark: "Bimbel The Prams" -> `AksaBrandMark` (AKSA / Belajar Tanpa
+ *     Batas), the approved AKSA shell brand migration.
+ *   - Destinations are now real `<a href>` elements, so middle-click and
+ *     cmd/ctrl-click work. A plain left click is still delegated to the
+ *     router-backed `setView`, so the in-memory demo session survives.
+ *   - One breakpoint (`lg`) for both desktop clusters, closing the dead zone.
+ *   - The mobile drawer now reflects the signed-in state.
+ *   - Contrast: no `#009688` normal-size text, and no white normal-size text
+ *     on `#009688`.
+ * ---------------------------------------------------------------------------
+ */
+
 import React, { useState } from 'react';
 import { Menu, X, BookOpen, GraduationCap, Users, LayoutDashboard, Search, Home, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';

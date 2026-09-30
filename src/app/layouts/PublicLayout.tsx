@@ -2,60 +2,60 @@
  * AKSA Public Layout
  * =================
  * B1.3 — Production Router + AKSA App Shell
+ * B1.4A — Public header extraction (this file's second revision)
  *
  * Authority: docs/aksa/design/03-learner-shell.md
  *            docs/aksa/b1/02-b1-subbatch-plan.md
+ *            docs/aksa/b1/06-b1.4a-design-system-public-header.md
  *
- * ## B1.3 compatibility decision — read before "fixing" this
+ * ## B1.4A revision — what changed and why
  *
- * `PublicLayout` deliberately renders the EXISTING legacy `Navbar`
- * (`src/components/Navbar.tsx`) rather than a new AKSA public header.
+ * B1.3 deliberately rendered the legacy `Navbar` and deferred its replacement.
+ * B1.4A is that work: the public chrome is now `PublicHeader`, the
+ * application-owned AKSA header built on the design-system primitives.
  *
- * Reasons:
+ * The B1.3 reasoning is preserved rather than reversed:
  *
- *  1. `Navbar` is imported by no other shell and already owns the public
- *     navigation. Re-implementing it here would produce two public headers.
- *  2. `Navbar` still carries the "Bimbel The Prams" wordmark. Replacing the
- *     legacy brand lockup is explicitly out of B1.3 scope — B1.2's
- *     sub-batch plan defers "Legacy brand replacement (The Prams -> AKSA)" to
- *     per-domain work in B2+.
- *  3. Decomposing `Navbar` into `app/layouts/PublicHeader.tsx` is listed as
- *     B1.4 work in `docs/aksa/b1/01-legacy-compatibility-map.md`.
+ *  1. There is still exactly ONE public chrome owner. `Navbar` is no longer
+ *     imported anywhere, so the "two public headers" risk that justified
+ *     keeping it is gone; the remaining reason — its legacy wordmark — is
+ *     exactly what B1.4A was asked to remove.
+ *  2. The chrome-visibility rule is UNCHANGED. `showsLegacyNavbar` and
+ *     `NAVBAR_HIDDEN_LEGACY_VIEWS` are the pre-existing rule from
+ *     `legacyViewRoutes.ts`, copied verbatim from the pre-router condition in
+ *     `src/App.tsx`. The header is therefore still hidden on `login`,
+ *     `payment`, `finalRegistration`, `exam`, `result`, `admin`, `dashboard`,
+ *     and `learning`, and still shown everywhere else. No double chrome.
+ *  3. Guest handling is UNCHANGED: `user?.id === 'u_guest' ? null : user`.
  *
- * `PublicLayout`'s job in B1.3 is therefore to (a) own the public route
- * boundary, (b) apply the AKSA document surface (mint canvas), and (c) keep
- * the Navbar as the single visual owner of public chrome. It is structurally
- * minimal BY DESIGN, not by omission.
+ * ## `bg-white`, not the AKSA mint canvas
  *
- * The Navbar is hidden on routes that own their own chrome. That rule is the
- * pre-existing `NAVBAR_HIDDEN_LEGACY_VIEWS` set from `legacyViewRoutes.ts`,
- * evaluated here against the derived legacy view.
+ * The legacy public pages were authored against a white document surface.
+ * Tinting them mint would be a visual change to every public page, which is
+ * B1.3 scope, not B1.4A. The mint surface belongs to the new shells
+ * (LearnerLayout, StudioLayout).
  */
 
 import { Outlet } from 'react-router-dom';
-import { Navbar } from '../../components/Navbar';
 import { useLegacyAppState } from '../providers/LegacyAppStateProvider';
 import { showsLegacyNavbar } from '../router/legacyViewRoutes';
+import { PublicHeader } from './PublicHeader';
 
 export function PublicLayout() {
   const { currentView, setView, user, requestLogout } = useLegacyAppState();
 
-  // Guest accounts are deliberately not shown an authenticated Navbar, which
+  // Guest accounts are deliberately not shown an authenticated header, which
   // matches the pre-router expression `user?.id === 'u_guest' ? null : user`.
-  const navbarUser = user?.id === 'u_guest' ? null : user;
+  const headerUser = user?.id === 'u_guest' ? null : user;
 
   return (
-    // `bg-white`, not the AKSA mint canvas. The legacy public pages were
-    // authored against a white document surface; tinting them mint would be a
-    // visual change to every public page, which B1.3 must not make. The mint
-    // surface belongs to the NEW shells (LearnerLayout, StudioLayout).
     <div className="min-h-screen bg-white">
       {showsLegacyNavbar(currentView) && (
-        <Navbar
+        <PublicHeader
           currentView={currentView!}
           setView={setView}
-          user={navbarUser}
-          logout={requestLogout}
+          user={headerUser}
+          onLogout={requestLogout}
         />
       )}
       <Outlet />
