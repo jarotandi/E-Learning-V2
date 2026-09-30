@@ -45,11 +45,12 @@
  * feature. Only routes backed by a real legacy capability show as available.
  */
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Bell,
   ChevronDown,
+  LogOut,
   Menu,
   Search,
   X,
@@ -273,7 +274,39 @@ function LearnerSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 /* ------------------------------------------------------------------ */
 
 function LearnerHeader({ onOpenDrawer }: { onOpenDrawer: () => void }) {
-  const { user } = useLegacyAppState();
+  const { user, requestLogout } = useLegacyAppState();
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  // Close profile menu on outside click
+  useEffect(() => {
+    if (!profileOpen) return;
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (profileRef.current && !profileRef.current.contains(target)) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [profileOpen]);
+
+  // Escape key closes profile menu
+  useEffect(() => {
+    if (!profileOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setProfileOpen(false);
+        profileTriggerRef.current?.focus();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [profileOpen]);
+
+  const profileRef = React.useRef<HTMLDivElement>(null);
+  const profileTriggerRef = React.useRef<HTMLButtonElement>(null);
+
+  const isPremium = user?.isPremium ?? false;
 
   return (
     <header
@@ -370,34 +403,78 @@ function LearnerHeader({ onOpenDrawer }: { onOpenDrawer: () => void }) {
             />
           </button>
 
-          {/* Profile slot — routes to the real legacy profile capability. */}
-          <Link
-            to="/app/profile"
-            className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full border hover:bg-slate-50 transition-colors"
-            style={{ borderColor: colors.neutral[200] }}
-            title={user ? user.name : 'Profil'}
-          >
-            <span
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-white shrink-0"
-              style={{ backgroundColor: colors.brand.emerald }}
+          {/* Profile disclosure — accessible account menu with Profile + Logout.
+              Replaces the legacy sidebar "Keluar" item and the simple profile link. */}
+          <div className="relative" ref={profileRef}>
+            <button
+              ref={profileTriggerRef}
+              type="button"
+              onClick={() => setProfileOpen(!profileOpen)}
+              aria-expanded={profileOpen}
+              aria-controls="aksa-learner-profile-menu"
+              aria-label={`Menu akun ${user?.name ?? 'Tamu'}`}
+              className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full border hover:bg-slate-50 transition-colors"
+              style={{ borderColor: colors.neutral[200] }}
             >
-              {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
-            </span>
-            <span className="hidden md:flex flex-col leading-none">
               <span
-                className="text-[12px] font-bold truncate max-w-[120px]"
-                style={{ color: colors.brand.emerald }}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black text-white shrink-0"
+                style={{ backgroundColor: colors.brand.emerald }}
               >
-                {user?.name ?? 'Tamu'}
+                {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
               </span>
-              <span
-                className="text-[10px] font-medium"
-                style={{ color: colors.neutral[500] }}
+              <span className="hidden md:flex flex-col leading-none">
+                <span
+                  className="text-[12px] font-bold truncate max-w-[120px]"
+                  style={{ color: colors.brand.emerald }}
+                >
+                  {user?.name ?? 'Tamu'}
+                </span>
+                <span
+                  className="text-[10px] font-medium"
+                  style={{ color: colors.neutral[500] }}
+                >
+                  {isPremium ? 'Premium' : 'Free'}
+                </span>
+              </span>
+              <ChevronDown size={14} className={`transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {profileOpen && (
+              <div
+                id="aksa-learner-profile-menu"
+                role="menu"
+                aria-orientation="vertical"
+                aria-label={`Menu akun ${user?.name ?? 'Tamu'}`}
+                className="absolute right-0 mt-2 w-48 bg-white rounded-xl border shadow-lg overflow-hidden"
+                style={{ borderColor: colors.neutral[200] }}
               >
-                {user?.isPremium ? 'Premium' : 'Free'}
-              </span>
-            </span>
-          </Link>
+                <Link
+                  to="/app/profile"
+                  role="menuitem"
+                  tabIndex={-1}
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-brand-navy hover:bg-slate-50"
+                >
+                  <User size={15} className="text-slate-400" />
+                  Profil
+                </Link>
+                <hr className="border-slate-100 my-1" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  tabIndex={-1}
+                  onClick={() => {
+                    setProfileOpen(false);
+                    requestLogout();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                >
+                  <LogOut size={15} />
+                  Keluar
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

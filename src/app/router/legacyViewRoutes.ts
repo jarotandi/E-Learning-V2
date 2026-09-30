@@ -319,14 +319,13 @@ export function showsLegacyNavbar(view: View | null): boolean {
  * Legacy views that own their own navigation chrome and therefore must NOT be
  * wrapped in `LearnerLayout`.
  *
- * `StudentDashboard` (23.6 KB) renders a complete sidebar + header, and
- * `LearningPage` (40.1 KB) renders its own workspace chrome. B1.3 routes
- * these two through the documented legacy-compatibility rendering mode —
- * bare, exactly as they are today — rather than producing a double header
- * and double sidebar. Full decomposition is B1.4 work.
+ * `StudentDashboard` was decomposed in B1.4B and now renders as content only
+ * inside `LearnerLayout`. `LearningPage` (40.1 KB) still renders its own
+ * workspace chrome. B1.3 routed both through the documented legacy-compatibility
+ * rendering mode — bare, exactly as they were — rather than producing a double
+ * header and double sidebar. `LearningPage` decomposition is B1.4C work.
  */
 export const SELF_CHROME_LEGACY_VIEWS: readonly View[] = [
-  'dashboard',
   'learning',
 ] as const;
 

@@ -184,17 +184,9 @@ export function AppRoutes() {
       <Route path={LEARNER_PATHS.wallet} element={<BareLegacyRoute />} />
 
       {/* LEGACY-COMPATIBILITY MODE — self-chrome pages.
-          `StudentDashboard` and `LearningPage` render their own header and
-          sidebar. Wrapping them in LearnerLayout would double both. They stay
-          bare, exactly as before the router existed. B1.4 decomposes them. */}
-      <Route
-        path={LEARNER_PATHS.dashboard}
-        element={
-          <Guarded>
-            <BareLegacyRoute />
-          </Guarded>
-        }
-      />
+          `LearningPage` renders its own workspace chrome.
+          Wrapping it in LearnerLayout would double both. It stays
+          bare, exactly as before the router existed. B1.4C decomposes it. */}
       <Route
         path={LEARNER_PATHS.learning}
         element={
@@ -207,7 +199,18 @@ export function AppRoutes() {
       {/* =========================================================== */}
       {/* LEARNER — AKSA shell                                          */}
       {/* =========================================================== */}
+      {/* B1.4B: `/app` (dashboard) now uses LearnerLayout.
+          StudentDashboard content is decomposed into features/learn/dashboard/
+          and renders as CONTENT ONLY inside the shell. */}
       <Route element={<LearnerLayout surfaceLabel="Learner App" />}>
+        <Route
+          path={LEARNER_PATHS.dashboard}
+          element={
+            <Guarded>
+              <BareLegacyRoute />
+            </Guarded>
+          }
+        />
         {/* Legacy learner pages that carry NO chrome of their own, so the
             shell is additive rather than duplicated. */}
         <Route
