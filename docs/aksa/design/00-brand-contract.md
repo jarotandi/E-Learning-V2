@@ -21,7 +21,8 @@
 
 | Role | Hex | Usage |
 |------|-----|-------|
-| Primary Teal | `#009688` | Primary actions, navigation, key UI elements |
+| Primary Teal | `#009688` | Brand identity: navigation, boundaries, icons, focus rings, large text |
+| Accessible Teal | `#00796b` | Filled primary controls carrying normal-size white text (~5.32:1) |
 | Deep Emerald | `#064e3b` | Hover states, emphasis, dark mode primary |
 | Gold Accent | `#ffc107` | Spark/highlight, rewards, premium indicators |
 
@@ -106,8 +107,24 @@
 
 The following are **non-negotiable** without architect review:
 
-1. Primary teal `#009688` must remain the primary action color
+1. Primary teal `#009688` must remain the primary brand color
 2. Gold `#ffc107` must remain the accent/spark color
 3. Inter font must not be replaced in B1
 4. Rounded card aesthetic must be preserved
 5. Clean white/mint canvas must remain the primary surface
+
+## Accessibility Refinement (B1.2 / AR-02)
+
+Item 1 above is a **brand identity** rule and is unchanged. Accessibility
+refines **how** teal is applied, not which teal defines AKSA:
+
+- `#009688` is ~3.67:1 against white. It is valid for navigation, borders, icons,
+  focus rings, and sufficiently large text (≥18px, or ≥14px bold).
+- For a filled primary control with normal-size white text, use `#00796b`
+  (`brand.tealAccessible`, ~5.32:1) so the text meets WCAG AA.
+- For normal-size body text on white, use emerald `#064e3b`.
+- Gold `#ffc107` is accent only; never normal-size text on white.
+
+This is an implementation refinement mandated by WCAG 2.1 AA. It does **not**
+alter the approved generated AKSA visual direction. See
+[06-responsive-accessibility.md](./06-responsive-accessibility.md).

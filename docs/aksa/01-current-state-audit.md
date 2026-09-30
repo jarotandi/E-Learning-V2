@@ -60,11 +60,18 @@ Migration must be explicit and versioned. Do not run a blind global replacement.
 
 ## Security finding — P0
 
-`vite.config.ts` currently injects `GEMINI_API_KEY` using Vite `define`:
+**Status: RESOLVED in B1.2.** At audit time `vite.config.ts` injected
+`GEMINI_API_KEY` using Vite `define`:
 
 `process.env.GEMINI_API_KEY = env.GEMINI_API_KEY`
 
-Any secret referenced by frontend code can become client-visible in a built bundle. B1/B2 must move AI calls behind a server/edge boundary and remove client-secret injection.
+Any secret referenced by frontend code could become client-visible in a built
+bundle. B1.2 removed the `define` block entirely (along with `loadEnv` and the
+unused `@google/genai` dependency), so no build-time secret substitution path
+remains in the client. AI calls must still move behind a server/edge boundary,
+which is tracked as SEC-P1-01 for B5.
+
+Evidence: `docs/aksa/b1/03-client-security-inventory.md`.
 
 ## Design system already worth preserving
 

@@ -2,7 +2,16 @@
 
 ## Immediate security issue
 
-Current Vite configuration exposes a path for `GEMINI_API_KEY` to be defined in frontend build code. Production AKSA must not ship provider credentials to the browser.
+**RESOLVED in B1.2.** The Vite configuration previously exposed a path for
+`GEMINI_API_KEY` to be defined in frontend build code via `define`. That
+injection has been **removed** along with the now-unused `loadEnv` call and the
+unused `@google/genai` dependency, so AKSA no longer ships — nor has a path to
+ship — provider credentials to the browser.
+
+See `docs/aksa/b1/03-client-security-inventory.md` (SEC-P0-01, SEC-P0-02) for
+closure evidence. The target boundary below is unchanged and is **not yet
+implemented**: there is still no AI server/edge runtime (SEC-P1-01, tracked for
+B5). Until that exists, `src/integrations/ai/` must remain empty.
 
 ## Target request path
 

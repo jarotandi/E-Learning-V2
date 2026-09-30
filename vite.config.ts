@@ -7,8 +7,11 @@ export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
     resolve: {
+      // Alias target must stay in sync with `paths` in tsconfig.json ("@/*": ["./src/*"]).
+      // B1.2 / CONF-01: previously resolved to the repository root, which made
+      // `@/design-system/...` unresolvable. See docs/aksa/b1/02-b1-subbatch-plan.md.
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, 'src'),
       },
     },
     server: {

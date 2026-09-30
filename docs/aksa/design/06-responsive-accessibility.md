@@ -121,24 +121,47 @@ All new UI must meet WCAG 2.1 AA.
 
 #### AKSA Color Contrast Verification
 
-| Foreground | Background | Ratio | Pass |
-|------------|------------|-------|------|
-| `#064e3b` (emerald) | `#ffffff` | 8.9:1 | ✅ AAA |
-| `#009688` (teal) | `#ffffff` | 3.9:1 | ⚠️ AA Large only |
-| `#ffffff` | `#009688` (teal) | 3.9:1 | ⚠️ AA Large only |
-| `#064e3b` (emerald) | `#f0fdfa` (mint) | 6.8:1 | ✅ AAA |
-| `#ffffff` | `#064e3b` (emerald) | 8.9:1 | ✅ AAA |
-| `#ffc107` (gold) | `#064e3b` (emerald) | 8.2:1 | ✅ AAA |
-| `#404040` (neutral-700) | `#ffffff` | 10.4:1 | ✅ AAA |
-| `#737373` (neutral-500) | `#ffffff` | 4.9:1 | ✅ AA |
+> **Corrected in B1.2 (architect review AR-02).** An earlier revision of this
+> table stated `#009688` on white as ~3.9:1 and labelled it "AA Large only".
+> The measured value is **~3.67:1**. That still clears the 3:1 large-text and
+> UI-boundary thresholds, but it does **not** meet the 4.5:1 requirement for
+> normal-size text. The canonical brand teal is unchanged; the *usage rule* is
+> now explicit.
 
-> **Note:** Teal `#009688` on white is **3.9:1** — only passes AA for large text (≥18px or 14px bold). For body text on teal, use white text. For teal text on white, use emerald `#064e3b` instead.
+| Foreground | Background | Ratio | Normal text (4.5:1) | Large text / UI (3:1) |
+|------------|------------|-------|----------------------|-----------------------|
+| `#064e3b` (emerald) | `#ffffff` | 8.9:1 | ✅ AAA | ✅ |
+| `#ffffff` | `#064e3b` (emerald) | 8.9:1 | ✅ AAA | ✅ |
+| `#ffffff` | `#00796b` (teal accessible) | 5.32:1 | ✅ AA | ✅ |
+| `#064e3b` (emerald) | `#f0fdfa` (mint) | 6.8:1 | ✅ AAA | ✅ |
+| `#404040` (neutral-700) | `#ffffff` | 10.4:1 | ✅ AAA | ✅ |
+| `#737373` (neutral-500) | `#ffffff` | 4.9:1 | ✅ AA | ✅ |
+| `#009688` (brand teal) | `#ffffff` | 3.67:1 | ❌ **fails AA** | ✅ passes 3:1 |
+| `#ffffff` | `#009688` (brand teal) | 3.67:1 | ❌ **fails AA** | ✅ passes 3:1 |
+| `#ffc107` (gold) | `#ffffff` | 1.8:1 | ❌ fails | ❌ fails |
+| `#ffc107` (gold) | `#064e3b` (emerald) | 8.2:1 | ✅ AAA | ✅ |
+
+#### Canonical Resolution Rules
+
+1. **`#009688` stays the AKSA brand teal.** It is the identity colour for
+   navigation, boundaries, icons, focus rings, and large text. It is not being
+   replaced, and the visual direction of the generated AKSA designs is unchanged.
+2. **Filled primary controls with normal-size white text use `#00796b`**
+   (`brand.tealAccessible`). White on `#00796b` is ~5.32:1, which satisfies AA.
+3. **Normal-size body text on white uses `#064e3b`** (emerald).
+4. **Gold `#ffc107` is accent only** — spark, rewards, premium markers. It is
+   never normal-size text on white. On dark surfaces it is usable.
+5. **When in doubt:** text → emerald; non-text surface/boundary → teal.
+
+TypeScript consumers should use `colors.brand.tealAccessible` and the
+`contrast` token map in `src/design-system/tokens/brand.ts` rather than
+hardcoding these hexes.
 
 ### Focus Management
 
 | Requirement | Implementation |
 |-------------|----------------|
-| Visible focus | `outline: 2px solid #009688; outline-offset: 2px;` |
+| Visible focus | `outline: 2px solid #009688; outline-offset: 2px;` — teal is a UI boundary, so 3.67:1 clears the 3:1 requirement |
 | Focus order | Logical, matches visual order |
 | Skip links | "Skip to main content" at page top |
 | Focus trap | Modals, drawers, dropdowns |

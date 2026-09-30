@@ -49,14 +49,37 @@ export const brand = {
  */
 export const colors = {
   brand: {
-    /** Primary teal — primary actions, navigation, boundaries. */
+    /**
+     * CANONICAL AKSA brand teal — identity colour.
+     *
+     * Contrast against white: ~3.67:1.
+     * Therefore ACCEPTABLE for: graphical/UI boundaries, icons, focus rings,
+     * large text where the applicable threshold is met.
+     * NOT ACCEPTABLE for: normal-size body or button text against white
+     * (WCAG AA requires 4.5:1).
+     *
+     * For a filled primary action carrying normal-size white text, use
+     * `brand.tealAccessible` instead.
+     */
     teal: '#009688',
+    /**
+     * Accessible darker teal — ~5.32:1 contrast of white text on this colour,
+     * which satisfies WCAG AA for normal-size text (4.5:1 required).
+     *
+     * Use this as the background of filled primary buttons/badges that render
+     * normal-size white text. This is an accessibility implementation
+     * refinement, NOT a change to the AKSA visual identity.
+     */
+    tealAccessible: '#00796b',
     tealHover: '#00796b',
     tealActive: '#00695c',
-    /** Deep emerald — body text on light surfaces, emphasis. */
+    /** Deep emerald — body text on light surfaces, strong surfaces. */
     emerald: '#064e3b',
     emeraldHover: '#065f46',
-    /** Restrained gold accent — spark, rewards, premium markers. */
+    /**
+     * Restrained gold accent — spark, rewards, premium markers.
+     * Accent ONLY: never normal-size text on white (fails contrast).
+     */
     gold: '#ffc107',
     goldHover: '#ffb300',
     goldSoft: '#fff8e1',
@@ -225,6 +248,10 @@ export const targetSize = {
 } as const;
 
 export const focusRing = {
+  /**
+   * Teal satisfies the 3:1 requirement for UI/focus indicators (~3.67:1 on white),
+   * so the brand teal is retained for focus rings unchanged.
+   */
   color: colors.brand.teal,
   width: '2px',
   offset: '2px',
@@ -236,6 +263,32 @@ export const focusRing = {
 
 export type BrandToken = typeof brand;
 export type ColorToken = typeof colors;
+
+/**
+ * WCAG 2.1 AA resolution for the AKSA palette.
+ *
+ * Architect review correction (B1.2 / AR-02): `#009688` against white is
+ * ~3.67:1, which does NOT meet AA for normal-size text. The canonical brand
+ * teal is unchanged; consumers must select the correct token.
+ */
+export const contrast = {
+  /** Primary teal on white. Fails AA for normal text; fine for large text/UI. */
+  tealOnWhite: 3.67,
+  /** Accessible darker teal — white text on this colour. Passes AA normal text. */
+  whiteOnTealAccessible: 5.32,
+  /** Deep emerald on white — passes AAA. Safe for body text. */
+  emeraldOnWhite: 8.9,
+  /** White text on deep emerald — passes AAA. */
+  whiteOnEmerald: 8.9,
+  /** Gold on white — fails badly. Accent only. */
+  goldOnWhite: 1.8,
+  /** WCAG AA threshold for normal-size text. */
+  aaNormalText: 4.5,
+  /** WCAG AA threshold for large text (>=18px, or >=14px bold). */
+  aaLargeText: 3.0,
+} as const;
+
+export type ContrastToken = typeof contrast;
 export type SpacingToken = typeof spacing;
 export type RadiusToken = typeof radius;
 export type ShadowToken = typeof shadows;

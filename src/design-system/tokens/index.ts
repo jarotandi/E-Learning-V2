@@ -14,6 +14,7 @@
 export {
   brand,
   colors,
+  contrast,
   spacing,
   radius,
   shadows,
@@ -29,6 +30,7 @@ export {
 export type {
   BrandToken,
   ColorToken,
+  ContrastToken,
   SpacingToken,
   RadiusToken,
   ShadowToken,

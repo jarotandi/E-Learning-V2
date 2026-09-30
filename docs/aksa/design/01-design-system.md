@@ -12,11 +12,21 @@ The token contract is the single source of truth for AKSA design values. All new
 
 ### Color Tokens
 
+> **Accessibility correction (B1.2 / AR-02).** `#009688` against white is
+> approximately **3.67:1**. It does **not** meet WCAG AA for normal-size text
+> (4.5:1 required). `#009688` remains the canonical AKSA brand teal — this is an
+> implementation rule, not an identity change. For filled primary controls
+> carrying normal-size white text, use `brand.tealAccessible` (`#00796b`,
+> ~5.32:1). Full rationale: [06-responsive-accessibility.md](./06-responsive-accessibility.md).
+
 ```typescript
 export const colors = {
   // Brand
   brand: {
+    /** Canonical brand teal. ~3.67:1 on white — UI/large text only. */
     teal: '#009688',
+    /** Accessible darker teal. ~5.32:1 with white text — AA normal text. */
+    tealAccessible: '#00796b',
     tealHover: '#00796b',
     tealActive: '#00695c',
     emerald: '#064e3b',
@@ -220,6 +230,20 @@ These are the foundational components to be built in B1.2+. Documented here for 
 
 ---
 
+### Contrast reference (TypeScript)
+
+```typescript
+export const contrast = {
+  tealOnWhite: 3.67,              // fails AA normal text; OK large text/UI
+  whiteOnTealAccessible: 5.32,    // passes AA normal text
+  emeraldOnWhite: 8.9,            // passes AAA
+  whiteOnEmerald: 8.9,            // passes AAA
+  goldOnWhite: 1.8,               // accent only, never normal text
+  aaNormalText: 4.5,
+  aaLargeText: 3.0,
+} as const;
+```
+
 ## Usage Rule
 
 New code in `src/app`, `src/features`, `src/studio` should import the tokens rather than hardcoding values.
@@ -227,16 +251,29 @@ New code in `src/app`, `src/features`, `src/studio` should import the tokens rat
 > **Import path note (CONF-01).** The repository `@/*` alias currently resolves to the **project root**, not `src/` (`tsconfig.json` → `"@/*": ["./*"]`, `vite.config.ts` → `path.resolve(__dirname, '.')`). Therefore `@/design-system/tokens/brand` does **not** resolve today. Until B1.2 realigns the alias to `src/*`, use a relative import — matching the existing `src/components/*` convention.
 
 ```typescript
-// ✅ Correct (B1.1 — relative import from inside src/)
-import { colors, spacing, radius } from '../../design-system/tokens/brand';
-// or, from src/app/navigation/ specifically:
+// ✅ Correct — alias now resolves to src/ (CONF-01 resolved in B1.2)
+import { colors, spacing, radius } from '@/design-system/tokens/brand';
+
+// ✅ Also valid — relative import, matches existing src/components/* convention
 import { layout, zIndex } from '../../design-system/tokens/brand';
 
-// ❌ Does not resolve in B1.1 (alias points at repo root)
-import { colors } from '@/design-system/tokens/brand';
-
-// ❌ Avoid in new code
+// ❌ Avoid in new code — hardcoded hex
 style={{ backgroundColor: '#009688', borderRadius: '8px' }}
 ```
 
-Tracked as CONF-01 in `docs/aksa/b1/02-b1-subbatch-plan.md`.
+The `@/*` alias and the Vite alias both target `src/` as of B1.2. Verified by
+`src/app/aliasContractProof.ts`, which fails `tsc --noEmit` if either side drifts.
+Relative imports remain valid and are not being mass-migrated for style.
+
+## Text-Colour Selection Rule
+
+| Intent | Token | Why |
+|---|---|---|
+| Normal-size body text on white | `brand.emerald` | 8.9:1, passes AAA |
+| Normal-size white text on a filled primary control | background `brand.tealAccessible` | 5.32:1, passes AA |
+| Large text on white | `brand.teal` | 3.67:1 meets the 3.0:1 large-text threshold |
+| Icon, border, focus ring, large surface | `brand.teal` | UI boundary, 3.67:1 is adequate |
+| Accent only (spark, rewards, markers) | `brand.gold` | 1.8:1 — never normal text on white |
+
+When in doubt, use `brand.emerald` for text and reserve `brand.teal` for
+non-text surfaces and boundaries.

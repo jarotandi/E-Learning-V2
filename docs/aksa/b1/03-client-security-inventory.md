@@ -189,53 +189,198 @@ sub-batch once the router migration settles.
 
 | ID | Severity | Summary | Status | Batch |
 |---|---|---|---|---|
-| SEC-P0-01 | **P0** | Vite `define` injects `GEMINI_API_KEY` into client build | Open — latent path, no live key | B1.2 |
-| SEC-P0-02 | **P0** | `@google/genai` declared but unused | Open | B1.2 |
-| SEC-P1-01 | P1 | No server/edge boundary for AI calls | Open | B5 |
-| SEC-P1-02 | P1 | `localStorage` is authority for identity/payment/audit | Open | B2 |
-| SEC-P1-03 | P1 | Admin view has no authentication gate | Open | B2 + B1.4 |
-| SEC-P2-01 | P2 | README instructs real key into `.env.local` | Open | B1.2 |
-| SEC-P2-02 | P2 | Placeholder key-like value in `.env.example` | Informational | B1.2 |
-| SEC-P2-03 | P2 | No CI workflow | Open | B13 |
+| SEC-P0-01 | **P0** | Vite `define` injects `GEMINI_API_KEY` into client build | ✅ **CLOSED in B1.2** | — |
+| SEC-P0-02 | **P0** | `@google/genai` declared but unused | ✅ **CLOSED in B1.2** | — |
+| SEC-P1-01 | P1 | No server/edge boundary for AI calls | ⬜ **Open** | B5 |
+| SEC-P1-02 | P1 | `localStorage` is authority for identity/payment/audit | ⬜ **Open** | B2 |
+| SEC-P1-03 | P1 | Admin view has no authentication gate | ⬜ **Open** | B2 |
+| SEC-P2-01 | P2 | README instructs real key into `.env.local` | ✅ **CLOSED in B1.2** | — |
+| SEC-P2-02 | P2 | Placeholder key-like value in `.env.example` | ✅ **CLOSED in B1.2** | — |
+| SEC-P2-03 | P2 | No CI workflow | ⬜ **Open** | B13 |
+
+**B1.2 did not solve, and does not claim to have solved, any B2 or B5 issue.**
+SEC-P1-01, SEC-P1-02, SEC-P1-03, and SEC-P2-03 remain open.
+
+---
+
+## B1.2 Remediation Evidence
+
+Closure commit: **`a01a872` — `fix(security): remove client AI credential exposure path`**
+(committed in isolation, paired with no alias, design, or feature change).
+
+### SEC-P0-01 — CLOSED
+
+`vite.config.ts` before:
+
+```typescript
+import {defineConfig, loadEnv} from 'vite';
+
+export default defineConfig(({mode}) => {
+  const env = loadEnv(mode, '.', '');
+  return {
+    plugins: [react(), tailwindcss()],
+    define: {
+      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+    },
+    ...
+```
+
+`vite.config.ts` after:
+
+```typescript
+import {defineConfig} from 'vite';
+
+export default defineConfig(() => {
+  return {
+    plugins: [react(), tailwindcss()],
+    ...
+```
+
+Removed: the entire `define` block, and `loadEnv` (which existed only to feed
+that block). Preserved unchanged: the React plugin, the Tailwind plugin, the
+`server.hmr` behaviour, and all other build behaviour.
+
+Verification after the change:
+
+```text
+git grep -nE "process\.env\.(GEMINI_API_KEY|GOOGLE_API_KEY)" -- src vite.config.ts
+  -> no live code matches (documentation references only)
+git grep -n "GEMINI_API_KEY" -- . ":!docs"
+  -> .env.example (prohibition note only), src/integrations/README.md (closure note)
+```
+
+### SEC-P0-02 — CLOSED
+
+```text
+npm uninstall @google/genai
+```
+
+- `package.json`: `"@google/genai": "^1.29.0"` removed from `dependencies`.
+- `package-lock.json`: updated by npm tooling; zero remaining `@google/genai`
+  entries (verified with `Select-String`). The lockfile was not hand-edited.
+- `npm audit` vulnerability count fell from **12 → 9** (6 high → 4 high,
+  4 moderate → 3 moderate) as a side effect.
+- No application import existed, so removal is behaviour-neutral.
+
+### SEC-P2-01 — CLOSED
+
+`README.md` no longer instructs developers to create a client `.env.local` with
+a real key. The step was removed and replaced with an architecture-safe note:
+
+```markdown
+## AI Integration
+
+AI provider integration is not active in the client.
+Future AI calls must use the AKSA server/edge AI Router boundary.
+```
+
+No fake or non-existent server was documented.
+
+> Implementation note: `README.md` has mixed encoding (a UTF-8 section followed
+> by a pre-existing UTF-16LE fragment), which is why Git classifies it as binary.
+> The edit was performed byte-precisely to leave the UTF-16 fragment untouched.
+
+### SEC-P2-02 — CLOSED / REMOVED
+
+`GEMINI_API_KEY="MY_GEMINI_API_KEY"` was deleted from `.env.example`. No
+replacement client-visible AI secret variable was added. Instead, `.env.example`
+now carries an explicit prohibition notice so the variable is not reintroduced:
+
+```text
+# SECURITY: Do NOT add AI provider keys (GEMINI_API_KEY, GOOGLE_API_KEY, or any
+# other provider secret) to this file or to any client-visible .env file.
+```
+
+`APP_URL` was retained, since it is a URL, not a credential.
+
+### Fresh gates after remediation
+
+| Gate | Result |
+|---|---|
+| `npm ci` | PASS |
+| `npm run lint` | PASS (exit 0) |
+| `npm run build` | PASS (exit 0, 2904 modules) |
+| `dist/assets/*.js` scanned for `GEMINI_API_KEY`, `MY_GEMINI_API_KEY`, `AIza`, `googleapis`, `GOOGLE_API_KEY`, `apiKey` | **Zero matches** |
+| `dist` scanned for `GoogleGenAI` | **Zero matches** |
+
+Bundle output is byte-for-byte unchanged from the B1.1 baseline
+(`index-ClsckA6U.js`, 1,474,396 bytes), confirming no runtime behaviour change.
+The three case-insensitive `genai` substring hits in `dist` were verified to be
+Indonesian prose ("mendalam mengenai", "detail mengenai", "soal mengenai"), not
+SDK code.
 
 ---
 
 ## Verified Absent
 
-Recorded explicitly so absence is not re-litigated every sub-batch.
+Re-verified fresh at the start of B1.2, before any edit. Recorded explicitly so
+absence is not re-litigated every sub-batch.
 
 | Checked | Result |
 |---|---|
 | `process.env` reads in `src/` | None |
 | `@google/genai` imports in `src/` | None |
+| `GoogleGenAI` constructor usage | None |
 | Any AI provider SDK import in `src/` | None |
 | Any `apiKey` identifier in `src/` | None |
+| `Gemini` / `generativeai` / `openai` / `anthropic` / `openrouter` in `src/` code | None (prose only in boundary READMEs) |
 | `fetch(` / `XMLHttpRequest` / `WebSocket` / `EventSource` / `axios` in `src/` | None |
 | Real credentials committed | None |
 | `.env` / `.env.local` / `.env.production` | None (only `.env.example`) |
 | Secret patterns in built `dist/assets/*.js` | None |
 | GitHub Actions workflows | None |
+| `@/` imports in `src/` before CONF-01 fix | None (alias was unused, so realignment was safe) |
+
+**The B1.1 inventory was accurate.** No contradiction was found between the
+recorded findings and repository state, so no STOP condition was triggered.
 
 ---
 
-## B1.1 Security Posture
+## B1.1 Security Posture (Historical)
+
+Recorded as it stood at B1.1, before remediation. Superseded by the B1.2
+evidence above; retained because it documents the original risk.
 
 - **No new exposure introduced by B1.1.** New files under `src/` are contract
   definitions with no network access, no environment reads, and no provider
   imports. Verified by grep across the B1.1 diff.
-- **No credential is currently shipped.** SEC-P0-01 is a live path, not an
+- **No credential was being shipped.** SEC-P0-01 was a live path, not an
   active leak.
-- **SEC-P0-01 and SEC-P0-02 remain open by design** and are the first security
+- **SEC-P0-01 and SEC-P0-02 were open by design** and were the first security
   action of B1.2.
 
 ---
 
-## B1.1 Remediation Order (for B1.2)
+## B1.2 Security Posture (Current)
 
-1. Remove the `define` entry in `vite.config.ts`.
-2. Update `README.md` key instructions.
-3. Deprecate/relocate `GEMINI_API_KEY` in `.env.example`.
-4. Re-run the two security greps as a regression gate.
-5. Remove the unused `@google/genai` dependency.
-6. Re-run `npm ci`, `npm run lint`, `npm run build`.
-7. Verify `dist/` contains no key pattern.
+- **Both P0 findings are closed** with fresh evidence, in an isolated commit.
+- **No new exposure introduced.** The B1.2 diff adds one compile-time-only
+  TypeScript proof file (`src/app/aliasContractProof.ts`) containing no runtime
+  behaviour, no network access, and no environment reads. Verified by scanning
+  every changed `.ts`/`.tsx` file for `process.env`, `apiKey`, `GEMINI`,
+  `genai`, `fetch(`, and `localStorage` — **zero matches**.
+- **The injection path no longer exists.** There is no `define` block in
+  `vite.config.ts`, so no build-time secret substitution can occur. Removing the
+  capability — rather than merely removing the unused reference — means a future
+  careless `process.env` read fails loudly instead of silently shipping a key.
+- **`@google/genai` is no longer installed**, so the SDK is not reachable even
+  accidentally.
+- **Still open, and not addressed by B1.2:** SEC-P1-01 (no AI server/edge
+  runtime — B5), SEC-P1-02 (`localStorage` authority — B2), SEC-P1-03 (ungated
+  admin — B2), SEC-P2-03 (no CI — B13).
+
+---
+
+## Standing Regression Gates (run at every future sub-batch)
+
+```text
+git grep -n "GEMINI_API_KEY" -- . ":!docs"        # expect: prohibition notes only
+git grep -n "@google/genai" -- src package.json   # expect: no matches
+git grep -nE "process\.env\.(GEMINI_API_KEY|GOOGLE_API_KEY)" -- src vite.config.ts
+                                                     # expect: no matches
+# after npm run build:
+# scan dist/assets/*.js for GEMINI_API_KEY | MY_GEMINI_API_KEY | AIza | apiKey
+```
+
+Any non-empty result from these gates is a regression and must block the
+sub-batch.
