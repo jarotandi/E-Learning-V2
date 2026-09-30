@@ -39,10 +39,16 @@ B1.1** — no Supabase, no OpenMAIC, no lab engines.
    ownership, offline behaviour, security boundary, and exit strategy per
    `docs/aksa/09-reference-stack.md`.
 
-## Security direction (B1.1)
+## Security direction
 
-`vite.config.ts` currently injects `process.env.GEMINI_API_KEY` into the client
-build via Vite `define`. This is classified **P0** in
-`docs/aksa/b1/03-client-security-inventory.md`. B1.1 documents the risk and
-defines the target path. Removal of the injection path is a B1.2 task and must
-not be paired with feature migration, so that the change stays auditable.
+As of **B1.2** the client credential exposure path is **CLOSED**:
+
+- `vite.config.ts` no longer defines or injects any provider secret.
+- `loadEnv` is no longer used by the build.
+- The unused `@google/genai` dependency was removed from `package.json`.
+- `.env.example` carries no AI provider key variable.
+
+There is still no server/edge AI runtime (SEC-P1-01, tracked for B5). Until that
+exists, `src/integrations/ai/` must stay empty — there is nowhere safe to place a
+provider call from the browser. Reintroducing a client-side `process.env` secret
+read or any `define` entry for a provider key is a regression.
