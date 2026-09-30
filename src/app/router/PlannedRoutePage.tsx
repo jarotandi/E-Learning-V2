@@ -38,7 +38,11 @@ import { colors, radius, shadows } from '../../design-system/tokens/brand';
 export interface PlannedRoutePageProps {
   /** Module display name, e.g. "Library". */
   moduleName: string;
-  /** Owning delivery batch, e.g. "B2". */
+  /**
+   * Owning delivery batch, e.g. "B3", or "TBD" when `docs/aksa/10-batch-roadmap.md`
+   * allocates no batch to this module. "TBD" is a truthful value, not a
+   * placeholder to default-fill.
+   */
   batch: string;
   /** One short, non-functional sentence describing intent. */
   intent: string;
@@ -75,9 +79,12 @@ export function PlannedRoutePage({
         Planned
       </span>
 
+      {/* Small (10px) label. `brand.teal` on white is ~3.67:1 and fails AA for
+          normal-size text, so the accessible teal is used for the text while
+          `brand.teal` stays reserved for graphical/UI use (B1.3R1). */}
       <p
         className="mt-5 text-[10px] font-black uppercase tracking-widest"
-        style={{ color: colors.brand.teal }}
+        style={{ color: colors.brand.tealAccessible }}
       >
         AKSA {surface}
       </p>
@@ -151,10 +158,14 @@ export function PlannedRoutePage({
       {children}
 
       {backTo ? (
+        // Back link is normal-size text (14px bold is still under the 18.66px
+        // large-text threshold), so it needs the AA-compliant teal. The arrow
+        // icon inherits the same colour; the focus ring keeps brand teal via
+        // the global focus-visible contract.
         <Link
           to={backTo}
           className="mt-7 inline-flex items-center gap-2 text-sm font-bold transition-colors"
-          style={{ color: colors.brand.teal }}
+          style={{ color: colors.brand.tealAccessible }}
         >
           <ArrowLeft size={16} />
           {backLabel}

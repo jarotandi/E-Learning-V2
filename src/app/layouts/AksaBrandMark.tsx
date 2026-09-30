@@ -62,10 +62,15 @@ export function AksaBrandMark({
           >
             {brand.name}
           </span>
+          {/* Context label is 10px text, so it is normal-size copy and needs an
+              AA-compliant colour. `goldHover` on white is ~1.7:1 and fails
+              badly; gold stays an accent-only colour for spark/badge surfaces.
+              The wordmark above is deep emerald (8.9:1), so accessible teal
+              (5.32:1) reads as a secondary tint beneath it. B1.3R1. */}
           {context ? (
             <span
               className="text-[10px] font-bold uppercase tracking-widest"
-              style={{ color: colors.brand.goldHover }}
+              style={{ color: colors.brand.tealAccessible }}
             >
               {context}
             </span>

@@ -152,7 +152,18 @@ export interface PlannedLearnerRoute {
   segment: string;
   /** Human label shown in the shell and the placeholder. */
   label: string;
-  /** Owning delivery batch, per docs/aksa/b1/02-b1-subbatch-plan.md. */
+  /**
+   * Owning delivery batch, per `docs/aksa/10-batch-roadmap.md` (authority).
+   *
+   * `'TBD'` means the roadmap allocates NO batch to this module. That is a
+   * deliberate, truthful value — not a gap to be filled with "the next batch".
+   * B2 is Identity & Data Authority (Supabase Auth, roles, RLS, storage,
+   * audit); it is infrastructure other batches depend on, NOT a catch-all
+   * delivery batch. Assigning a UI surface to B2 merely because B2 comes next
+   * is the specific error this field was corrected for (B1.3R1).
+   *
+   * Full audit and per-value authority: docs/aksa/b1/05-planned-route-delivery-map.md
+   */
   batch: string;
   /** Non-functional description of what the module will be. */
   intent: string;
@@ -162,103 +173,130 @@ export const PLANNED_LEARNER_ROUTES: readonly PlannedLearnerRoute[] = [
   {
     segment: 'path',
     label: 'My Path / Skill Map',
-    batch: 'B2',
+    // roadmap B3 "Learning Kernel": skill graph, learner model, mastery.
+    batch: 'B3',
     intent: 'Peta tujuan belajar dan penanda gap kompetensi.',
   },
   {
     segment: 'library',
     label: 'Library',
-    batch: 'B2',
+    // No roadmap batch owns a learner content library. B4 owns authoring
+    // (Studio side); B12 owns offline packs. Neither is this surface.
+    batch: 'TBD',
     intent: 'Koleksi materi, modul, dan sumber belajar terkurasi.',
   },
   {
     segment: 'labs',
     label: 'Skills Labs',
-    batch: 'B2',
+    // roadmap B9 "Skills Labs".
+    batch: 'B9',
     intent: 'Latihan praktik terpandu berbasis skenario nyata.',
   },
   {
     segment: 'projects',
     label: 'Projects',
-    batch: 'B2',
+    // roadmap B11 "Projects & Credentials": real projects.
+    batch: 'B11',
     intent: 'Proyek terstruktur sebagai bukti kemampuan.',
   },
   {
     segment: 'partner-practice',
     label: 'Partner Practice',
-    batch: 'B2',
+    // No roadmap batch names peer/paired practice. B10 owns human support
+    // (tutors, chat, booking, video) but does not establish this surface.
+    batch: 'TBD',
     intent: 'Berlatih berpasangan dengan mentor atau fellow learner.',
   },
   {
     segment: 'ai',
     label: 'AI Tutor',
-    batch: 'B5',
+    // roadmap B10 "Human Support" lists "AI Tutor" explicitly. This is
+    // learner-facing tutoring, NOT B5 Creator AI. It also requires the
+    // server/edge AI Router to exist first (SEC-P1-01).
+    batch: 'B10',
     intent: 'Tutor AI. Memerlukan AKSA server/edge AI Router — belum ada.',
   },
   {
     segment: 'mentors',
     label: 'Guru & Mentor',
-    batch: 'B2',
+    // roadmap B10 "Human Support": primary/on-demand tutors.
+    // Corroborated by b1/01-legacy-compatibility-map.md (mentorProfile -> B10).
+    batch: 'B10',
     intent: 'Direktori guru dan mentor AKSA.',
   },
   {
     segment: 'live',
     label: 'AKSA Live',
-    batch: 'B2',
+    // roadmap B10 "Human Support": scheduled/instant video, office hours.
+    // Corroborated by b1/01-legacy-compatibility-map.md (schedule -> B10).
+    batch: 'B10',
     intent: 'Sesi live terjadwal dan rekaman kelas.',
   },
   {
     segment: 'progress',
     label: 'Progress',
-    batch: 'B2',
+    // No roadmap batch owns a progress surface. B3 owns the mastery and
+    // learner-model DATA this would present, but the roadmap does not
+    // allocate the surface itself, so ownership stays unallocated.
+    batch: 'TBD',
     intent: 'Analisis kemajuan belajar berbasis data.',
   },
   {
     segment: 'portfolio',
     label: 'Portfolio',
-    batch: 'B2',
+    // roadmap B11 "Projects & Credentials" lists "portfolio".
+    batch: 'B11',
     intent: 'Kumpulan karya dan achievement learner.',
   },
   {
     segment: 'passport',
     label: 'Skills Passport',
-    batch: 'B2',
+    // roadmap B11 "Projects & Credentials" lists "Skills Passport".
+    batch: 'B11',
     intent: 'Sertifikasi kompetensi yang dapat diverifikasi.',
   },
   {
     segment: 'career',
     label: 'Career',
-    batch: 'B2',
+    // No roadmap batch owns career guidance or selection preparation.
+    batch: 'TBD',
     intent: 'Panduan karier dan persiapan seleksi.',
   },
   {
     segment: 'community',
     label: 'Community',
-    batch: 'B2',
+    // No roadmap batch owns a learner community or discussion feed.
+    batch: 'TBD',
     intent: 'Ruang diskusi dan komunitas antar learner.',
   },
   {
     segment: 'rewards',
     label: 'Rewards',
-    batch: 'B2',
+    // No roadmap batch owns achievements, points, or recognition.
+    batch: 'TBD',
     intent: 'Sistem achievement, poin, dan pengakuan.',
   },
   {
     segment: 'downloads',
     label: 'Downloads',
-    batch: 'B2',
+    // roadmap B12 "Offline & Edge": downloadable content packs, storage
+    // manager. This is offline-material capability, NOT localStorage-as-
+    // authority (that is B2 / SEC-P1-02).
+    batch: 'B12',
     intent: 'Berkas unduhan dan materi milik learner.',
   },
   {
     segment: 'settings',
     label: 'Settings',
-    batch: 'B2',
+    // No roadmap batch owns learner account settings.
+    batch: 'TBD',
     intent: 'Pengaturan akun dan preferensi learner.',
   },
   {
     segment: 'help',
     label: 'Help Center',
-    batch: 'B2',
+    // No roadmap batch owns help, FAQ, or support content.
+    batch: 'TBD',
     intent: 'Bantuan, FAQ, dan dukungan AKSA.',
   },
 ] as const;
@@ -283,6 +321,11 @@ export const plannedLearnerPaths: Record<string, string> =
 export interface PlannedStudioRoute {
   segment: string;
   label: string;
+  /**
+   * Owning delivery batch, per `docs/aksa/10-batch-roadmap.md` (authority).
+   * `'TBD'` means the roadmap allocates no batch. Same rule and same intent as
+   * `PlannedLearnerRoute['batch']`.
+   */
   batch: string;
   intent: string;
 }
@@ -291,61 +334,74 @@ export const PLANNED_STUDIO_ROUTES: readonly PlannedStudioRoute[] = [
   {
     segment: '',
     label: 'Dashboard',
+    // roadmap B4 "AKSA Studio Core" owns the Studio shell this lands in.
     batch: 'B4',
     intent: 'Ringkasan aktivitas authoring AKSA Studio.',
   },
   {
     segment: 'editor',
     label: 'Studio / Editor',
+    // roadmap B4: "editor".
     batch: 'B4',
     intent: 'Editor konten Authoring dengan panel Copilot.',
   },
   {
     segment: 'templates',
     label: 'Templates',
+    // roadmap B4: "templates".
     batch: 'B4',
     intent: 'Pustaka template konten terstruktur.',
   },
   {
     segment: 'media',
     label: 'Media Library',
+    // roadmap B4: "media/source manager".
     batch: 'B4',
     intent: 'Kelola aset gambar, video, dan dokumen.',
   },
   {
     segment: 'factory',
     label: 'Content Factory',
+    // roadmap B5 "Creator AI & Content Factory".
     batch: 'B5',
     intent: 'Pipeline pembuatan konten. Memerlukan AI Router.',
   },
   {
     segment: 'validation',
     label: 'Validation Center',
+    // roadmap B6 "Validation Center": automatic validator registry, risk policy.
     batch: 'B6',
     intent: 'Validasi kelayakan konten sebelum publikasi.',
   },
   {
     segment: 'review',
     label: 'Review Queue',
+    // roadmap B6: "review queue", "human review".
     batch: 'B6',
     intent: 'Antrean review dan persetujuan konten.',
   },
   {
     segment: 'published',
     label: 'Published Content',
+    // roadmap B6: "publish gate", "re-validation".
     batch: 'B6',
     intent: 'Konten yang sudah tayang.',
   },
   {
     segment: 'analytics',
     label: 'Analytics',
-    batch: 'B4',
+    // The roadmap establishes NO batch for Studio analytics. B4 owns authoring
+    // primitives, not engagement reporting. Left unallocated rather than
+    // invented (B1.3R1).
+    batch: 'TBD',
     intent: 'Performa konten dan keterlibatan learner.',
   },
   {
     segment: 'settings',
     label: 'Settings',
-    batch: 'B4',
+    // The roadmap establishes NO batch for Studio settings. Not a B4 Studio
+    // Core deliverable. Left unallocated rather than invented (B1.3R1).
+    batch: 'TBD',
     intent: 'Pengaturan Studio dan preferensi authoring.',
   },
 ] as const;

@@ -47,9 +47,11 @@ export function NotFoundPage() {
           <SearchX size={26} style={{ color: colors.brand.emerald }} />
         </div>
 
+        {/* 10px label: `brand.teal` on white is ~3.67:1, which fails AA for
+            normal-size text. Accessible teal keeps the brand hue and passes. */}
         <p
           className="mt-6 text-[10px] font-black uppercase tracking-widest"
-          style={{ color: colors.brand.teal }}
+          style={{ color: colors.brand.tealAccessible }}
         >
           404 — Halaman tidak ditemukan
         </p>

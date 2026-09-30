@@ -45,7 +45,10 @@ export function LegacySchedulePage({
         {user?.isPremium ? (
           <>
             <div className="mb-8">
-              <p className="text-xs font-black uppercase tracking-widest text-brand-blue mb-2">
+              {/* `text-brand-blue` is #009688 (~3.67:1 on white) and fails AA for
+                  this 12px label. Accessible teal #00796b (~5.32:1) is the
+                  contract remedy for normal-size text (B1.3R1). */}
+              <p className="text-xs font-black uppercase tracking-widest text-[#00796b] mb-2">
                 Google Calendar Sync
               </p>
               <h1 className="text-4xl font-black text-brand-navy mb-3">
@@ -63,9 +66,12 @@ export function LegacySchedulePage({
                 <div key={session.id} className="card-premium p-6 bg-white">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="flex gap-5">
+                      {/* Teal is kept for the graphical Calendar icon and the
+                          tinted tile, but the 10px time label is text: it uses
+                          accessible teal so it passes AA on blue-50 (~4.89:1). */}
                       <div className="w-16 h-16 rounded-2xl bg-blue-50 text-brand-blue flex flex-col items-center justify-center shrink-0">
                         <Calendar size={22} />
-                        <span className="text-[10px] font-black mt-1">
+                        <span className="text-[10px] font-black mt-1 text-[#00796b]">
                           {session.startTime}
                         </span>
                       </div>
@@ -77,9 +83,11 @@ export function LegacySchedulePage({
                           {session.title}
                         </h2>
                         <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest">
+                          {/* Icon keeps brand teal (graphical); the mode label is
+                              text and needs the accessible teal on blue-50. */}
                           <span className="px-2 py-1 rounded-md bg-blue-50 text-brand-blue flex items-center gap-1">
                             <Video size={12} />
-                            {session.mode}
+                            <span className="text-[#00796b]">{session.mode}</span>
                           </span>
                           <span className="px-2 py-1 rounded-md bg-red-50 text-red-500 flex items-center gap-1">
                             <Mail size={12} />
@@ -102,11 +110,15 @@ export function LegacySchedulePage({
                         Tambah Calendar
                         <Calendar size={16} />
                       </a>
+                      {/* Filled control with normal-size (12px) white text.
+                          White on #009688 is ~3.67:1 and fails AA; the contract
+                          remedy is the accessible teal fill (~5.32:1). The
+                          hover already used blue-600 (~5.17:1) and passes. */}
                       <a
                         href={session.meetUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex-1 px-4 py-3 rounded-xl bg-brand-blue text-white text-xs font-black flex items-center justify-center gap-2 hover:bg-blue-600 transition-all"
+                        className="flex-1 px-4 py-3 rounded-xl bg-[#00796b] text-white text-xs font-black flex items-center justify-center gap-2 hover:bg-blue-600 transition-all"
                       >
                         Masuk GMeet
                         <ExternalLink size={16} />

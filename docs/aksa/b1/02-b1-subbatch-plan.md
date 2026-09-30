@@ -45,6 +45,7 @@ product capability**.
 | Official design contract (`docs/aksa/design/`) | Done |
 | Brand / design-system / a11y tokens contract | Done |
 | Learner + Studio navigation data contract | Done |
+| Planned route delivery map | Done — `05-planned-route-delivery-map.md` (B1.3R1) |
 | Source boundary skeleton (`app`, `design-system`, `core`, `features`, `studio`, `integrations`, `shared`) | Done |
 | Legacy compatibility map | Done |
 | Client security inventory | Done |
@@ -89,6 +90,27 @@ Security and build foundation only. **No router, no shells, no feature work.**
 | Runtime product behaviour change | **Deliberate and documented** — the 0.3s view fade-**out** is dropped (DEFECT-1, `04-b1.3-router-migration.md`) |
 | New dependencies | `react-router-dom` ^7.18.4 (lockfile delta purely additive) |
 
+B1.3R1 (contract correction) followed architect review. Two corrections, no
+routing behaviour change:
+
+- **Route delivery metadata.** `PLANNED_LEARNER_ROUTES` had assigned almost every
+  future surface to `B2` on the reasoning that B2 came next. B2 is Identity & Data
+  Authority, not a catch-all. Every value is now traced to
+  `10-batch-roadmap.md`, and the 9 learner + 2 studio routes the roadmap does not
+  allocate read `TBD` rather than a guessed batch. Full audit in
+  `05-planned-route-delivery-map.md`.
+- **Accessibility contract.** `brand.teal` (#009688, ~3.67:1 on white) and gold
+  (#ffc107, ~1.63:1) were used for normal/small-size text in the B1.3 router and
+  layout layer, which the token contract explicitly disallows. 6 textual
+  violations corrected to `tealAccessible` (#00796b, ~5.32:1). Teal retained for
+  icons, borders, focus rings, the large monogram glyph, and other non-text use;
+  gold retained as an accent. Legacy `src/components/` violations (200+ uses of
+  `text-brand-blue`, which is the same #009688) are out of B1.3R1 scope and
+  remain for B1.5.
+
+`verify-routes.mjs` re-verified at 174 passed / 0 failed, `npm run lint` and
+`npm run build` exit 0.
+
 Full evidence, the three defects found and fixed in place, and the B1.4
 follow-ups are recorded in `04-b1.3-router-migration.md`. Implementation commit:
 `98dcbb120545829125dfdb0efe58fc4b6784226f`.
@@ -98,8 +120,6 @@ redirect/alias table, and `scripts/verify-routes.mjs` fails the build if any of
 the 21 capabilities becomes unreachable.
 
 ### B1.4 - Design System + Monolith Decomposition ← NEXT
-
-### B1.4 — Design System + Monolith Decomposition
 
 Status: **NEXT.**
 
