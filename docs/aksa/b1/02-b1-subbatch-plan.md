@@ -17,6 +17,7 @@ Authority: `docs/aksa/10-batch-roadmap.md` (B1 definition),
 | B1.4A — Design-System Primitives + Public Header | **✅ COMPLETE** | `06-b1.4a-design-system-public-header.md` |
 | B1.4B — `StudentDashboard` decomposition | **✅ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
 | **B1.4B-R1 — Entitlement parity + Profile accessibility** | **✅ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
+| **B1.4B-R2 — Chrome accessibility closeout** | **✅ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
 | B1.4C — `LearningPage` decomposition | **← NEXT** | this document, §B1.4 |
 | B1.4D — `AdminDashboard` split + `/admin/*` sub-routes | pending | this document, §B1.4 |
 | B1.4 (whole) | **IN PROGRESS** | this document, §B1.4 |
@@ -239,6 +240,28 @@ Following architect review, two defects were corrected in a focused correction b
 | Profile disclosure | Done — disclosure pattern, Tab order, Escape/focus return |
 | Pure derivation function | Done — `deriveLegacyLearnerAccess()` testable |
 | Learner access verifier | Done — 66 deterministic checks |
+| Route/design-system/lint/build | All pass |
+
+#### B1.4B-R2 — Learner Chrome Accessibility Closeout
+
+Following B1.4B-R1, this batch closes the remaining accessibility gaps in the learner chrome:
+
+| Defect | Before | After |
+|--------|--------|-------|
+| Touch targets | Hamburger/drawer close/profile/logout < 44×44 | All ≥44×44 via `min-w-11 min-h-11` |
+| Premium lock naming | No accessible explanation on disabled items | `aria-label="Assessment Center — Memerlukan akses Premium"` + `title` |
+| Profile disclosure | Verified disclosure pattern (B1.4A) | Confirmed: no `role="menu"`, natural Tab order, Escape/focus return |
+
+**Changes:**
+- `src/app/layouts/LearnerLayout.tsx` — `min-w-11 min-h-11` on hamburger, drawer close, profile trigger, Profile link, Logout button; `aria-label` + `title` on premium-gated nav items
+
+**Gates:** All existing gates pass (174 routes, 50 design-system, 66 learner-access, lint, build)
+
+| Item | Status |
+|------|--------|
+| Touch targets ≥44×44 | Done — hamburger, drawer close, profile trigger, Profile, Logout |
+| Premium lock accessible name | Done — `aria-label` + `title` on Assessment/Calendar |
+| Profile disclosure pattern | Confirmed — disclosure, not menu |
 | Route/design-system/lint/build | All pass |
 
 #### B1.4C–D — inherited constraints
