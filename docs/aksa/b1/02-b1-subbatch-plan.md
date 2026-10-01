@@ -16,7 +16,8 @@ Authority: `docs/aksa/10-batch-roadmap.md` (B1 definition),
 | B1.3 — Production Router + AKSA App Shell | **✅ COMPLETE** | `04-b1.3-router-migration.md` |
 | B1.4A — Design-System Primitives + Public Header | **✅ COMPLETE** | `06-b1.4a-design-system-public-header.md` |
 | B1.4B — `StudentDashboard` decomposition | **✅ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
-| B1.4C — `LearningPage` decomposition | pending | this document, §B1.4 |
+| **B1.4B-R1 — Entitlement parity + Profile accessibility** | **✅ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
+| B1.4C — `LearningPage` decomposition | **← NEXT** | this document, §B1.4 |
 | B1.4D — `AdminDashboard` split + `/admin/*` sub-routes | pending | this document, §B1.4 |
 | B1.4 (whole) | **IN PROGRESS** | this document, §B1.4 |
 | B1.5 — Regression + Visual Acceptance | pending | this document, §B1.5 |
@@ -214,6 +215,31 @@ Design-system primitives used throughout (Card, Button, ButtonLink, Badge). Char
 | Lint / Build | exit 0 |
 
 Four defects from B1.4A carry forward: ≥1024px dashboard measurement (no viewport resize), visual acceptance vs designs (B1.5), `contrast.emeraldOnWhite` token correction (separate pass), B1.3 TBD spot-check on learner route.
+
+#### B1.4B-R1 — Learner Entitlement Parity & Profile Accessibility Correction
+
+Following architect review, two defects were corrected in a focused correction batch:
+
+| Defect | Before | After |
+|--------|--------|-------|
+| Entitlement parity | LearnerLayout did not apply `useLegacyLearnerAccess()` to sidebar; header used `user?.isPremium` | Single `useLegacyLearnerAccess()` authority; Assessment Center & Calendar visually gated for non-premium (opacity-40, Lock, no nav) |
+| Profile accessibility | `role="menu"` with `tabIndex={-1}` but no ArrowUp/Down/Home/End/roving focus | B1.4A disclosure pattern: `aria-expanded`/`aria-controls`, natural Tab order, Escape + focus return, outside click close |
+
+**Changes:**
+- `src/app/layouts/LearnerLayout.tsx` — uses `useLegacyLearnerAccess()`, premium-gated nav items, disclosure pattern
+- `src/features/learn/dashboard/legacyLearnerAccess.ts` — extracted `deriveLegacyLearnerAccess()` pure function
+- `scripts/verify-learner-access.mjs` — new contract verifier (66 checks)
+
+**Gates added:** `npx tsx scripts/verify-learner-access.mjs` — 66/0 pass
+
+| Item | Status |
+|------|--------|
+| Entitlement parity | Done — single `useLegacyLearnerAccess()` authority |
+| Premium UI gating (Assessment/Calendar) | Done — visually disabled, no nav for non-premium |
+| Profile disclosure | Done — disclosure pattern, Tab order, Escape/focus return |
+| Pure derivation function | Done — `deriveLegacyLearnerAccess()` testable |
+| Learner access verifier | Done — 66 deterministic checks |
+| Route/design-system/lint/build | All pass |
 
 #### B1.4C–D — inherited constraints
 
