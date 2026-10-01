@@ -2,6 +2,8 @@
  * AKSA Learner Shell
  * ==================
  * B1.3 — Production Router + AKSA App Shell
+ * B1.4B — StudentDashboard decomposition (dashboard now uses this shell)
+ * B1.4B-R1 — Learner entitlement parity & profile accessibility correction
  *
  * Authority: docs/aksa/design/03-learner-shell.md
  *            docs/aksa/design/02-navigation-information-architecture.md
@@ -12,28 +14,27 @@
  * ## Structure
  *
  *   Header  64px desktop / 56px mobile  — AKSA mark, tagline, search slot,
- *                                        notification slot, profile slot
+ *                                        notification slot, profile disclosure
  *   Sidebar 256px desktop               — 7 groups from learnerNavigation
  *   Drawer  tablet + mobile             — same groups, overlay backdrop
  *   Bottom  mobile only                 — 5 items, MAX_MOBILE_BOTTOM_NAV
  *
- * ## Which routes use this shell in B1.3
+ * ## Which routes use this shell (current)
  *
  *   USES the shell:
- *     - the 17 planned learner foundation routes
+ *     - `/app`      -> LearnerDashboardPage (B1.4B: decomposed into features/learn/dashboard)
  *     - `/app/assessment`, `/app/profile`, `/app/calendar` — legacy pages that
  *       carry NO navigation chrome of their own, so the shell is additive
  *       rather than duplicated.
+ *     - the 17 planned learner foundation routes (placeholders)
  *
  *   DOES NOT use the shell (documented legacy-compatibility mode):
- *     - `/app`      -> `StudentDashboard` (23.6 KB) renders its own sidebar +
- *                      header
  *     - `/app/learn`-> `LearningPage` (40.1 KB) renders its own workspace
- *                      chrome
+ *                      chrome (B1.4C will decompose)
  *     - exam, result, `/app/wallet`, `/app/login`-adjacent surfaces render
  *       bare, exactly as before the router existed.
  *
- *   Wrapping the two self-chrome pages in this shell would produce a double
+ *   Wrapping a self-chrome page in this shell would produce a double
  *   header and a double sidebar, which is the specific failure mode B1.3 is
  *   required to avoid. Decomposing them into the AKSA shell is B1.4 work —
  *   see `docs/aksa/b1/04-b1.3-router-migration.md`.
@@ -43,6 +44,24 @@
  * Every entry renders its `status`. `planned` entries carry a "Segera"
  * (upcoming) treatment so a reserved URL can never be mistaken for a shipped
  * feature. Only routes backed by a real legacy capability show as available.
+ *
+ * ## Entitlement (B1.4B-R1)
+ *
+ * LearnerLayout now uses `useLegacyLearnerAccess()` as the single UI
+ * entitlement authority. The legacy StudentDashboard disabled
+ * Tryout / Hasil & Ranking / Jadwal for non-premium users. In the new IA
+ * the corresponding shell destinations are:
+ *
+ *   Assessment Center -> /app/assessment
+ *   Calendar          -> /app/calendar
+ *
+ * For `access.hasPremiumAccess === false` these two navigation items are
+ * visibly unavailable: not a functioning NavLink, `aria-disabled="true"`,
+ * Lock icon, visually muted, accessible explanation. Click/keyboard does
+ * not navigate. For premium access: normal NavLink.
+ *
+ * THIS IS UI ENTITLEMENT COMPATIBILITY, NOT SECURITY OR AUTHORIZATION.
+ * B2 remains responsible for enforcement.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -50,9 +69,12 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Bell,
   ChevronDown,
+  ChevronRight,
+  Lock,
   LogOut,
   Menu,
   Search,
+  User,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -65,6 +87,7 @@ import {
 } from '../navigation/navigation.types';
 import { learnerNavigation } from '../navigation/learnerNavigation';
 import { useLegacyAppState } from '../providers/LegacyAppStateProvider';
+import { useLegacyLearnerAccess } from '@/features/learn/dashboard/legacyLearnerAccess';
 import { AksaBrandMark } from './AksaBrandMark';
 
 /* ------------------------------------------------------------------ */
@@ -99,7 +122,6 @@ import {
   Target,
   TrendingUp,
   Trophy,
-  User,
   Users,
   Video,
   Wallet,
@@ -164,7 +186,12 @@ function StatusDot({ status }: { status: NavItem['status'] }) {
 /* Sidebar                                                            */
 /* ------------------------------------------------------------------ */
 
-function LearnerSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+interface LearnerSidebarContentProps {
+  onNavigate?: () => void;
+  hasPremiumAccess: boolean;
+}
+
+function LearnerSidebarContent({ onNavigate, hasPremiumAccess }: LearnerSidebarContentProps) {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(
       learnerNavigation.sections.map((section) => [
@@ -181,6 +208,19 @@ function LearnerSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       [section.id]: !previous[section.id],
     }));
   };
+
+  /**
+   * Returns true if the given navigation item should be gated by premium access.
+   * Matches the legacy StudentDashboard behaviour: Tryout, Hasil & Ranking, Jadwal.
+   * In the new IA: Assessment Center (Tryout) and Calendar (Jadwal).
+   * "Hasil & Ranking" is reached via the result flow, not a direct nav item.
+   */
+  function isPremiumGatedItem(item: NavItem): boolean {
+    if (!hasPremiumAccess) {
+      return item.id === 'practice.assessment' || item.id === 'utilities.calendar';
+    }
+    return false;
+  }
 
   return (
     <nav
@@ -206,11 +246,11 @@ function LearnerSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                       ? 'bg-brand-blue/10 text-brand-navy'
                       : 'text-slate-600 hover:bg-slate-50'
                   }`
-                }
-              >
-                {SectionIcon ? <SectionIcon size={17} /> : null}
-                <span className="truncate">{section.label}</span>
-              </NavLink>
+              }
+            >
+              {SectionIcon ? <SectionIcon size={17} /> : null}
+              <span className="truncate">{section.label}</span>
+            </NavLink>
             ) : (
               <>
                 <button
@@ -235,26 +275,42 @@ function LearnerSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   <ul className="space-y-0.5">
                     {section.items.map((item) => {
                       const ItemIcon = resolveIcon(item.icon);
+                      const gated = isPremiumGatedItem(item);
+
                       return (
                         <li key={item.id}>
-                          <NavLink
-                            to={item.path ?? '#'}
-                            onClick={onNavigate}
-                            end={item.path === '/app'}
-                            className={({ isActive }) =>
-                              `flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-colors ${
-                                isActive
-                                  ? 'bg-brand-blue/10 text-brand-navy font-bold'
-                                  : 'text-slate-600 hover:bg-slate-50 hover:text-brand-navy'
-                              }`
-                            }
-                          >
-                            {ItemIcon ? (
-                              <ItemIcon size={15} className="shrink-0" />
-                            ) : null}
-                            <span className="truncate">{item.label}</span>
-                            <StatusDot status={item.status} />
-                          </NavLink>
+                          {gated ? (
+                            // Premium-gated: not a link, visually disabled, not in tab order
+                            <button
+                              type="button"
+                              disabled
+                              aria-disabled="true"
+                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium opacity-40 cursor-not-allowed"
+                              style={{ color: colors.neutral[500] }}
+                            >
+                              {ItemIcon ? <ItemIcon size={15} className="shrink-0" /> : null}
+                              <span className="truncate">{item.label}</span>
+                              <Lock size={14} className="ml-auto" />
+                            </button>
+                          ) : (
+                            // Normal available navigation
+                            <NavLink
+                              to={item.path ?? '#'}
+                              onClick={onNavigate}
+                              end={item.path === '/app'}
+                              className={({ isActive }) =>
+                                `flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-colors ${
+                                  isActive
+                                    ? 'bg-brand-blue/10 text-brand-navy font-bold'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-brand-navy'
+                                }`
+                              }
+                            >
+                              {ItemIcon ? <ItemIcon size={15} className="shrink-0" /> : null}
+                              <span className="truncate">{item.label}</span>
+                              <StatusDot status={item.status} />
+                            </NavLink>
+                          )}
                         </li>
                       );
                     })}
@@ -273,8 +329,14 @@ function LearnerSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 /* Header                                                             */
 /* ------------------------------------------------------------------ */
 
-function LearnerHeader({ onOpenDrawer }: { onOpenDrawer: () => void }) {
-  const { user, requestLogout } = useLegacyAppState();
+interface LearnerHeaderProps {
+  onOpenDrawer: () => void;
+  access: ReturnType<typeof useLegacyLearnerAccess>;
+  user: ReturnType<typeof useLegacyAppState>['user'];
+  requestLogout: () => void;
+}
+
+function LearnerHeader({ onOpenDrawer, access, user, requestLogout }: LearnerHeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
 
   // Close profile menu on outside click
@@ -305,8 +367,6 @@ function LearnerHeader({ onOpenDrawer }: { onOpenDrawer: () => void }) {
 
   const profileRef = React.useRef<HTMLDivElement>(null);
   const profileTriggerRef = React.useRef<HTMLButtonElement>(null);
-
-  const isPremium = user?.isPremium ?? false;
 
   return (
     <header
@@ -404,7 +464,11 @@ function LearnerHeader({ onOpenDrawer }: { onOpenDrawer: () => void }) {
           </button>
 
           {/* Profile disclosure — accessible account menu with Profile + Logout.
-              Replaces the legacy sidebar "Keluar" item and the simple profile link. */}
+              Replaces the legacy sidebar "Keluar" item and the simple profile link.
+              Uses a simple disclosure pattern (aria-expanded + aria-controls) —
+              NOT role="menu" — so keyboard navigation follows natural Tab order.
+              B1.4B-R1: fixed incomplete ARIA menu implementation (was role="menu"
+              with tabIndex={-1} items but no ArrowUp/Down/Home/End/roving focus). */}
           <div className="relative" ref={profileRef}>
             <button
               ref={profileTriggerRef}
@@ -433,7 +497,7 @@ function LearnerHeader({ onOpenDrawer }: { onOpenDrawer: () => void }) {
                   className="text-[10px] font-medium"
                   style={{ color: colors.neutral[500] }}
                 >
-                  {isPremium ? 'Premium' : 'Free'}
+                  {access.accessLabel}
                 </span>
               </span>
               <ChevronDown size={14} className={`transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
@@ -442,16 +506,11 @@ function LearnerHeader({ onOpenDrawer }: { onOpenDrawer: () => void }) {
             {profileOpen && (
               <div
                 id="aksa-learner-profile-menu"
-                role="menu"
-                aria-orientation="vertical"
-                aria-label={`Menu akun ${user?.name ?? 'Tamu'}`}
                 className="absolute right-0 mt-2 w-48 bg-white rounded-xl border shadow-lg overflow-hidden"
                 style={{ borderColor: colors.neutral[200] }}
               >
                 <Link
                   to="/app/profile"
-                  role="menuitem"
-                  tabIndex={-1}
                   onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-brand-navy hover:bg-slate-50"
                 >
@@ -461,8 +520,6 @@ function LearnerHeader({ onOpenDrawer }: { onOpenDrawer: () => void }) {
                 <hr className="border-slate-100 my-1" />
                 <button
                   type="button"
-                  role="menuitem"
-                  tabIndex={-1}
                   onClick={() => {
                     setProfileOpen(false);
                     requestLogout();
@@ -533,6 +590,8 @@ export interface LearnerLayoutProps {
 }
 
 export function LearnerLayout({ surfaceLabel }: LearnerLayoutProps) {
+  const { user, requestLogout } = useLegacyAppState();
+  const access = useLegacyLearnerAccess(user);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
 
@@ -563,7 +622,12 @@ export function LearnerLayout({ surfaceLabel }: LearnerLayoutProps) {
         Lewati ke konten utama
       </a>
 
-      <LearnerHeader onOpenDrawer={() => setDrawerOpen(true)} />
+      <LearnerHeader
+        onOpenDrawer={() => setDrawerOpen(true)}
+        access={access}
+        user={user}
+        requestLogout={requestLogout}
+      />
 
       <div className="flex-1 flex min-h-0">
         {/* Desktop sidebar (>=1024px per the shell contract) */}
@@ -578,7 +642,9 @@ export function LearnerLayout({ surfaceLabel }: LearnerLayoutProps) {
               </p>
             </div>
           ) : null}
-          <LearnerSidebarContent />
+          <LearnerSidebarContent
+            hasPremiumAccess={access.hasPremiumAccess}
+          />
         </aside>
 
         {/* Tablet drawer (<1024px) */}
@@ -610,7 +676,10 @@ export function LearnerLayout({ surfaceLabel }: LearnerLayoutProps) {
                   <X size={18} />
                 </button>
               </div>
-              <LearnerSidebarContent onNavigate={() => setDrawerOpen(false)} />
+              <LearnerSidebarContent
+                onNavigate={() => setDrawerOpen(false)}
+                hasPremiumAccess={access.hasPremiumAccess}
+              />
             </aside>
           </div>
         ) : null}

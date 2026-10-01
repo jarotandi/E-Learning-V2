@@ -2,6 +2,7 @@
  * Legacy Learner Access Model
  * ============================
  * B1.4B — StudentDashboard decomposition into AKSA LearnerLayout
+ * B1.4B-R1 — Entitlement parity & profile accessibility correction
  *
  * Authority: docs/aksa/design/01-design-system.md
  *            docs/aksa/design/06-responsive-accessibility.md
@@ -17,7 +18,6 @@
 
 import { useMemo } from 'react';
 import type { User } from '@/types';
-import { CURRICULUM, TRYOUT_SUBTEST_RESULTS } from '@/constants';
 
 /** Shape of a recommended lesson derived from weak tryout subjects. */
 export interface RecommendedLesson {
@@ -90,55 +90,49 @@ export interface DirectoryUser {
 }
 
 /**
- * Hook that derives the complete legacy access surface from the current user.
+ * PURE derivation function — no side effects, no hooks, no localStorage.
  *
- * @param user The authenticated user (from LegacyAppStateProvider)
- * @returns The complete derived access object
+ * This is the single source of truth for all legacy learner entitlement
+ * calculations. It can be used by the hook, by tests, and by any
+ * consumer that already has the user and directory record.
+ *
+ * @param user The authenticated user from LegacyAppStateProvider
+ * @param directoryUser The matching record from `theprams_demo_users` (or null)
+ * @returns The complete derived access surface
  */
-export function useLegacyLearnerAccess(user: User | null): LegacyLearnerAccess {
-  const directoryUser = useMemo((): DirectoryUser | null => {
-    try {
-      const rows = JSON.parse(localStorage.getItem('theprams_demo_users') || '[]');
-      return Array.isArray(rows) ? rows.find((item: any) => item.email === user?.email) ?? null : null;
-    } catch {
-      return null;
-    }
-  }, [user?.email]);
+export function deriveLegacyLearnerAccess(
+  user: User | null,
+  directoryUser: DirectoryUser | null,
+): LegacyLearnerAccess {
+  const accountType = ((
+    directoryUser?.accountType ||
+    user?.accountType ||
+    (user?.isPremium ? 'Paid' : 'Free')
+  ) as 'Free' | 'Paid' | 'Scholarship' | 'Staff');
 
-  const accountType = useMemo((): 'Free' | 'Paid' | 'Scholarship' | 'Staff' => {
-    return (directoryUser?.accountType || user?.accountType || (user?.isPremium ? 'Paid' : 'Free')) as
-      | 'Free'
-      | 'Paid'
-      | 'Scholarship'
-      | 'Staff';
-  }, [directoryUser, user]);
+  const packageName =
+    directoryUser?.packageName ||
+    user?.packageName ||
+    (accountType === 'Free' ? 'Gratis' : accountType === 'Scholarship' ? 'Beasiswa' : 'Premium');
 
-  const packageName = useMemo((): string => {
-    return directoryUser?.packageName || user?.packageName || (accountType === 'Free' ? 'Gratis' : accountType === 'Scholarship' ? 'Beasiswa' : 'Premium');
-  }, [directoryUser, user, accountType]);
+  const paymentStatus =
+    directoryUser?.paymentStatus ||
+    user?.paymentStatus ||
+    (accountType === 'Free' ? 'Free Active' : user?.isPremium ? 'Payment Approved' : 'Limited');
 
-  const paymentStatus = useMemo((): string => {
-    return directoryUser?.paymentStatus || user?.paymentStatus || (accountType === 'Free' ? 'Free Active' : user?.isPremium ? 'Payment Approved' : 'Limited');
-  }, [directoryUser, user, accountType]);
+  const approvedStatus = /approved|success/i.test(String(paymentStatus));
 
-  const approvedStatus = useMemo((): boolean => {
-    return /approved|success/i.test(String(paymentStatus));
-  }, [paymentStatus]);
+  const hasPremiumAccess =
+    Boolean(user?.isPremium) ||
+    (accountType === 'Paid' && approvedStatus) ||
+    (accountType === 'Scholarship' && approvedStatus);
 
-  const hasPremiumAccess = useMemo((): boolean => {
-    return Boolean(user?.isPremium) || (accountType === 'Paid' && approvedStatus) || (accountType === 'Scholarship' && approvedStatus);
-  }, [user, accountType, approvedStatus]);
+  const isScholarshipReview = accountType === 'Scholarship' && !hasPremiumAccess;
 
-  const isScholarshipReview = useMemo((): boolean => {
-    return accountType === 'Scholarship' && !hasPremiumAccess;
-  }, [accountType, hasPremiumAccess]);
+  const isPaidPending = accountType === 'Paid' && !hasPremiumAccess;
 
-  const isPaidPending = useMemo((): boolean => {
-    return accountType === 'Paid' && !hasPremiumAccess;
-  }, [accountType, hasPremiumAccess]);
-
-  const accountLabel = useMemo((): string => {
-    return accountType === 'Scholarship'
+  const accountLabel =
+    accountType === 'Scholarship'
       ? hasPremiumAccess
         ? 'BEASISWA APPROVED'
         : 'BEASISWA REVIEW'
@@ -147,39 +141,31 @@ export function useLegacyLearnerAccess(user: User | null): LegacyLearnerAccess {
         ? 'MEMBER BERBAYAR'
         : 'PAYMENT REVIEW'
       : 'FREE USER';
-  }, [accountType, hasPremiumAccess]);
 
-  const premiumUntil = useMemo((): string => {
-    return directoryUser?.premiumUntil || user?.premiumUntil || (hasPremiumAccess ? '31 Des 2025' : '-');
-  }, [directoryUser, user, hasPremiumAccess]);
+  const premiumUntil =
+    directoryUser?.premiumUntil || user?.premiumUntil || (hasPremiumAccess ? '31 Des 2025' : '-');
 
-  const accessLabel = useMemo((): string => {
-    return hasPremiumAccess
-      ? 'Premium Aktif'
-      : isScholarshipReview || isPaidPending
-      ? 'Menunggu Verifikasi'
-      : 'Akses Terbatas';
-  }, [hasPremiumAccess, isScholarshipReview, isPaidPending]);
+  const accessLabel = hasPremiumAccess
+    ? 'Premium Aktif'
+    : isScholarshipReview || isPaidPending
+    ? 'Menunggu Verifikasi'
+    : 'Akses Terbatas';
 
-  const nextActionLabel = useMemo((): string => {
-    if (isPaidPending) return 'Tunggu verifikasi pembayaran';
-    if (isScholarshipReview) return 'Tunggu review beasiswa';
-    if (hasPremiumAccess) return 'Lanjutkan belajar';
-    return 'Upgrade untuk akses penuh';
-  }, [isPaidPending, isScholarshipReview, hasPremiumAccess]);
+  const nextActionLabel = isPaidPending
+    ? 'Tunggu verifikasi pembayaran'
+    : isScholarshipReview
+    ? 'Tunggu review beasiswa'
+    : hasPremiumAccess
+    ? 'Lanjutkan belajar'
+    : 'Upgrade untuk akses penuh';
 
-  const accountDescription = useMemo((): string => {
-    if (isScholarshipReview) {
-      return 'Pengajuan beasiswa kamu sedang direview admin. Akses premium aktif setelah disetujui.';
-    }
-    if (isPaidPending) {
-      return 'Pendaftaran berbayar kamu sedang menunggu verifikasi admin. Akses premium aktif setelah pembayaran disetujui.';
-    }
-    if (hasPremiumAccess) {
-      return 'Ayo lanjutkan belajarmu. Jadwal, kelas, dan tryout premium sudah tersedia.';
-    }
-    return 'Akun gratis aktif. Upgrade paket untuk membuka kelas live, jadwal, dan tryout premium.';
-  }, [isScholarshipReview, isPaidPending, hasPremiumAccess]);
+  const accountDescription = isScholarshipReview
+    ? 'Pengajuan beasiswa kamu sedang direview admin. Akses premium aktif setelah disetujui.'
+    : isPaidPending
+    ? 'Pendaftaran berbayar kamu sedang menunggu verifikasi admin. Akses premium aktif setelah pembayaran disetujui.'
+    : hasPremiumAccess
+    ? 'Ayo lanjutkan belajarmu. Jadwal, kelas, dan tryout premium sudah tersedia.'
+    : 'Akun gratis aktif. Upgrade paket untuk membuka kelas live, jadwal, dan tryout premium.';
 
   return {
     directoryUser,
@@ -196,6 +182,26 @@ export function useLegacyLearnerAccess(user: User | null): LegacyLearnerAccess {
     nextActionLabel,
     accountDescription,
   };
+}
+
+/**
+ * Hook that derives the complete legacy access surface from the current user.
+ *
+ * @param user The authenticated user (from LegacyAppStateProvider)
+ * @returns The complete derived access object
+ */
+export function useLegacyLearnerAccess(user: User | null): LegacyLearnerAccess {
+  const directoryUser = useMemo((): DirectoryUser | null => {
+    try {
+      const rows = JSON.parse(localStorage.getItem('theprams_demo_users') || '[]');
+      return Array.isArray(rows) ? rows.find((item: any) => item.email === user?.email) ?? null : null;
+    } catch {
+      return null;
+    }
+  }, [user?.email]);
+
+  // Delegate all calculations to the pure derivation function
+  return deriveLegacyLearnerAccess(user, directoryUser);
 }
 
 /**
