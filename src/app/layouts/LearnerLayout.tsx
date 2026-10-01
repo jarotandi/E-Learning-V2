@@ -285,7 +285,9 @@ function LearnerSidebarContent({ onNavigate, hasPremiumAccess }: LearnerSidebarC
                               type="button"
                               disabled
                               aria-disabled="true"
-                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium opacity-40 cursor-not-allowed"
+                              aria-label={`${item.label} — Memerlukan akses Premium`}
+                              title="Memerlukan akses Premium"
+                              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium opacity-40 cursor-not-allowed min-h-11"
                               style={{ color: colors.neutral[500] }}
                             >
                               {ItemIcon ? <ItemIcon size={15} className="shrink-0" /> : null}
@@ -403,7 +405,7 @@ function LearnerHeader({ onOpenDrawer, access, user, requestLogout }: LearnerHea
           type="button"
           onClick={onOpenDrawer}
           aria-label="Buka navigasi"
-          className="lg:hidden p-2 -ml-2 rounded-lg text-brand-navy hover:bg-slate-50"
+          className="lg:hidden p-2 -ml-2 rounded-lg text-brand-navy hover:bg-slate-50 min-w-11 min-h-11"
         >
           <Menu size={20} />
         </button>
@@ -477,7 +479,7 @@ function LearnerHeader({ onOpenDrawer, access, user, requestLogout }: LearnerHea
               aria-expanded={profileOpen}
               aria-controls="aksa-learner-profile-menu"
               aria-label={`Menu akun ${user?.name ?? 'Tamu'}`}
-              className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full border hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-full border hover:bg-slate-50 transition-colors min-h-11 min-w-11"
               style={{ borderColor: colors.neutral[200] }}
             >
               <span
@@ -512,7 +514,7 @@ function LearnerHeader({ onOpenDrawer, access, user, requestLogout }: LearnerHea
                 <Link
                   to="/app/profile"
                   onClick={() => setProfileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-brand-navy hover:bg-slate-50"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-brand-navy hover:bg-slate-50 min-h-11"
                 >
                   <User size={15} className="text-slate-400" />
                   Profil
@@ -524,7 +526,7 @@ function LearnerHeader({ onOpenDrawer, access, user, requestLogout }: LearnerHea
                     setProfileOpen(false);
                     requestLogout();
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 min-h-11"
                 >
                   <LogOut size={15} />
                   Keluar
@@ -671,7 +673,7 @@ export function LearnerLayout({ surfaceLabel }: LearnerLayoutProps) {
                   type="button"
                   onClick={() => setDrawerOpen(false)}
                   aria-label="Tutup"
-                  className="p-2 -mr-2 rounded-lg text-slate-500 hover:bg-slate-50"
+                  className="p-2 -mr-2 rounded-lg text-slate-500 hover:bg-slate-50 min-w-11 min-h-11"
                 >
                   <X size={18} />
                 </button>
