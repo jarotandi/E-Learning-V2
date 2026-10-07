@@ -187,6 +187,10 @@ export function AppRoutes() {
           `LearningPage` renders its own workspace chrome.
           Wrapping it in LearnerLayout would double both. It stays
           bare, exactly as before the router existed. B1.4C decomposes it. */}
+      {/* LEGACY-COMPATIBILITY MODE — self-chrome pages.
+          `LearningPage` renders its own workspace chrome.
+          Wrapping it in LearnerLayout would double both. It stays
+          bare, exactly as before the router existed. B1.4C decomposes it. */}
       <Route
         path={LEARNER_PATHS.learning}
         element={
@@ -201,8 +205,27 @@ export function AppRoutes() {
       {/* =========================================================== */}
       {/* B1.4B: `/app` (dashboard) now uses LearnerLayout.
           StudentDashboard content is decomposed into features/learn/dashboard/
+          and renders as CONTENT ONLY inside the shell.
+          B1.4C: `/app/learn` (learning workspace) now uses LearnerLayout.
+          LearningPage content is decomposed into features/learn/workspace/
           and renders as CONTENT ONLY inside the shell. */}
       <Route element={<LearnerLayout surfaceLabel="Learner App" />}>
+        <Route
+          path={LEARNER_PATHS.dashboard}
+          element={
+            <Guarded>
+              <BareLegacyRoute />
+            </Guarded>
+          }
+        />
+        <Route
+          path={LEARNER_PATHS.learning}
+          element={
+            <Guarded>
+              <BareLegacyRoute />
+            </Guarded>
+          }
+        />
         <Route
           path={LEARNER_PATHS.dashboard}
           element={

@@ -320,13 +320,11 @@ export function showsLegacyNavbar(view: View | null): boolean {
  * wrapped in `LearnerLayout`.
  *
  * `StudentDashboard` was decomposed in B1.4B and now renders as content only
- * inside `LearnerLayout`. `LearningPage` (40.1 KB) still renders its own
- * workspace chrome. B1.3 routed both through the documented legacy-compatibility
- * rendering mode — bare, exactly as they were — rather than producing a double
- * header and double sidebar. `LearningPage` decomposition is B1.4C work.
+ * inside `LearnerLayout`. `LearningPage` was decomposed in B1.4C and now
+ * renders as content only inside `LearnerLayout`. No learner legacy views
+ * own their own chrome — all render inside `LearnerLayout`.
  */
 export const SELF_CHROME_LEGACY_VIEWS: readonly View[] = [
-  'learning',
 ] as const;
 
 /** True when the view must render outside any AKSA layout. */

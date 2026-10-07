@@ -215,7 +215,7 @@ section('5. Navigation chrome rules (no double chrome)');
 
 const NAVBAR_HIDDEN = ['exam', 'result', 'payment', 'finalRegistration',
   'admin', 'dashboard', 'learning', 'login'];
-const SELF_CHROME = ['learning'];
+const SELF_CHROME = [];
 
 for (const view of LEGACY_VIEW_ROUTES) {
   const expectedHidden = NAVBAR_HIDDEN.includes(view);
