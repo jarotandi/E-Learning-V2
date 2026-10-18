@@ -426,6 +426,54 @@ check('No isDialogSubmitted in page', !pageContent.includes('isDialogSubmitted')
 check('No feedback state in page', !pageContent.includes('setFeedback') && !pageContent.includes('setRating'));
 check('No isFeedbackSubmitted in page', !pageContent.includes('isFeedbackSubmitted'));
 
+// R4 - Responsive width contract
+console.log('\nR4. Responsive width contract');
+const curriculumPanelContent = readFileSync(join(WORKSPACE_DIR, 'CurriculumPanel.tsx'), 'utf-8');
+check('CurriculumPanel has w-full', curriculumPanelContent.includes('w-full'));
+check('CurriculumPanel has min-w-0', curriculumPanelContent.includes('min-w-0'));
+check('CurriculumPanel does NOT have lg:w-96', !curriculumPanelContent.includes('lg:w-96'));
+
+// R4 - Legacy action class audit
+console.log('\nR4. Legacy action class audit');
+// allTsxFiles already declared above
+let hasBtnPrimary = false;
+let hasBtnOrange = false;
+let hasBgBrandBlueWhite = false;
+let hasBgBrandTealWhite = false;
+for (const file of allTsxFiles) {
+  const fileContent = readFileSync(join(WORKSPACE_DIR, file), 'utf-8');
+  if (fileContent.includes('btn-primary')) hasBtnPrimary = true;
+  if (fileContent.includes('btn-orange')) hasBtnOrange = true;
+  const lines = fileContent.split('\n');
+  for (const line of lines) {
+    if (line.includes('bg-brand-blue') && line.includes('text-white')) hasBgBrandBlueWhite = true;
+    // Only flag bg-brand-teal + text-white on text elements (not icons/SVGs)
+    if (line.includes('bg-brand-teal') && line.includes('text-white') && !line.includes('svg') && !line.includes('polygon') && !line.includes('path d=') && !line.includes('rounded-full') && !line.includes('items-center')) hasBgBrandTealWhite = true;
+  }
+}
+check('No btn-primary in workspace', !hasBtnPrimary);
+check('No btn-orange in workspace', !hasBtnOrange);
+check('No bg-brand-blue + text-white in workspace', !hasBgBrandBlueWhite);
+check('No bg-brand-teal + text-white in workspace', !hasBgBrandTealWhite);
+
+// R4 - Specific 44px checks
+console.log('\nR4. Specific 44px checks');
+const cpContent = readFileSync(join(WORKSPACE_DIR, 'CurriculumPanel.tsx'), 'utf-8');
+const lfcContent = readFileSync(join(WORKSPACE_DIR, 'LessonFeedbackCard.tsx'), 'utf-8');
+const lfdContent = readFileSync(join(WORKSPACE_DIR, 'LessonFeedbackDialog.tsx'), 'utf-8');
+const smcContent = readFileSync(join(WORKSPACE_DIR, 'SupportMaterialsCard.tsx'), 'utf-8');
+const lcpContent = readFileSync(join(WORKSPACE_DIR, 'LessonContentPanel.tsx'), 'utf-8');
+const lvpContent = readFileSync(join(WORKSPACE_DIR, 'LessonVideoPlayer.tsx'), 'utf-8');
+
+check('CurriculumPanel bookmark has min-w-11 min-h-11', cpContent.includes('min-w-11 min-h-11') && cpContent.includes('bookmark'));
+check('LessonFeedbackCard stars have min-w-11 min-h-11', lfcContent.includes('min-w-11 min-h-11'));
+check('LessonFeedbackDialog stars have min-w-11 min-h-11', lfdContent.includes('min-w-11 min-h-11'));
+check('LessonFeedbackDialog close has min-w-11 min-h-11', lfdContent.includes('min-w-11 min-h-11'));
+check('SupportMaterialsCard toast close has min-w-11 min-h-11', smcContent.includes('min-w-11 min-h-11'));
+check('LessonContentPanel share has min-w-11 min-h-11', lcpContent.includes('min-w-11 min-h-11'));
+check('LessonVideoPlayer play has min-w-11 min-h-11', lvpContent.includes('min-w-11 min-h-11'));
+check('LessonVideoPlayer mute has min-w-11 min-h-11', lvpContent.includes('min-w-11 min-h-11'));
+
 console.log('\n============================================================');
 console.log(`passed: ${passed}`);
 console.log(`failed: ${failed}`);

@@ -177,7 +177,7 @@ export function LessonFeedbackDialog({
                   <button
                     type="submit"
                     disabled={rating === 0}
-                    className="w-full btn-orange py-5 rounded-[1.5rem] shadow-xl shadow-brand-orange/20 disabled:opacity-50 disabled:shadow-none"
+                    className="w-full px-4 py-3 bg-emerald-700 text-white rounded-xl text-xs font-black disabled:opacity-50 disabled:shadow-none"
                   >
                     Bagikan Feedback
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -37,7 +37,7 @@ export function LiveSessionPanel({ isPremium }: LiveSessionPanelProps) {
         </div>
         <h3 className="text-2xl font-bold text-brand-navy mb-4">Sesi Live Mendatang</h3>
         <p className="text-slate-500 mb-8">Nantikan diskusi materi intensif langsung bersama mentor terbaik setiap Sabtu malam melalui Google Meet.</p>
-        <button className="btn-primary">Upgrade Paket</button>
+        <button className="px-4 py-3 bg-emerald-700 text-white rounded-xl text-xs font-black">Upgrade Paket</button>
       </div>
     );
   }
@@ -126,7 +126,7 @@ export function LiveSessionPanel({ isPremium }: LiveSessionPanelProps) {
             href={liveSession.meetUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex-1 px-4 py-3 rounded-xl bg-brand-blue text-white text-xs font-black flex items-center justify-center gap-2 hover:bg-blue-600 transition-all"
+            className="flex-1 px-4 py-3 rounded-xl bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-2 hover:bg-emerald-800 transition-all"
           >
             Masuk GMeet
             <ExternalLink size={16} />
