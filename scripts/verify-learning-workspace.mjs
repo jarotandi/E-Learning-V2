@@ -403,6 +403,29 @@ console.log('\n22. Tabs (D12)');
 check('Uses design-system Tabs primitive', pageContent.includes('from \'@/design-system/components\'') && pageContent.includes('Tabs') && pageContent.includes('TabsPanel'));
 check('Live Session tab disabled for non-premium', pageContent.includes('disabled: !user?.isPremium') || pageContent.includes('disabled={!user?.isPremium}'));
 
+// R3 - Desktop workspace layout proof
+console.log('\nR3. Desktop workspace layout');
+// pageContent already declared above
+const gridIndex = pageContent.indexOf('grid lg:grid-cols-3');
+const curriculumJsxIndex = pageContent.indexOf('<CurriculumPanel');
+const gridCloseIndex = pageContent.indexOf('</div>', curriculumJsxIndex);
+check('CurriculumPanel inside grid (not after)', gridIndex > 0 && curriculumJsxIndex > gridIndex && gridCloseIndex > curriculumJsxIndex);
+
+// R3 - Live URL data-driven
+console.log('\nR3. Live URL data-driven');
+const livePanelContent = readFileSync(join(WORKSPACE_DIR, 'LiveSessionPanel.tsx'), 'utf-8');
+check('Meet URL uses liveSession.meetUrl', livePanelContent.includes('liveSession.meetUrl'));
+check('Calendar URL uses liveSession.calendarUrl', livePanelContent.includes('liveSession.calendarUrl'));
+check('No hardcoded meet.google.com fallback', !livePanelContent.includes('meet.google.com/abc-defg-hij'));
+
+// R3 - Dead state removed
+console.log('\nR3. Dead state removed');
+check('No dialogRating in page', !pageContent.includes('dialogRating'));
+check('No dialogQuestion in page', !pageContent.includes('dialogQuestion'));
+check('No isDialogSubmitted in page', !pageContent.includes('isDialogSubmitted'));
+check('No feedback state in page', !pageContent.includes('setFeedback') && !pageContent.includes('setRating'));
+check('No isFeedbackSubmitted in page', !pageContent.includes('isFeedbackSubmitted'));
+
 console.log('\n============================================================');
 console.log(`passed: ${passed}`);
 console.log(`failed: ${failed}`);

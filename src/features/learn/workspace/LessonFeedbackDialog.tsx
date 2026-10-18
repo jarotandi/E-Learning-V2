@@ -151,14 +151,14 @@ export function LessonFeedbackDialog({
                   className="space-y-8"
                 >
                   <div className="text-center space-y-4">
-                    <p className="text-sm font-bold text-slate-500">Beri rating untuk materi "<span className="text-emerald-600">{lessonTitle}</span>"</p>
+                    <p className="text-sm font-bold text-slate-500">Beri rating untuk materi "<span className="text-emerald-700">{lessonTitle}</span>"</p>
                     <div className="flex items-center justify-center gap-2">
                       {[1, 2, 3, 4, 5].map((s) => (
                         <button
                           key={s}
                           type="button"
                           onClick={() => setRating(s)}
-                          className={`p-2 transition-all hover:scale-125 ${s <= rating ? 'text-amber-400' : 'text-slate-200'}`}
+                          className={`p-2 transition-all hover:scale-125 min-w-11 min-h-11 flex items-center justify-center ${s <= rating ? 'text-amber-400' : 'text-slate-200'}`}
                           aria-label={`Beri rating ${s} dari 5`}
                         >
                           <svg width="36" height="36" viewBox="0 0 24 24" fill={s <= rating ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">

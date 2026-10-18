@@ -39,9 +39,6 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
   // Curriculum state - mutable, derived from current state
   const [curriculum, setCurriculum] = useState(CURRICULUM);
   const [activeLesson, setActiveLesson] = useState(CURRICULUM[0].lessons[0]);
-  const [feedback, setFeedback] = useState('');
-  const [rating, setRating] = useState(0);
-  const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
 
   // Video Player States
   const [isPlaying, setIsPlaying] = useState(false);
@@ -51,9 +48,6 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
 
   // Feedback Modal States
   const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
-  const [dialogRating, setDialogRating] = useState(0);
-  const [dialogQuestion, setDialogQuestion] = useState('');
-  const [isDialogSubmitted, setIsDialogSubmitted] = useState(false);
 
   // Bookmarks
   const [bookmarkedLessons, setBookmarkedLessons] = useState<string[]>([]);
@@ -99,17 +93,6 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
     );
   };
 
-  const handleFeedbackSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (rating === 0) return;
-    setIsFeedbackSubmitted(true);
-    setTimeout(() => {
-      setIsFeedbackSubmitted(false);
-      setFeedback('');
-      setRating(0);
-    }, 4000);
-  };
-
   const handleLessonClick = (lessonId: string) => {
     const lesson = getLessonById(curriculum, lessonId);
     if (lesson) setActiveLesson(lesson);
@@ -117,9 +100,6 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
 
   // Open feedback dialog - legacy "Beri Rating Pelajaran" action
   const openFeedbackDialog = () => {
-    setDialogRating(0);
-    setDialogQuestion('');
-    setIsDialogSubmitted(false);
     setIsFeedbackDialogOpen(true);
   };
 
@@ -207,7 +187,7 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
                         Kamu bisa mencoba 2 video/modul pertama. Materi lanjutan dan live session tersedia untuk akun premium.
                       </p>
                     </div>
-                    <button onClick={onUpgrade} className="px-4 py-3 bg-brand-orange text-white rounded-xl text-xs font-black">Upgrade Paket</button>
+                    <button onClick={onUpgrade} className="px-4 py-3 bg-emerald-700 text-white rounded-xl text-xs font-black">Upgrade Paket</button>
                   </div>
                 )}
 
@@ -231,14 +211,7 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
                 {/* Feedback */}
                 <LessonFeedbackCard
                   onSubmit={(r, f) => {
-                    setRating(r);
-                    setFeedback(f);
-                    setIsFeedbackSubmitted(true);
-                    setTimeout(() => {
-                      setIsFeedbackSubmitted(false);
-                      setRating(0);
-                      setFeedback('');
-                    }, 4000);
+                    // Minimal callback - card owns its own state
                   }}
                 />
 
@@ -255,19 +228,21 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
                 <LiveSessionPanel isPremium={Boolean(user?.isPremium)} />
               </TabsPanel>
             </div>
+
+            {/* Curriculum Panel - inside grid, stacks on mobile */}
+            <div className="lg:col-span-1 space-y-6">
+              <CurriculumPanel
+                curriculum={curriculum}
+                activeLessonId={activeLesson.id}
+                bookmarkedLessons={bookmarkedLessons}
+                isPremium={Boolean(user?.isPremium)}
+                onLessonClick={handleLessonClick}
+                onToggleBookmark={toggleBookmark}
+                onUpgrade={onUpgrade}
+              />
+            </div>
           </div>
         </div>
-
-        {/* Right Sidebar - Curriculum Panel - uses current curriculum state */}
-        <CurriculumPanel
-          curriculum={curriculum}
-          activeLessonId={activeLesson.id}
-          bookmarkedLessons={bookmarkedLessons}
-          isPremium={Boolean(user?.isPremium)}
-          onLessonClick={handleLessonClick}
-          onToggleBookmark={toggleBookmark}
-          onUpgrade={onUpgrade}
-        />
       </div>
 
       {/* Lesson Feedback Dialog - legacy "Beri Rating Pelajaran" capability */}
@@ -276,13 +251,7 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
         onClose={() => setIsFeedbackDialogOpen(false)}
         lessonTitle={activeLesson.title}
         onSubmit={(rating, question) => {
-          setDialogRating(rating);
-          setDialogQuestion(question);
-          setIsDialogSubmitted(true);
-          setTimeout(() => {
-            setIsDialogSubmitted(false);
-            setIsFeedbackDialogOpen(false);
-          }, 2000);
+          // Dialog owns its own state, parent only tracks open/close
         }}
       />
     </>

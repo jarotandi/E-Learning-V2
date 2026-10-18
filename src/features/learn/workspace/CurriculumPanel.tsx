@@ -115,7 +115,7 @@ export function CurriculumPanel({
                         disabled={isLocked}
                         className={`flex-1 flex items-center gap-3 p-3 rounded-2xl text-left transition-colors ${
                           activeLessonId === lesson.id
-                            ? 'bg-blue-50 text-emerald-600 border border-emerald-200'
+                            ? 'bg-blue-50 text-emerald-700 border border-emerald-200'
                             : 'hover:bg-slate-50 text-slate-600'
                         }`}
                       >
@@ -129,7 +129,7 @@ export function CurriculumPanel({
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onToggleBookmark(lesson.id); }}
-                        className={`p-2 rounded-xl transition-all ${bookmarkedLessons.includes(lesson.id) ? 'bg-amber-50 text-amber-500' : 'text-slate-300 hover:bg-slate-50 hover:text-slate-400'}`}
+                        className={`p-2 rounded-xl transition-all min-w-11 min-h-11 flex items-center justify-center ${bookmarkedLessons.includes(lesson.id) ? 'bg-amber-50 text-amber-500' : 'text-slate-300 hover:bg-slate-50 hover:text-slate-400'}`}
                         aria-label={bookmarkedLessons.includes(lesson.id) ? 'Hapus bookmark' : 'Simpan bookmark'}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill={bookmarkedLessons.includes(lesson.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">

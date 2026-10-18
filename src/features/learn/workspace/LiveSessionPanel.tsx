@@ -114,7 +114,7 @@ export function LiveSessionPanel({ isPremium }: LiveSessionPanelProps) {
         </div>
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
           <a
-            href={LIVE_SESSIONS[0].calendarUrl}
+            href={liveSession.calendarUrl}
             target="_blank"
             rel="noreferrer"
             className="flex-1 px-4 py-3 rounded-xl bg-white text-brand-navy text-xs font-black flex items-center justify-center gap-2 hover:bg-blue-50 transition-all"
@@ -123,7 +123,7 @@ export function LiveSessionPanel({ isPremium }: LiveSessionPanelProps) {
             <Calendar size={16} />
           </a>
           <a
-            href={liveSession.meetUrl || 'https://meet.google.com/abc-defg-hij'}
+            href={liveSession.meetUrl}
             target="_blank"
             rel="noreferrer"
             className="flex-1 px-4 py-3 rounded-xl bg-brand-blue text-white text-xs font-black flex items-center justify-center gap-2 hover:bg-blue-600 transition-all"

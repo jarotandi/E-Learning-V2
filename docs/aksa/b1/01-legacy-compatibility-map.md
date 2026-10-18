@@ -67,7 +67,7 @@ Required by the B1 brief. Each row states the legacy owner and the AKSA target.
 |---|---|---|---|---|
 | LandingPage | `LandingPage.tsx` | Public Web home | — | B1.3 |
 | StudentDashboard | `StudentDashboard.tsx` → `features/learn/dashboard/` | Learner Home (`Beranda`) | BERANDA | **B1.4B** |
-| LearningPage | `LearningPage.tsx` | Lesson Workspace | LEARN → Kelas Saya | B1.2 |
+| LearningPage | `LearningPage.tsx` → `features/learn/workspace/` | Lesson Workspace | LEARN → Kelas Saya | B1.4C |
 | Tryout* (listing/exam/result) | `TryoutListingPage`, `TryoutExamPage`, `TryoutResultPage` | Assessment Center | PRACTICE | B3 |
 | MentorProfilePage | `MentorProfilePage.tsx` | Guru & Mentor | SUPPORT | B10 |
 | PaymentPage | `PaymentPage.tsx` | Wallet & Payments | UTILITIES | B1.3 |

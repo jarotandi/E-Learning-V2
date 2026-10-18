@@ -130,7 +130,7 @@ the 21 capabilities becomes unreachable.
 ### B1.4 - Design System + Monolith Decomposition — IN PROGRESS
 
 Split into four sub-batches so each is independently reviewable. B1.4A and B1.4B are done;
-**B1.4C is COMPLETE (R1).**
+**B1.4C is COMPLETE (R3).**
 
 | Sub-batch | Scope | Status |
 |---|---|---|

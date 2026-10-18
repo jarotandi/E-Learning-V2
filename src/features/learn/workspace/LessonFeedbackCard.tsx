@@ -85,7 +85,7 @@ export function LessonFeedbackCard({ initialFeedback = '', onSubmit }: LessonFee
                     key={s}
                     type="button"
                     onClick={() => setRating(s)}
-                    className={`p-1.5 transition-all hover:scale-125 ${s <= rating ? 'text-amber-400' : 'text-slate-200'}`}
+                    className={`p-2 transition-all hover:scale-125 min-w-11 min-h-11 flex items-center justify-center ${s <= rating ? 'text-amber-400' : 'text-slate-200'}`}
                     aria-label={`Beri rating ${s} dari 5`}
                   >
                     <svg width="24" height="24" viewBox="0 0 24 24" fill={s <= rating ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
@@ -107,7 +107,7 @@ export function LessonFeedbackCard({ initialFeedback = '', onSubmit }: LessonFee
               <button
                 type="submit"
                 disabled={rating === 0}
-                className="absolute bottom-6 right-6 px-4 py-3 bg-brand-teal text-white rounded-xl shadow-xl shadow-brand-teal/20 disabled:opacity-30 disabled:shadow-none transition-all flex items-center gap-2 font-bold text-xs"
+                className="absolute bottom-6 right-6 px-4 py-3 bg-emerald-700 text-white rounded-xl shadow-xl shadow-emerald-700/20 disabled:opacity-30 disabled:shadow-none transition-all flex items-center gap-2 font-bold text-xs"
               >
                 Kirim Feedback
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
