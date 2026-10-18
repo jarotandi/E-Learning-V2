@@ -1,5 +1,5 @@
 /**
- * B1.4D admin workspace verification script (T1 + T2 + T3 + T4 + T5A).
+ * B1.4D admin workspace verification script (T1 + T2 + T3 + T4 + T5A + T5B).
  *
  * Usage:
  *   node scripts/verify-admin-workspace.mjs
@@ -50,9 +50,22 @@
  *  AJ. (T5A) Video storage ownership (canonical key, one owner, 13 keys).
  *  AK. (T5A) Content behaviour: save/delete/upload parity + EXECUTED seed.
  *  AL. (T5A) Composition + old Content Library JSX removed from the monolith.
- *  AM. (T5A) Website / Blog (T5B) non-regression: it stays in AdminDashboard.
+ *  AM. (T5A) Website / Blog freeze — RETIRED by T5B. It now asserts the
+ *      INVERSE (the Website surface has LEFT the monolith; T5A's T5B guard is
+ *      superseded by its own stage).
  *  AN. (T5A) Accessibility SOURCE CONTRACT for the migrated Content surface.
  *  AO. (T5A) Security deferrals (no auth/Supabase/AI added).
+ *  AP. (T5B) Website Editor + Blog/Literasi modules + composition wiring.
+ *  AQ. (T5B) Single Website authority (one hook, no duplicate state).
+ *  AR. (T5B) Blog prop bridge (`blogPosts` / `onBlogPostsChange`) preserved.
+ *  AS. (T5B) Blog-asset storage ownership (canonical key, one owner, no new).
+ *  AT. (T5B) Blog behaviour: source contract + EXECUTED data/template module.
+ *  AU. (T5B) Pseudo "AI" helper stays LOCAL + deterministic (no API client).
+ *  AV. (T5B) Composition + old Website JSX removed from the monolith.
+ *  AW. (T5B) T6 boundary — Review / Inquiries (`websiteQuestions`) is NOT taken.
+ *  AX. (T5B) T5A Content Library non-regression.
+ *  AY. (T5B) Accessibility SOURCE CONTRACT for the migrated Website surface.
+ *  AZ. (T5B) Security + storage (13 keys, no new key, SEC-P1-03 open).
  *
  * WHAT THIS DOES NOT PROVE
  * ------------------------
@@ -67,7 +80,7 @@
  * No test framework is added. This is one plain Node script.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -538,6 +551,40 @@ const contentDataCode = stripComments(contentDataSrc);
 const contentBarrelCode = stripComments(contentBarrelSrc);
 // Comment-stripped view of the whole feature tree (for CODE-only key counting).
 const adminFeatureCode = stripComments(adminFeatureSrc);
+
+// B1.4D-T5B — Studio / Website Editor + Blog/Literasi domain.
+// Read defensively so a missing module is a FAILED CHECK, not a crashed script.
+const safeReadAdminFeature = (relative) => {
+  const target = join(adminFeatureDir, relative);
+  return existsSync(target) ? readFileSync(target, 'utf8') : '';
+};
+const websiteFeatureDir = join(adminFeatureDir, 'studio', 'website');
+const websitePageSrc = safeReadAdminFeature('studio/website/AdminWebsiteEditorPage.tsx');
+const websiteHookSrc = safeReadAdminFeature('studio/website/useAdminWebsiteDomain.ts');
+const websiteDataSrc = safeReadAdminFeature('studio/website/adminWebsiteData.ts');
+const websiteBarrelSrc = safeReadAdminFeature('studio/website/index.ts');
+const blogEditorSrc = safeReadAdminFeature('studio/website/AdminBlogEditorDialog.tsx');
+const blogMiddleInsertSrc = safeReadAdminFeature('studio/website/AdminBlogMiddleInsertDialog.tsx');
+const blogAssetEditorSrc = safeReadAdminFeature('studio/website/AdminBlogAssetEditorDialog.tsx');
+const blogPreviewSrc = safeReadAdminFeature('studio/website/AdminBlogPreviewDialog.tsx');
+const websiteSaveConfirmSrc = safeReadAdminFeature('studio/website/AdminWebsiteSaveConfirmDialog.tsx');
+
+const websitePageCode = stripComments(websitePageSrc);
+const websiteHookCode = stripComments(websiteHookSrc);
+const websiteDataCode = stripComments(websiteDataSrc);
+const websiteBarrelCode = stripComments(websiteBarrelSrc);
+const blogEditorCode = stripComments(blogEditorSrc);
+const blogMiddleInsertCode = stripComments(blogMiddleInsertSrc);
+const blogAssetEditorCode = stripComments(blogAssetEditorSrc);
+const blogPreviewCode = stripComments(blogPreviewSrc);
+const websiteSaveConfirmCode = stripComments(websiteSaveConfirmSrc);
+// Whole-domain concatenations (raw + comment-stripped) for cross-file assertions.
+const websiteDomainSrc = [
+  websitePageSrc, websiteHookSrc, websiteDataSrc, websiteBarrelSrc,
+  blogEditorSrc, blogMiddleInsertSrc, blogAssetEditorSrc, blogPreviewSrc,
+  websiteSaveConfirmSrc,
+].join('\n');
+const websiteDomainCode = stripComments(websiteDomainSrc);
 
 /**
  * Returns the body of a top-level (2-space indented) component function, e.g.
@@ -1469,29 +1516,36 @@ check('the extracted page keeps the derived completion metric',
 /* AM. Website / Blog (T5B) non-regression                             */
 /* ------------------------------------------------------------------ */
 
-section('AM. T5A Website / Blog (T5B) non-regression — it stays in AdminDashboard');
+section('AM. T5B Website / Blog state has LEFT AdminDashboard (supersedes the T5A freeze)');
 
-check('activeTab === "website" still lives in AdminDashboard',
+// This section WAS the T5A non-regression guard that FROZE the Website/Blog
+// state inside AdminDashboard while T5A extracted the Content Library. T5B is
+// the stage that legitimately moves that surface, so the guard is RETIRED and
+// replaced with the post-T5B contract: the state must now live in the Website
+// domain ONLY and the monolith must keep ZERO Website/Blog atoms.
+check('activeTab === "website" still lives in AdminDashboard (route render)',
   /activeTab === 'website'/.test(adminDashCode));
-check('the Website Editor Panel still lives in AdminDashboard',
-  /Website Editor Panel/.test(adminDashCode));
 for (const name of [
   'isSaveWebsiteConfirmOpen', 'editingBlogPost', 'previewBlogPost',
   'blogEditorAssets', 'editingBlogAsset', 'isMiddleInsertOpen',
   'isBlogAiChatOpen', 'middlePreviewAsset', 'middlePreviewRelatedId',
-  'internetAssetUrl', 'internetAssetName', 'aiChatPrompt', 'blogPostDrafts',
-  'blogEditorSearchTerm', 'blogEditorCategory',
+  'internetAssetUrl', 'internetAssetName', 'aiChatPrompt', 'aiChatDraft',
+  'blogPostDrafts', 'blogEditorSearchTerm', 'blogEditorCategory',
 ]) {
-  check(`T5B state "${name}" remains in AdminDashboard`,
-    new RegExp(`\\b${name}\\b`).test(adminDashCode));
+  check(`T5B state "${name}" has LEFT AdminDashboard`,
+    !new RegExp(`\\b${name}\\b`).test(adminDashCode));
 }
+check('the Website/Blog helpers have LEFT AdminDashboard',
+  !/const createBlogPostDraft = /.test(adminDashCode) &&
+    !/const saveBlogPost = /.test(adminDashCode) &&
+    !/const syncBlogPostsToWebsite = /.test(adminDashCode) &&
+    !/const generateAiBlogDraft = /.test(adminDashCode) &&
+    !/const saveBlogEditorAssets = /.test(adminDashCode));
 check('the content extract did NOT take any Website/Blog symbol',
   !/blogPost|website|Blog|Website/i.test(contentHookCode) &&
     !/blogPost|website|Blog|Website/i.test(contentPageCode));
-check('no Website/Blog feature files were created yet',
-  JSON.stringify(readdirSync(join(adminFeatureDir, 'studio')).sort()) ===
-    JSON.stringify(['content']),
-  JSON.stringify(readdirSync(join(adminFeatureDir, 'studio')).sort()));
+check('the Website/Blog feature directory now exists',
+  existsSync(websiteFeatureDir));
 
 /* ------------------------------------------------------------------ */
 /* AN. Accessibility source contract (Content)                         */
@@ -1557,6 +1611,360 @@ check('no router change: content path is still /admin/studio/content',
   allAdminPaths().includes('/admin/studio/content'));
 
 /* ------------------------------------------------------------------ */
+/* AP. Website modules + composition wiring                            */
+/* ------------------------------------------------------------------ */
+
+section('AP. T5B Website Editor + Blog/Literasi modules + wiring');
+
+const WEBSITE_MODULES = [
+  'AdminWebsiteEditorPage.tsx',
+  'AdminWebsiteSaveConfirmDialog.tsx',
+  'AdminBlogEditorDialog.tsx',
+  'AdminBlogMiddleInsertDialog.tsx',
+  'AdminBlogAssetEditorDialog.tsx',
+  'AdminBlogPreviewDialog.tsx',
+  'useAdminWebsiteDomain.ts',
+  'adminWebsiteData.ts',
+  'index.ts',
+];
+for (const file of WEBSITE_MODULES) {
+  check(`website module "${file}" exists`,
+    existsSync(join(websiteFeatureDir, file)));
+}
+check('AdminDashboard imports the Website barrel',
+  /from '\.\.\/features\/admin\/studio\/website'/.test(adminDashCode));
+check('AdminDashboard invokes useAdminWebsiteDomain exactly once',
+  (adminDashCode.match(/useAdminWebsiteDomain\(/g) || []).length === 1);
+check('the hook exports useAdminWebsiteDomain',
+  /export function useAdminWebsiteDomain\(/.test(websiteHookCode));
+check('the page exports AdminWebsiteEditorPage',
+  /export function AdminWebsiteEditorPage\(/.test(websitePageCode));
+check('the barrel re-exports the page, hook and dialogs',
+  /AdminWebsiteEditorPage/.test(websiteBarrelCode) &&
+    /useAdminWebsiteDomain/.test(websiteBarrelCode) &&
+    /AdminBlogEditorDialog/.test(websiteBarrelCode) &&
+    /AdminBlogPreviewDialog/.test(websiteBarrelCode));
+check('the data module owns the templates + canonical asset key',
+  /BLOG_EDITOR_TEMPLATES/.test(websiteDataCode) &&
+    /BLOG_ASSETS_STORAGE_KEY/.test(websiteDataCode));
+
+/* ------------------------------------------------------------------ */
+/* AQ. Single Website authority                                        */
+/* ------------------------------------------------------------------ */
+
+section('AQ. T5B single Website authority (no duplicate state)');
+
+check('the hook is invoked ONCE, never by the page/dialogs',
+  (adminDashCode.match(/useAdminWebsiteDomain\(/g) || []).length === 1 &&
+    !/useAdminWebsiteDomain\(/.test(websiteDomainCode.replace(websiteHookCode, '')));
+check('only the hook declares the Website state atoms',
+  /const \[isSaveWebsiteConfirmOpen, setIsSaveWebsiteConfirmOpen\] = useState\(false\)/.test(websiteHookCode) &&
+    /const \[blogPostDrafts, setBlogPostDrafts\] = useState<BlogPost\[\]>\(blogPosts\)/.test(websiteHookCode));
+check('the extracted page/dialogs are stateless (no local useState)',
+  !/useState/.test(websitePageCode) &&
+    !/useState/.test(blogEditorCode) &&
+    !/useState/.test(blogMiddleInsertCode) &&
+    !/useState/.test(blogAssetEditorCode) &&
+    !/useState/.test(blogPreviewCode) &&
+    !/useState/.test(websiteSaveConfirmCode));
+check('no import cycle: the Website domain never imports AdminDashboard',
+  !/AdminDashboard/.test(websiteDomainCode));
+check('the Website domain never imports the legacy state provider',
+  !/LegacyAppStateProvider/.test(websiteDomainCode));
+check('AdminDashboard passes blogPosts + onBlogPostsChange into the hook',
+  /useAdminWebsiteDomain\(\{\s*blogPosts,\s*onBlogPostsChange,\s*notify,\s*recordAudit\s*\}\)/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* AR. Blog prop bridge                                                */
+/* ------------------------------------------------------------------ */
+
+section('AR. T5B blog prop bridge (blogPosts / onBlogPostsChange)');
+
+check('the hook seeds blogPostDrafts from the blogPosts prop',
+  /useState<BlogPost\[\]>\(blogPosts\)/.test(websiteHookCode));
+check('the prop re-sync effect is preserved',
+  /useEffect\(\(\) => \{\s*setBlogPostDrafts\(blogPosts\);\s*\}, \[blogPosts\]\)/.test(websiteHookCode));
+check('save + sync still publish through onBlogPostsChange',
+  (websiteHookCode.match(/onBlogPostsChange\?\.\(/g) || []).length >= 2);
+check('no localStorage persistence is invented for BlogPost records',
+  !/theprams_demo_blog_posts/.test(websiteDomainCode) &&
+    !/localStorage[\s\S]{0,60}blogPostDrafts/i.test(websiteHookCode));
+check('AdminDashboard still declares the six-prop signature',
+  /blogPosts\?: BlogPost\[\]/.test(adminDashSrc) &&
+    /onBlogPostsChange\?: \(posts: BlogPost\[\]\) => void/.test(adminDashSrc));
+
+/* ------------------------------------------------------------------ */
+/* AS. Blog-asset storage                                              */
+/* ------------------------------------------------------------------ */
+
+section('AS. T5B blog-asset storage (canonical key, one owner, no new key)');
+
+check('the canonical blog-asset key is declared exactly once in the domain',
+  (websiteDomainCode.match(/theprams_demo_blog_assets/g) || []).length === 1);
+check('the key literal lives in the data module',
+  /BLOG_ASSETS_STORAGE_KEY = 'theprams_demo_blog_assets'/.test(websiteDataCode));
+check('the hook reads the assets through the same helper',
+  /readStorageArray\(BLOG_ASSETS_STORAGE_KEY\)/.test(websiteHookCode));
+check('the hook writes with the same setItem/JSON.stringify semantics',
+  /localStorage\.setItem\(BLOG_ASSETS_STORAGE_KEY, JSON\.stringify\(nextAssets\)\)/.test(websiteHookCode));
+check('AdminDashboard no longer owns the blog-asset key',
+  !/theprams_demo_blog_assets/.test(adminDashCode));
+check('the website domain introduces exactly ONE theprams_demo_ key',
+  (websiteDomainCode.match(/theprams_demo_[a-zA-Z_]+/g) || []).length === 1);
+
+/* ------------------------------------------------------------------ */
+/* AT. Blog behaviour (source + executed data module)                  */
+/* ------------------------------------------------------------------ */
+
+section('AT. T5B blog behaviour (source contract + EXECUTED data module)');
+
+check('create draft: template match, Date.now id, legacy fallbacks',
+  /BLOG_EDITOR_TEMPLATES\.find\(\(item\) => item\.category === category\)\s*\|\|\s*BLOG_EDITOR_TEMPLATES\[0\]/.test(websiteHookCode) &&
+    /id: `blog-\$\{Date\.now\(\)\}`/.test(websiteHookCode) &&
+    /author: 'Admin The Prams'/.test(websiteHookCode) &&
+    /authorRole: 'Content Specialist'/.test(websiteHookCode) &&
+    /readTime: '5 min read'/.test(websiteHookCode) &&
+    /tags: template\?\.tags \|\| \[category\]/.test(websiteHookCode));
+check('save blog: sanitises tags, replaces by id OR prepends, closes + audits + toasts',
+  /tags: post\.tags\.map\(\(tag\) => tag\.trim\(\)\)\.filter\(Boolean\)/.test(websiteHookCode) &&
+    /blogPostDrafts\.find\(\(item\) => item\.id === sanitized\.id\)/.test(websiteHookCode) &&
+    /\[sanitized, \.\.\.blogPostDrafts\]/.test(websiteHookCode) &&
+    /setEditingBlogPost\(null\)/.test(websiteHookCode) &&
+    /recordAudit\('Website Editor', 'Save Blog\/Literasi', sanitized\.title\)/.test(websiteHookCode) &&
+    /Konten Info Menarik tersimpan dan tampil di website\./.test(websiteHookCode));
+check('publish/sync: set drafts, publish prop, audit count, toast',
+  /const syncBlogPostsToWebsite = \(posts = blogPostDrafts\)/.test(websiteHookCode) &&
+    /recordAudit\('Website Editor', 'Publish Info Menarik', `\$\{posts\.length\} artikel`\)/.test(websiteHookCode) &&
+    /Info Menarik & Literasi sudah disinkronkan ke website publik\./.test(websiteHookCode));
+check('delete filters by id then re-syncs',
+  /blogPostDrafts\.filter\(\(item\) => item\.id !== id\)/.test(websiteHookCode) &&
+    /Artikel dihapus dari Info Menarik\./.test(websiteHookCode));
+check('duplicate clones, Date.now id, " - Copy", prepends and opens the copy',
+  /`\$\{post\.title\} - Copy`/.test(websiteHookCode) &&
+    /const nextPosts = \[copy, \.\.\.blogPostDrafts\]/.test(websiteHookCode) &&
+    /setEditingBlogPost\(copy\)/.test(websiteHookCode));
+check('insert content block appends after trimmed content (no-op without a draft)',
+  /if \(!editingBlogPost\) return;/.test(websiteHookCode) &&
+    /content: `\$\{editingBlogPost\.content\.trim\(\)\}\\n\\n\$\{block\}`\.trim\(\)/.test(websiteHookCode));
+check('related options: selected first, excluding the current post, sliced to 3',
+  /\.slice\(0, 3\)/.test(websiteHookCode) &&
+    /item\.id !== post\.id && item\.id !== selected\?\.id/.test(websiteHookCode));
+check('internet asset: URL required + image-extension detection incl. unsplash',
+  /if \(!url\) \{/.test(websiteHookCode) &&
+    /\.\(png\|jpe\?g\|webp\|gif\|svg\)/.test(websiteHookCode) &&
+    /images\.unsplash\.com/.test(websiteHookCode) &&
+    /source\.unsplash\.com/.test(websiteHookCode) &&
+    /name: internetAssetName\.trim\(\) \|\| \(isImage \? 'Gambar Internet' : 'Dokumen Internet'\)/.test(websiteHookCode));
+check('PC asset import uses a real FileReader readAsDataURL (local demo)',
+  /new FileReader\(\)/.test(websiteHookCode) &&
+    /reader\.readAsDataURL\(file\)/.test(websiteHookCode) &&
+    /file\.type\.startsWith\('image\/'\)/.test(websiteHookCode) &&
+    /KB dari PC/.test(websiteHookCode));
+check('asset insert branches image vs document markdown; delete persists',
+  /if \(asset\.type === 'image'\) \{[\s\S]*?\} else \{/.test(websiteHookCode) &&
+    /!\[\$\{asset\.name\}\]\(\$\{asset\.url\}\)/.test(websiteHookCode) &&
+    /saveBlogEditorAssets\(blogEditorAssets\.filter\(\(asset\) => asset\.id !== id\)\)/.test(websiteHookCode));
+
+// Executed: the preserved data module (pure, no runtime deps).
+const websiteData = await compileAndImport(
+  join(srcDir, 'features', 'admin', 'studio', 'website', 'adminWebsiteData.ts'),
+);
+check('executed: canonical blog-asset key is EXACT',
+  websiteData.BLOG_ASSETS_STORAGE_KEY === 'theprams_demo_blog_assets');
+check('executed: category filter list preserved exactly',
+  websiteData.BLOG_CATEGORY_OPTIONS.join(',') ===
+    'Semua,Tips & Trik,Info PTN,Materi,Inspirasi,Literasi');
+check('executed: exactly four article templates are preserved',
+  websiteData.BLOG_EDITOR_TEMPLATES.length === 4);
+check('executed: template labels + categories preserved',
+  websiteData.BLOG_EDITOR_TEMPLATES.map((t) => `${t.label}:${t.category}`).join('|') ===
+    'Template Tips Belajar:Tips & Trik|Template Literasi:Literasi|Template Info Seleksi:Info PTN|Template CPNS/SKD:Materi');
+check('executed: template tag lists preserved',
+  websiteData.BLOG_EDITOR_TEMPLATES.map((t) => t.tags.join(',')).join('|') ===
+    'Tips Belajar,Strategi,Tryout|Literasi,SNBT,Membaca|Info Seleksi,Pendaftaran,Persiapan|CPNS,SKD,Strategi');
+check('executed: template bodies are non-trivial markdown',
+  websiteData.BLOG_EDITOR_TEMPLATES.every(
+    (t) => t.content.includes('## ') && t.content.length > 200));
+
+/* ------------------------------------------------------------------ */
+/* AU. Pseudo "AI" helper stays local + deterministic                  */
+/* ------------------------------------------------------------------ */
+
+section('AU. T5B pseudo "AI" helper stays LOCAL + deterministic');
+
+check('the helper exists and derives a topic with the legacy fallback chain',
+  /const generateAiBlogDraft = \(\) => \{/.test(websiteHookCode) &&
+    /aiChatPrompt\.trim\(\) \|\| editingBlogPost\?\.title \|\| 'topik artikel'/.test(websiteHookCode));
+check('the local draft copy + notification are preserved',
+  /cek kembali akurasi data sebelum publish\./.test(websiteHookCode) &&
+    /AI chat agent membuat draft blok artikel\./.test(websiteHookCode));
+check('no external AI / network client anywhere in the Website domain',
+  !/fetch\(|axios|\bopenai\b|@google\/genai|GoogleGenAI|generativelanguage|anthropic|huggingface/i.test(websiteDomainCode));
+
+/* ------------------------------------------------------------------ */
+/* AV. Composition + old Website JSX removal                           */
+/* ------------------------------------------------------------------ */
+
+section('AV. T5B composition + old Website JSX removed from the monolith');
+
+const websiteTabStart = adminDashCode.indexOf("{activeTab === 'website' && (");
+const financeTabStart = adminDashCode.indexOf("{activeTab === 'finance' && (");
+const websiteTabBlock = websiteTabStart !== -1 && financeTabStart > websiteTabStart
+  ? adminDashCode.slice(websiteTabStart, financeTabStart)
+  : '';
+check('the website tab renders AdminWebsiteEditorPage with the domain',
+  websiteTabBlock.length > 0 &&
+    /<AdminWebsiteEditorPage/.test(websiteTabBlock) &&
+    /domain=\{websiteDomain\}/.test(websiteTabBlock));
+check('the page receives the narrow onPreviewWebsite callback (legacy landing nav)',
+  /onPreviewWebsite=\{\(\) => setView\?\.\('landing'\)\}/.test(websiteTabBlock));
+check('the five Website dialogs render OUTSIDE the tab conditional (state survives tab switch)',
+  !/AdminBlogEditorDialog|AdminBlogMiddleInsertDialog|AdminBlogAssetEditorDialog|AdminBlogPreviewDialog|AdminWebsiteSaveConfirmDialog/.test(websiteTabBlock) &&
+    /<AdminWebsiteSaveConfirmDialog/.test(adminDashCode) &&
+    /<AdminBlogEditorDialog/.test(adminDashCode) &&
+    /<AdminBlogMiddleInsertDialog/.test(adminDashCode) &&
+    /<AdminBlogAssetEditorDialog/.test(adminDashCode) &&
+    /<AdminBlogPreviewDialog/.test(adminDashCode));
+check('the old Website panel + editor JSX has LEFT AdminDashboard',
+  !/Website Editor Panel/.test(adminDashCode) &&
+    !/Editor Info Menarik & Literasi/.test(adminDashCode) &&
+    !/Jendela Sisipan Tengah Artikel/.test(adminDashCode));
+check('the old Website dialogs have LEFT AdminDashboard',
+  !/Edit Aset Editor Blog/.test(adminDashCode) &&
+    !/Preview Draft Info Menarik/.test(adminDashCode) &&
+    !/Simpan perubahan website\?/.test(adminDashCode));
+check('the article templates + BlogEditorAsset interface have LEFT AdminDashboard',
+  !/BLOG_EDITOR_TEMPLATES/.test(adminDashCode) &&
+    !/interface BlogEditorAsset/.test(adminDashCode));
+check('the Website feature renders the legacy panel heading + controls',
+  /Website Editor Panel/.test(websitePageCode) &&
+    /Preview Changes/.test(websitePageCode) &&
+    /Save Changes/.test(websitePageCode) &&
+    /Publish Updates/.test(websitePageCode) &&
+    /Rincian Menu Website Editor/.test(websitePageCode) &&
+    /Editor Info Menarik & Literasi/.test(websitePageCode));
+
+/* ------------------------------------------------------------------ */
+/* AW. T6 boundary — Review / Inquiries NOT taken                      */
+/* ------------------------------------------------------------------ */
+
+section('AW. T5B T6 boundary — Review / Inquiries NOT taken');
+
+check('websiteQuestions state still lives in AdminDashboard',
+  /const \[websiteQuestions, setWebsiteQuestions\]/.test(adminDashCode) &&
+    /readStorageArray\('theprams_demo_website_questions'\)/.test(adminDashCode));
+check('the Review/Inquiries key still lives in AdminDashboard',
+  /theprams_demo_website_questions/.test(adminDashCode));
+check('saveWebsiteQuestions / saveWebsiteQuestionAnswer stay in AdminDashboard',
+  /const saveWebsiteQuestions = /.test(adminDashCode) &&
+    /const saveWebsiteQuestionAnswer = /.test(adminDashCode));
+check('openQuestionWhatsapp stays in AdminDashboard',
+  /const openQuestionWhatsapp = /.test(adminDashCode));
+check('the Website extraction did NOT take the Inquiries storage key',
+  !/theprams_demo_website_questions/.test(websiteDomainCode));
+check('the Website extraction did NOT take websiteQuestions / WebsiteQuestion',
+  !/websiteQuestions/.test(websiteDomainCode) &&
+    !/WebsiteQuestion/.test(websiteDomainCode));
+check('the Website extraction did NOT take the Inquiries helpers',
+  !/saveWebsiteQuestionAnswer|openQuestionWhatsapp/.test(websiteDomainCode));
+
+/* ------------------------------------------------------------------ */
+/* AX. T5A Content Library non-regression                              */
+/* ------------------------------------------------------------------ */
+
+section('AX. T5B T5A Content Library non-regression');
+
+check('the content domain files are still present',
+  [contentPageSrc, contentHookSrc, contentEditorSrc, contentUploadSrc, contentDataSrc, contentBarrelSrc]
+    .every((s) => s.length > 0));
+check('AdminDashboard still imports + invokes the content domain ONCE',
+  /from '\.\.\/features\/admin\/studio\/content'/.test(adminDashCode) &&
+    (adminDashCode.match(/useAdminContentDomain\(/g) || []).length === 1);
+check('AdminDashboard still renders AdminContentLibraryPage',
+  /<AdminContentLibraryPage/.test(adminDashCode));
+check('the content page still renders Content Management',
+  /Content Management/.test(contentPageCode));
+check('the video storage key is still owned by the content data module',
+  /theprams_demo_video_lessons/.test(contentDataCode) &&
+    !/theprams_demo_video_lessons/.test(adminDashCode));
+check('the Website domain imports no content/video symbol',
+  !/videoLessons|VideoLessonRecord|useAdminContentDomain|AdminContentLibraryPage/.test(websiteDomainCode));
+
+/* ------------------------------------------------------------------ */
+/* AY. Website accessibility source contract                           */
+/* ------------------------------------------------------------------ */
+
+section('AY. T5B website accessibility source contract');
+
+check('blog article actions carry aria-labels',
+  /aria-label=\{`Edit artikel \$\{/.test(websitePageCode) &&
+    /aria-label=\{`Duplikasi artikel \$\{/.test(websitePageCode) &&
+    /aria-label=\{`Hapus artikel \$\{/.test(websitePageCode));
+check('blog article actions declare a 44px min target',
+  /min-h-\[44px\]/.test(websitePageCode) &&
+    (websitePageCode.match(/min-w-\[44px\]/g) || []).length >= 2);
+check('every Website dialog close has an aria-label',
+  /aria-label="Tutup editor Info Menarik"/.test(blogEditorCode) &&
+    /aria-label="Tutup jendela sisipan"/.test(blogMiddleInsertCode) &&
+    /aria-label="Tutup aset editor"/.test(blogAssetEditorCode) &&
+    /aria-label="Tutup preview artikel"/.test(blogPreviewCode));
+check('every Website dialog close declares a 44px target',
+  /min-w-\[44px\]/.test(blogEditorCode) && /min-h-\[44px\]/.test(blogEditorCode) &&
+    /min-w-\[44px\]/.test(blogMiddleInsertCode) && /min-h-\[44px\]/.test(blogMiddleInsertCode) &&
+    /min-w-\[44px\]/.test(blogAssetEditorCode) && /min-h-\[44px\]/.test(blogAssetEditorCode) &&
+    /min-w-\[44px\]/.test(blogPreviewCode) && /min-h-\[44px\]/.test(blogPreviewCode));
+check('the floating AI toggle + AI panel close are labelled',
+  /aria-label="AI Chat Agent"/.test(blogEditorCode) &&
+    /aria-label="Tutup AI chat"/.test(blogEditorCode));
+check('the PC file input is sr-only (keyboard reachable), not hidden',
+  /type="file"[\s\S]{0,160}aria-label="Import aset dari PC"[\s\S]{0,60}className="sr-only"/.test(blogEditorCode) &&
+    !/type="file"[\s\S]{0,160}className="hidden"/.test(blogEditorCode));
+check('blog editor fields carry accessible names',
+  /aria-label="Judul artikel"/.test(blogEditorCode) &&
+    /aria-label="Ringkasan kartu"/.test(blogEditorCode) &&
+    /aria-label="Kategori"/.test(blogEditorCode) &&
+    /aria-label="Tags \(pisahkan koma\)"/.test(blogEditorCode) &&
+    /aria-label="Konten Markdown"/.test(blogEditorCode));
+check('asset editor fields carry accessible names',
+  /aria-label="Nama aset"/.test(blogAssetEditorCode) &&
+    /aria-label="Tipe aset"/.test(blogAssetEditorCode) &&
+    /aria-label="Sumber aset"/.test(blogAssetEditorCode) &&
+    /aria-label="URL atau data file"/.test(blogAssetEditorCode) &&
+    /aria-label="Catatan aset"/.test(blogAssetEditorCode));
+check('no Website file uses bg-brand-blue + text-white',
+  !/bg-brand-blue[^"'`]*text-white|text-white[^"'`]*bg-brand-blue/.test(websiteDomainCode));
+check('no Website file uses raw brand text utilities',
+  !/text-brand-blue|text-brand-orange/.test(websiteDomainCode));
+check('the Website surface avoids emerald-600',
+  !/text-emerald-600/.test(websiteDomainCode));
+
+/* ------------------------------------------------------------------ */
+/* AZ. Website security + storage                                      */
+/* ------------------------------------------------------------------ */
+
+section('AZ. T5B security + storage (13 keys, no new key, SEC-P1-03 open)');
+
+check('the Website domain owns exactly ONE storage key (the blog-asset key)',
+  [...new Set(websiteDomainCode.match(/theprams_demo_[a-zA-Z_]+/g) || [])].join(',') ===
+    'theprams_demo_blog_assets');
+check('the page + dialogs introduce no localStorage usage',
+  !/localStorage/.test(websitePageCode) &&
+    !/localStorage/.test(blogEditorCode) &&
+    !/localStorage/.test(blogMiddleInsertCode) &&
+    !/localStorage/.test(blogAssetEditorCode) &&
+    !/localStorage/.test(blogPreviewCode) &&
+    !/localStorage/.test(websiteSaveConfirmCode));
+check('the hook uses localStorage ONLY for the blog-asset key',
+  (websiteHookCode.match(/localStorage\./g) || []).length === 1 &&
+    /localStorage\.setItem\(BLOG_ASSETS_STORAGE_KEY/.test(websiteHookCode));
+check('SEC-P1-03 still open: no Supabase/auth/AI/backend in the Website domain',
+  !/@supabase|supabase|GoogleGenAI|@google\/genai|createClient|\bopenai\b|authorization/i.test(websiteDomainCode));
+check('the Website domain adds no access-control language',
+  !/\b(?:403|Forbidden|unauthorized|access control)\b/i.test(websiteDomainCode));
+check('no router change: the website path is still /admin/studio/website',
+  allAdminPaths().includes('/admin/studio/website'));
+
+/* ------------------------------------------------------------------ */
 /* Report                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -1568,7 +1976,7 @@ if (failures.length) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }
-console.log('B1.4D-T5A admin workspace contract: PASS');
+console.log('B1.4D-T5B admin workspace contract: PASS');
 process.exit(0);
 
 /* ------------------------------------------------------------------ */
