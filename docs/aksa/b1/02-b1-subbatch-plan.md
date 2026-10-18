@@ -136,7 +136,7 @@ B1.4A, B1.4B, and B1.4C are complete. B1.4D is next. B1.4 remains IN PROGRESS.
 | **B1.4A** | Design-system primitives + `PublicHeader` extraction from `Navbar` | **ÃÂ¢ÃÂÃÂ COMPLETE** |
 | **B1.4B** | Decompose `StudentDashboard.tsx` ÃÂ¢ÃÂÃÂ `features/learn/*`; adopt `LearnerLayout` instead of self-chrome | **ÃÂ¢ÃÂÃÂ COMPLETE** |
 | **B1.4C** | Decompose `LearningPage.tsx` ÃÂ¢ÃÂÃÂ `features/learn/*` | **ÃÂ¢ÃÂÃÂ COMPLETE** |
-| **B1.4D** | Split `AdminDashboard.tsx` (408.8 KB) ÃÂ¢ÃÂÃÂ `AdminLayout` + 8 admin sections; register `/admin/*` sub-routes | pending |
+| **B1.4D** | Split `AdminDashboard.tsx` (408.8 KB) ÃÂ¢ÃÂÃÂ `AdminLayout` + 8 admin sections; register `/admin/*` sub-routes | NEXT |
 
 The ordering is deliberate: the primitives and the public header land first so
 the learner/admin decompositions have a design system to migrate onto instead of
