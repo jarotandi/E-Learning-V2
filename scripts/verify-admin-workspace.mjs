@@ -1,5 +1,5 @@
 /**
- * B1.4D admin workspace verification script (T1 + T2).
+ * B1.4D admin workspace verification script (T1 + T2 + T3).
  *
  * Usage:
  *   node scripts/verify-admin-workspace.mjs
@@ -8,7 +8,8 @@
  * ----------------
  * This is a DETERMINISTIC CONTRACT CHECK, not a browser test. It exercises the
  * REAL pure model (`src/features/admin/shell/adminWorkspaceModel.ts`) and the
- * REAL route tree, and asserts the contract B1.4D-T1/T2 is required to satisfy:
+ * REAL route tree, and asserts the contract B1.4D-T1/T2/T3 is required to
+ * satisfy:
  *
  *   A. Tab registry:  exactly 13 unique tabs.
  *   B. Domain registry: exactly 8 domains, every tab owned exactly once.
@@ -19,7 +20,7 @@
  *   G. Invalid paths are NOT known admin paths.
  *   H. Legacy AdminDashboard still receives its exact six props.
  *   I. Transient-state SOURCE CONTRACT: no `key={pathname}` on the admin path.
- *   J. localStorage key registry: all 13 keys still discoverable in source.
+ *   J. localStorage key registry: all 13 keys discoverable across the admin tree.
  *   K. Security deferrals: SEC-P1-03 remains OPEN (B2).
  *   L. (T2) AdminLayout owns the admin shell chrome.
  *   M. (T2) AdminDashboard is business content only (shell removed).
@@ -28,6 +29,13 @@
  *   P. (T2) Mobile navigation source contract (SOURCE CONTRACT only).
  *   Q. (T2) Migrated shell contrast (no white on brand-blue/orange).
  *   R. (T2) Legacy contract preservation.
+ *   S. (T3) Platform/Overview extracted to AdminOverviewPage + data module.
+ *   T. (T3) Users extracted to AdminUsersPage + domain hook + dialog.
+ *   U. (T3) Single users store (no duplicate state in the monolith).
+ *   V. (T3) Cross-domain consumers (Finance / Leads / contextual add) share it.
+ *   W. (T3) Search relocated from the shared toolbar into the Users page.
+ *   X. (T3) Accessibility SOURCE CONTRACT for the migrated Users surface.
+ *   Y. (T3) Security deferrals + routing no-regression.
  *
  * WHAT THIS DOES NOT PROVE
  * ------------------------
@@ -42,7 +50,7 @@
  * No test framework is added. This is one plain Node script.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -452,6 +460,46 @@ const adminLayoutCode = stripComments(adminLayoutSrc);
 const shellCtxCode = stripComments(shellCtxSrc);
 const adminDashCode = stripComments(adminDashSrc);
 
+// B1.4D-T3 sources: the extracted Platform + Users modules under features/admin.
+// The whole tree is concatenated for storage-key discovery (section J); the
+// individual modules are read for the T3 source contracts (sections S–Y).
+const adminFeatureDir = join(srcDir, 'features', 'admin');
+const adminFeatureEntries = readdirSync(adminFeatureDir, { recursive: true })
+  .map((entry) => String(entry).replace(/\\/g, '/'))
+  .filter((entry) => /\.(?:ts|tsx)$/.test(entry));
+const readAdminFeature = (relative) =>
+  readFileSync(join(adminFeatureDir, relative), 'utf8');
+const adminFeatureSrc = adminFeatureEntries
+  .map((entry) => readFileSync(join(adminFeatureDir, entry), 'utf8'))
+  .join('\n');
+
+const overviewPageSrc = readAdminFeature('platform/AdminOverviewPage.tsx');
+const overviewDataSrc = readAdminFeature('platform/adminPlatformData.ts');
+const overviewBarrelSrc = readAdminFeature('platform/index.ts');
+const usersPageSrc = readAdminFeature('users/AdminUsersPage.tsx');
+const usersHookSrc = readAdminFeature('users/useAdminUsersDomain.ts');
+const usersRecordsSrc = readAdminFeature('users/adminUserRecords.ts');
+const userDialogSrc = readAdminFeature('users/AdminUserEditorDialog.tsx');
+const usersBarrelSrc = readAdminFeature('users/index.ts');
+
+const overviewPageCode = stripComments(overviewPageSrc);
+const usersPageCode = stripComments(usersPageSrc);
+const usersHookCode = stripComments(usersHookSrc);
+const usersRecordsCode = stripComments(usersRecordsSrc);
+const userDialogCode = stripComments(userDialogSrc);
+
+/**
+ * Returns the body of a top-level (2-space indented) component function, e.g.
+ * `const convertLeadToStudent = (...) => { ... };`. Used to prove that a
+ * cross-domain consumer persists through the shared users store.
+ */
+function componentFunctionBody(src, name) {
+  const start = src.indexOf(`const ${name} = `);
+  if (start === -1) return '';
+  const end = src.indexOf('\n  };', start);
+  return end === -1 ? src.slice(start) : src.slice(start, end);
+}
+
 const LEGACY_PROPS = [
   'logout', 'setView', 'programs', 'onProgramsChange',
   'blogPosts', 'onBlogPostsChange',
@@ -556,13 +604,14 @@ const EXPECTED_STORAGE_KEYS = [
 ];
 
 const discovered = new Set(
-  adminDashSrc.match(/theprams_demo_[a-zA-Z_]+/g) || [],
+  [adminDashSrc, adminFeatureSrc].join('\n')
+    .match(/theprams_demo_[a-zA-Z_]+/g) || [],
 );
-check('exactly 13 theprams_demo_* keys discovered',
+check('exactly 13 theprams_demo_* keys discovered across the admin tree',
   discovered.size === 13, `found ${discovered.size}: ${[...discovered].sort().join(', ')}`);
 
 for (const key of EXPECTED_STORAGE_KEYS) {
-  check(`storage key "${key}" still present in AdminDashboard source`,
+  check(`storage key "${key}" still present across the admin tree`,
     discovered.has(key));
 }
 
@@ -573,6 +622,15 @@ const unexpectedKeys = [...discovered].filter(
 check('no unexpected/renamed storage key introduced',
   unexpectedKeys.length === 0,
   unexpectedKeys.length ? `unexpected: ${unexpectedKeys.join(', ')}` : '');
+
+// T3 single-store rule: the users key left AdminDashboard for the users domain
+// module and no second users store may exist in the monolith.
+check('AdminDashboard no longer owns the users storage key',
+  !/theprams_demo_users\b/.test(adminDashCode));
+check('AdminDashboard does not write a second users store',
+  !/localStorage\.setItem\(\s*['"]theprams_demo_users['"]/.test(adminDashCode));
+check('the users storage key constant is defined in the users domain module',
+  /['"]theprams_demo_users['"]/.test(usersRecordsCode));
 
 /* ------------------------------------------------------------------ */
 /* K. Security deferrals                                              */
@@ -743,6 +801,185 @@ check('LegacyRouteBridge still keyed by currentView (no pathname key)',
   /\bkey=\{\s*currentView/.test(bridgeCode));
 
 /* ------------------------------------------------------------------ */
+/* S. T3 Platform (Overview) extraction                                */
+/* ------------------------------------------------------------------ */
+
+section('S. T3 platform/overview extraction');
+
+check('AdminOverviewPage module exists', overviewPageSrc.length > 0);
+check('platform barrel exists', /AdminOverviewPage/.test(overviewBarrelSrc));
+check('AdminDashboard renders <AdminOverviewPage /> for the overview tab',
+  /\{activeTab === 'overview' && <AdminOverviewPage \/>\}/.test(adminDashCode));
+check('legacy overview JSX removed from AdminDashboard (Growth Analytics)',
+  !/Growth Analytics/.test(adminDashCode));
+check('legacy overview JSX removed from AdminDashboard (Program Popularity)',
+  !/Program Popularity/.test(adminDashCode));
+check('overview page owns the four summary-card metrics',
+  /'Total Siswa Aktif'/.test(overviewPageCode) &&
+    /'Active Leads'/.test(overviewPageCode) &&
+    /'Tryout Offline Boyolali'/.test(overviewPageCode) &&
+    /'Revenue \(MTD\)'/.test(overviewPageCode));
+check('AdminOverviewPage is prop-less today',
+  /export function AdminOverviewPage\(\)/.test(overviewPageCode));
+check('overview chart data moved to the platform data module',
+  /export const programData/.test(overviewDataSrc) &&
+    !/const programData = \[/.test(adminDashCode));
+check('shared chart palette moved to the platform data module',
+  /export const COLORS/.test(overviewDataSrc) &&
+    !/const COLORS = \[/.test(adminDashCode));
+check('AdminDashboard still imports the shared palette for Reports',
+  /COLORS/.test(adminDashCode) &&
+    /from '\.\.\/features\/admin\/platform'/.test(adminDashSrc));
+check('overview legend labels use accessible tokens (no raw brand text)',
+  !/text-brand-blue\s+uppercase/.test(overviewPageCode) &&
+    !/text-brand-orange\s+uppercase/.test(overviewPageCode));
+check('overview trend badge no longer uses emerald-600 on emerald-50',
+  !/bg-emerald-50 text-emerald-600/.test(overviewPageCode));
+
+/* ------------------------------------------------------------------ */
+/* T. T3 Users extraction — module presence + wiring                   */
+/* ------------------------------------------------------------------ */
+
+section('T. T3 users extraction — modules + wiring');
+
+check('AdminUsersPage module exists', usersPageSrc.length > 0);
+check('useAdminUsersDomain module exists', usersHookSrc.length > 0);
+check('adminUserRecords module exists', usersRecordsSrc.length > 0);
+check('AdminUserEditorDialog module exists', userDialogSrc.length > 0);
+check('users barrel exists', /AdminUsersPage/.test(usersBarrelSrc));
+check('AdminDashboard renders AdminUsersPage for the users tab',
+  /\{activeTab === 'users' && \([\s\S]{0,200}<AdminUsersPage/.test(adminDashCode));
+check('AdminUsersPage receives the canonical domain surface',
+  /domain=\{usersDomain\}/.test(adminDashCode));
+check('legacy users JSX removed from AdminDashboard (heading)',
+  !/User Management & Permissions/.test(adminDashCode));
+check('legacy users table removed from AdminDashboard (System Role column)',
+  !/System Role/.test(adminDashCode));
+check('legacy users editor modal removed from AdminDashboard',
+  !/Add \/ Edit User/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* U. T3 single users store                                            */
+/* ------------------------------------------------------------------ */
+
+section('U. T3 single users store (no duplicate state)');
+
+check('AdminDashboard no longer declares useState<UserAccount[]>',
+  !/useState<\s*UserAccount\[\]\s*>/.test(adminDashCode));
+check('AdminDashboard no longer declares a local editingUser state',
+  !/useState<\s*UserAccount \| null\s*>/.test(adminDashCode));
+check('AdminDashboard no longer declares a local userDirectoryView state',
+  !/useState<\s*'students' \| 'staff'\s*>/.test(adminDashCode));
+check('AdminDashboard no longer declares a local roleFilter state',
+  !/const \[\s*roleFilter/.test(adminDashCode));
+check('AdminDashboard no longer declares a generic searchTerm state',
+  !/const \[\s*searchTerm\s*,\s*setSearchTerm\s*\]/.test(adminDashCode));
+check('AdminDashboard invokes the users domain hook exactly once',
+  (adminDashCode.match(/useAdminUsersDomain\(/g) || []).length === 1);
+check('AdminDashboard destructures users/persistUsers from the domain',
+  /const\s*\{\s*users\s*,\s*persistUsers\s*\}\s*=\s*usersDomain/.test(adminDashCode));
+check('the route-mounted page does NOT own users state',
+  !/useAdminUsersDomain\(/.test(usersPageCode) &&
+    !/useState<\s*UserAccount\[\]\s*>/.test(usersPageCode));
+check('the shell/layout layers do NOT own users state',
+  !/useAdminUsersDomain\(/.test(adminLayoutCode) &&
+    !/useAdminUsersDomain\(/.test(shellCtxCode));
+check('the users domain module does not import AdminDashboard (no cycle)',
+  !/from '[^']*AdminDashboard'/.test(usersHookCode) &&
+    !/from '[^']*AdminDashboard'/.test(usersPageCode) &&
+    !/from '[^']*AdminDashboard'/.test(userDialogCode));
+check('the record-adapter module owns no React state',
+  !/useState/.test(usersRecordsCode));
+
+/* ------------------------------------------------------------------ */
+/* V. T3 cross-domain consumers                                        */
+/* ------------------------------------------------------------------ */
+
+section('V. T3 cross-domain consumers still share the one store');
+
+check('Finance approval flow persists through the shared store',
+  /persistUsers\(/.test(componentFunctionBody(adminDashCode, 'updateFinanceRecordStatus')));
+check('Lead conversion persists through the shared store',
+  /persistUsers\(/.test(componentFunctionBody(adminDashCode, 'convertLeadToStudent')));
+check('contextual add persists through the shared store',
+  /persistUsers\(\s*\[/.test(adminDashCode));
+check('record adapters are imported, not re-declared in the monolith',
+  /isApprovedStudentRecord/.test(adminDashCode) &&
+    !/const isApprovedStudentRecord = /.test(adminDashCode) &&
+    !/const userFromStudentRecord = /.test(adminDashCode));
+check('the users domain module owns the record adapters',
+  /export const isApprovedStudentRecord = /.test(usersRecordsCode) &&
+    /export const userFromStudentRecord = /.test(usersRecordsCode));
+check('approved-student sync reads registrations + transactions',
+  /theprams_demo_registrations/.test(usersHookCode) &&
+    /theprams_demo_transactions/.test(usersHookCode));
+check('approved-student sync dedupes by id and composite key',
+  /existingIds/.test(usersHookCode) && /existingEmails/.test(usersHookCode));
+check('approved-student mount-time sync effect preserved',
+  /useEffect\(\(\)\s*=>\s*\{[\s\S]{0,80}syncApprovedStudentsToUsers\(\);/.test(usersHookCode));
+
+/* ------------------------------------------------------------------ */
+/* W. T3 search relocation                                             */
+/* ------------------------------------------------------------------ */
+
+section('W. T3 search relocated from the shared toolbar to Users');
+
+check('AdminUsersPage owns a users-local search term',
+  /usersSearchTerm/.test(usersPageCode));
+check('AdminUsersPage search input has an accessible name',
+  /aria-label="Cari pengguna"/.test(usersPageCode));
+check('the users hook filters by name + email (legacy semantics)',
+  /name\.toLowerCase\(\)\.includes/.test(usersHookCode) &&
+    /email\.toLowerCase\(\)\.includes/.test(usersHookCode));
+check('the shared toolbar no longer carries users search',
+  !/Search dashboard/.test(adminDashCode) && !/Cari dashboard/.test(adminDashCode));
+check('the shared toolbar keeps the notification bell',
+  /aria-label="Lihat notifikasi admin"/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* X. T3 accessibility source contract (Users)                         */
+/* ------------------------------------------------------------------ */
+
+section('X. T3 accessibility source contract (Users domain)');
+
+check('Users page uses design-system Button/IconButton',
+  /design-system\/components/.test(usersPageCode) &&
+    /\bButton\b/.test(usersPageCode) && /\bIconButton\b/.test(usersPageCode));
+check('directory toggles declare a 44px min target (both)',
+  (usersPageCode.match(/min-h-\[44px\]/g) || []).length >= 2);
+check('access icon control has an aria-label',
+  /aria-label=\{`Lihat hak akses \$\{/.test(usersPageCode));
+check('edit icon control has an aria-label',
+  /aria-label=\{`Edit user \$\{/.test(usersPageCode));
+check('delete icon control has an aria-label',
+  /aria-label=\{`Hapus user \$\{/.test(usersPageCode));
+check('editor dialog close control has an aria-label',
+  /aria-label="Tutup editor pengguna"/.test(userDialogCode));
+check('editor dialog close declares a 44px min target',
+  /min-w-\[44px\]/.test(userDialogCode) && /min-h-\[44px\]/.test(userDialogCode));
+check('extracted users surface has no raw brand text utilities',
+  !/text-brand-blue|text-brand-orange/.test(usersPageCode) &&
+    !/text-brand-blue|text-brand-orange/.test(userDialogCode));
+
+/* ------------------------------------------------------------------ */
+/* Y. T3 security + routing no-regression                              */
+/* ------------------------------------------------------------------ */
+
+section('Y. T3 security deferrals + routing no-regression');
+
+check('SEC-P1-03 still open: no Supabase/GenAI in extracted admin features',
+  !/@supabase|supabase|GoogleGenAI|@google\/genai/i.test(stripComments(adminFeatureSrc)));
+check('the navigation registry still declares exactly 13 tabs',
+  (navRegistrySrc.match(/tab:\s*'[a-z]+'/g) || []).length === 13);
+check('no fake global search introduced into the shell',
+  !/Search dashboard/.test(adminLayoutCode) &&
+    !/Cari dashboard/.test(shellCtxCode));
+check('notify/actionMessage stay owned by AdminDashboard (not the layout)',
+  /const notify = \(/.test(adminDashCode) &&
+    /actionMessage/.test(adminDashCode) &&
+    !/actionMessage/.test(adminLayoutCode));
+
+/* ------------------------------------------------------------------ */
 /* Report                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -754,7 +991,7 @@ if (failures.length) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }
-console.log('B1.4D-T2 admin workspace contract: PASS');
+console.log('B1.4D-T3 admin workspace contract: PASS');
 process.exit(0);
 
 /* ------------------------------------------------------------------ */

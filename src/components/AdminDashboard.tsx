@@ -1,11 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Users, 
-  GraduationCap,
   BookOpen, 
   Rocket, 
   DollarSign, 
-  Users2, 
   CheckCircle2, 
   MoreVertical,
   Plus,
@@ -21,7 +19,6 @@ import {
   FileText,
   Shield,
   ThumbsUp,
-  MapPin,
   Calendar,
   Clock,
   LineChart as LineChartIcon,
@@ -68,6 +65,14 @@ import {
   type AdminTab,
 } from '../features/admin/shell/adminWorkspaceModel';
 import { useAdminShell } from '../features/admin/shell/AdminShellContext';
+import { readStorageArray } from '../features/admin/adminStorage';
+import { AdminOverviewPage, COLORS } from '../features/admin/platform';
+import {
+  AdminUsersPage,
+  useAdminUsersDomain,
+  isApprovedStudentRecord,
+  userFromStudentRecord,
+} from '../features/admin/users';
 
 const MOCK_LEADS: Lead[] = [
   { id: '1', name: 'Rina Wijaya', email: 'rina@mail.com', phone: '0812345678', programOfInterest: 'SNBT Kedokteran', source: 'Instagram', status: 'Qualified', createdAt: '2026-04-20' },
@@ -90,13 +95,6 @@ const revenueData = [
   { name: 'Sun', rev: 3490, students: 430 },
 ];
 
-const programData = [
-  { name: 'SNBT Kedokteran', value: 420 },
-  { name: 'SKD CPNS', value: 215 },
-  { name: 'Sekolah Kedinasan', value: 180 },
-  { name: 'OSN Matematika', value: 95 },
-];
-
 const programPerformanceData = [
   { name: 'SNBT Kedokteran', active: 420, leads: 650, revenue: 1050 },
   { name: 'SKD CPNS', active: 215, leads: 450, revenue: 268 },
@@ -104,8 +102,6 @@ const programPerformanceData = [
   { name: 'OSN Math', active: 95, leads: 220, revenue: 95 },
   { name: 'Poltekkes', active: 154, leads: 280, revenue: 185 },
 ];
-
-const COLORS = ['#2563eb', '#1e3a8a', '#f59e0b', '#10b981', '#6366f1'];
 
 const currencyOptions = [
   { code: 'IDR', label: 'Rupiah Indonesia', symbol: 'Rp', locale: 'id-ID' },
@@ -122,52 +118,7 @@ const formatCurrencyAmount = (value: string | number, currencyCode = 'IDR') => {
   return `${currency.symbol} ${amount.toLocaleString(currency.locale)}`;
 };
 
-const readStorageArray = <T,>(key: string, fallback: T[] = []): T[] => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key) || '[]');
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const USER_STORAGE_KEY = 'theprams_demo_users';
 const LEAD_STORAGE_KEY = 'theprams_demo_leads';
-
-const getAccountTypeFromRecord = (record: any): UserAccount['accountType'] => {
-  const text = `${record.type || ''} ${record.status || ''} ${record.packageName || ''}`.toLowerCase();
-  if (text.includes('scholar') || text.includes('beasiswa')) return 'Scholarship';
-  if (text.includes('free') || text.includes('gratis')) return 'Free';
-  return 'Paid';
-};
-
-const isApprovedStudentRecord = (record: any) => {
-  const type = getAccountTypeFromRecord(record);
-  const status = String(record.status || '').toLowerCase();
-  if (type === 'Free') return true;
-  if (type === 'Scholarship') return status.includes('approved');
-  return status.includes('approved') || status.includes('success');
-};
-
-const userFromStudentRecord = (record: any, prefix = 'student'): UserAccount => {
-  const sourceId = record.invoiceNumber || record.id || `${prefix}-${Date.now()}`;
-  const data = record.registrationData || {};
-  const accountType = getAccountTypeFromRecord(record);
-  return {
-    id: `${prefix}-${sourceId}`,
-    name: data.name || record.name || record.student || 'Siswa Baru',
-    email: data.email || record.email || '-',
-    role: 'Student',
-    program: record.program || data.program || '-',
-    status: 'Active',
-    avatar: `https://i.pravatar.cc/150?u=${encodeURIComponent(sourceId)}`,
-    joinedAt: String(record.createdAt || new Date().toISOString()).slice(0, 10),
-    accountType,
-    packageName: record.packageName || '-',
-    paymentStatus: record.status || '-',
-    source: accountType === 'Free' ? 'Paket Gratis' : accountType === 'Scholarship' ? 'Approval Beasiswa' : 'Approval Pembayaran'
-  };
-};
 
 const parseRupiah = (value: string | number | undefined) => {
   if (typeof value === 'number') return value;
@@ -409,8 +360,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   const setActiveTab = (tab: AdminTab) => {
     navigateToTab(tab);
   };
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('All');
   const [actionMessage, setActionMessage] = useState('');
   const [isSaveWebsiteConfirmOpen, setIsSaveWebsiteConfirmOpen] = useState(false);
   const [isCampaignEditorOpen, setIsCampaignEditorOpen] = useState(false);
@@ -964,17 +913,25 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     }
   };
   
-  // User Management State
-  const [users, setUsers] = useState<UserAccount[]>(() => readStorageArray(USER_STORAGE_KEY, USER_ACCOUNTS.map((user) => ({
-    ...user,
-    accountType: user.role === 'Student' ? 'Paid' : 'Staff',
-    source: 'Demo Seed'
-  }))));
-  const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
-  const [userDirectoryView, setUserDirectoryView] = useState<'students' | 'staff'>('students');
   const [testimonials, setTestimonials] = useState<Testimonial[]>(TESTIMONIALS);
   const [testimonialFilter, setTestimonialFilter] = useState<'All' | 'Pending' | 'Approved'>('All');
   const [programsList, setProgramsList] = useState<Program[]>(programs);
+
+  // B1.4D-T3 — Users domain.
+  //
+  // The Users state (users / editingUser / userDirectoryView / roleFilter /
+  // usersSearchTerm) now lives in a dedicated domain hook invoked by this
+  // PERSISTENT orchestrator, not by the route-mounted AdminUsersPage. That
+  // keeps one canonical users store for the cross-domain consumers that also
+  // read/write it: Lead conversion, Finance approval auto-create, and the
+  // contextual add. `notify`/`recordAudit`/`programsList` are injected so the
+  // hook never imports this component.
+  const usersDomain = useAdminUsersDomain({
+    programs: programsList,
+    notify,
+    recordAudit,
+  });
+  const { users, persistUsers } = usersDomain;
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [programPendingSave, setProgramPendingSave] = useState<Program | null>(null);
   const [websiteQuestions, setWebsiteQuestions] = useState<WebsiteQuestion[]>(() => readStorageArray('theprams_demo_website_questions'));
@@ -1017,34 +974,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     infoMenarik: blogPostDrafts.filter((post) => post.category !== 'Literasi').length,
     words: blogPostDrafts.reduce((sum, post) => sum + post.content.trim().split(/\s+/).filter(Boolean).length, 0)
   }), [blogPostDrafts]);
-
-  const persistUsers = (nextUsers: UserAccount[]) => {
-    setUsers(nextUsers);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUsers));
-  };
-
-  const syncApprovedStudentsToUsers = (baseUsers = users) => {
-    const registrations = readStorageArray<any>('theprams_demo_registrations');
-    const transactions = readStorageArray<any>('theprams_demo_transactions');
-    const systemStudents = [
-      ...transactions.filter(isApprovedStudentRecord).map((record) => userFromStudentRecord(record, 'tx')),
-      ...registrations.filter(isApprovedStudentRecord).map((record) => userFromStudentRecord(record, 'reg'))
-    ];
-    const existingIds = new Set(baseUsers.map((user) => user.id));
-    const existingEmails = new Set(baseUsers.map((user) => `${user.email}-${user.program}-${user.packageName || ''}`.toLowerCase()));
-    const newStudents = systemStudents.filter((student) => {
-      const key = `${student.email}-${student.program}-${student.packageName || ''}`.toLowerCase();
-      return !existingIds.has(student.id) && !existingEmails.has(key);
-    });
-    if (!newStudents.length) return baseUsers;
-    const nextUsers = [...newStudents, ...baseUsers];
-    persistUsers(nextUsers);
-    return nextUsers;
-  };
-
-  useEffect(() => {
-    syncApprovedStudentsToUsers();
-  }, []);
 
   const saveWebsiteQuestions = (nextQuestions: WebsiteQuestion[]) => {
     setWebsiteQuestions(nextQuestions);
@@ -1297,50 +1226,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     return testimonials.filter((item) => item.status === testimonialFilter);
   }, [testimonialFilter, testimonials]);
 
-  const openNewUserForm = (kind: 'student' | 'staff') => {
-    setEditingUser({
-      id: `user-${Date.now()}`,
-      name: '',
-      email: '',
-      role: kind === 'student' ? 'Student' : 'Support',
-      program: kind === 'student' ? (programsList[0]?.title || 'SNBT Kedokteran') : 'Admin Panel',
-      status: 'Active',
-      avatar: `https://i.pravatar.cc/150?u=${Date.now()}`,
-      joinedAt: new Date().toISOString().slice(0, 10),
-      accountType: kind === 'student' ? 'Free' : 'Staff',
-      packageName: kind === 'student' ? 'Manual Input' : 'Staff Account',
-      paymentStatus: kind === 'student' ? 'Manual Active' : 'Internal',
-      source: kind === 'student' ? 'Add User Siswa' : 'Add User Admin'
-    });
-  };
-
-  const saveUser = (user: UserAccount) => {
-    if (!user.name.trim() || !user.email.trim()) {
-      notify('Nama dan email user wajib diisi.');
-      return;
-    }
-    const sanitizedUser: UserAccount = {
-      ...user,
-      id: user.id || `user-${Date.now()}`,
-      name: user.name.trim(),
-      email: user.email.trim(),
-      avatar: user.avatar.trim() || `https://i.pravatar.cc/150?u=${encodeURIComponent(user.email)}`,
-      joinedAt: user.joinedAt || new Date().toISOString().slice(0, 10),
-      program: ['Student', 'Tutor'].includes(user.role) ? (user.program?.trim() || programsList[0]?.title || 'General') : user.program?.trim(),
-      accountType: user.role === 'Student' ? (user.accountType === 'Staff' ? 'Free' : user.accountType || 'Free') : 'Staff',
-      packageName: user.packageName?.trim() || (user.role === 'Student' ? 'Manual Input' : 'Staff Account'),
-      paymentStatus: user.paymentStatus?.trim() || (user.role === 'Student' ? 'Manual Active' : 'Internal'),
-      source: user.source?.trim() || (user.role === 'Student' ? 'Add User Siswa' : 'Add User Admin')
-    };
-    const nextUsers = users.some((item) => item.id === sanitizedUser.id)
-      ? users.map((item) => item.id === sanitizedUser.id ? sanitizedUser : item)
-      : [sanitizedUser, ...users];
-    persistUsers(nextUsers);
-    setEditingUser(null);
-    recordAudit('User & Roles', 'Save User', `${sanitizedUser.name} - ${sanitizedUser.role}`);
-    notify('User berhasil disimpan.');
-  };
-
   const financeRows = useMemo(() => {
     const demoRows = [
       { id: 'demo-1', student: 'Andi Pratama', program: 'Med-Express', packageName: 'Premium', amount: 'Rp 3.500.000', status: 'Success', method: 'Virtual Account', date: '25 Apr 2026', type: 'paid' },
@@ -1542,25 +1427,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     notify('Detail video berhasil disimpan.');
   };
   
-  const filteredUsers = useMemo(() => {
-    return users.filter(u => {
-      const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           u.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesRole = roleFilter === 'All' || u.role === roleFilter;
-      const matchesDirectory = userDirectoryView === 'students'
-        ? u.role === 'Student'
-        : u.role !== 'Student';
-      return matchesSearch && matchesRole && matchesDirectory;
-    });
-  }, [users, searchTerm, roleFilter, userDirectoryView]);
-
-  const deleteUser = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus akun ini?')) {
-      persistUsers(users.filter(u => u.id !== id));
-      notify('User berhasil dihapus.');
-    }
-  };
-
   // Question Bank Functions
   const duplicateQuestion = (q: Question) => {
     const newQuestion: Question = {
@@ -1669,25 +1535,13 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
 
   return (
     <div className="min-w-0 flex flex-col bg-slate-50 font-sans">
-      {/* Content toolbar (B1.4D-T2 transitional).
-          Search + notification bell were part of the legacy application
-          header. They are business-coupled (searchTerm filters users,
-          notify() uses actionMessage), so they are RE-HOMED here as a
-          content toolbar rather than lifted into the shell. T3 will place
-          user-domain search with Users; notification ownership is later.
-          They must NOT become a sticky second global header. */}
-      <div className="flex items-center justify-between gap-4 px-8 py-4 bg-white border-b border-slate-200">
-        <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-100 max-w-md w-full">
-          <Search size={18} className="text-slate-400" aria-hidden="true" />
-          <input
-           type="text"
-           aria-label="Cari dashboard"
-           placeholder="Search dashboard..."
-           value={searchTerm}
-           onChange={(e) => setSearchTerm(e.target.value)}
-           className="bg-transparent border-none text-sm w-full focus:ring-0"
-          />
-        </div>
+      {/* Notification action row (B1.4D-T3).
+          The T2 transitional toolbar carried a "Search dashboard..." input
+          that only ever filtered Users; T3 moved that search into the Users
+          page. What remains is the notification bell, which is business-coupled
+          (notify() uses actionMessage) and stays owned by AdminDashboard.
+          It must NOT become a sticky second global header. */}
+      <div className="flex items-center justify-end gap-4 px-8 py-4 bg-white border-b border-slate-200">
         <button
           onClick={() => notify('Notifikasi: 3 pembayaran menunggu verifikasi dan 2 testimoni pending.')}
           aria-label="Lihat notifikasi admin"
@@ -1712,108 +1566,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
       </AnimatePresence>
 
          <div className="p-8">
-            {activeTab === 'overview' && (
-              <div className="space-y-8 animate-in fade-in duration-500">
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                   {[
-                     { label: 'Total Siswa Aktif', value: '1,284', trend: '+12%', icon: Users2, color: 'text-brand-blue' },
-                     { label: 'Active Leads', value: '450', trend: '+25%', icon: UserPlus, color: 'text-brand-orange' },
-                     { label: 'Tryout Offline Boyolali', value: '15 Mei', trend: 'Upcoming', icon: MapPin, color: 'text-brand-orange' },
-                     { label: 'Revenue (MTD)', value: 'Rp 420jt', trend: '+14%', icon: DollarSign, color: 'text-emerald-500' }
-                   ].map((stat, i) => (
-                     <div key={i} className="card-premium p-6">
-                        <div className="flex justify-between items-start mb-4">
-                           <div className={`p-3 rounded-2xl bg-slate-50 ${stat.color}`}>
-                              <stat.icon size={24} />
-                           </div>
-                           <span className={`text-xs font-bold px-2 py-1 rounded-lg ${stat.trend.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
-                              {stat.trend}
-                           </span>
-                        </div>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{stat.label}</p>
-                        <p className="text-2xl font-bold text-brand-navy mt-1">{stat.value}</p>
-                     </div>
-                   ))}
-                </div>
-
-                <div className="grid lg:grid-cols-3 gap-8">
-                   <div className="lg:col-span-2 card-premium p-8">
-                      <div className="flex items-center justify-between mb-8">
-                         <h3 className="text-xl font-bold text-brand-navy">Growth Analytics</h3>
-                         <div className="flex gap-4">
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-brand-blue uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-brand-blue" /> Students</span>
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-brand-orange uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-brand-orange" /> Leads</span>
-                         </div>
-                      </div>
-                      <div className="h-80 w-full">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={[
-                              { name: 'Week 1', students: 40, leads: 120 },
-                              { name: 'Week 2', students: 65, leads: 180 },
-                              { name: 'Week 3', students: 85, leads: 240 },
-                              { name: 'Week 4', students: 120, leads: 310 },
-                            ]}>
-                               <defs>
-                                  <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
-                                     <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                                     <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                                  </linearGradient>
-                                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                                     <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1}/>
-                                     <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                                  </linearGradient>
-                               </defs>
-                               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748b'}} />
-                               <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#64748b'}} />
-                               <Tooltip 
-                                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                               />
-                               <Area type="monotone" dataKey="students" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorStudents)" />
-                               <Area type="monotone" dataKey="leads" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorLeads)" />
-                            </AreaChart>
-                         </ResponsiveContainer>
-                      </div>
-                   </div>
-
-                   <div className="card-premium p-8">
-                      <h3 className="font-bold text-brand-navy mb-8">Program Popularity</h3>
-                      <div className="h-64 w-full">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                               <Pie
-                                  data={programData}
-                                  cx="50%"
-                                  cy="50%"
-                                  innerRadius={60}
-                                  outerRadius={80}
-                                  paddingAngle={5}
-                                  dataKey="value"
-                               >
-                                  {programData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                  ))}
-                               </Pie>
-                               <Tooltip />
-                            </PieChart>
-                         </ResponsiveContainer>
-                      </div>
-                      <div className="mt-8 space-y-3">
-                         {programData.map((prog, i) => (
-                           <div key={i} className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i] }} />
-                                 <span className="text-xs font-medium text-slate-600">{prog.name}</span>
-                              </div>
-                              <span className="text-xs font-bold text-brand-navy">{prog.value}</span>
-                           </div>
-                         ))}
-                      </div>
-                   </div>
-                </div>
-              </div>
-            )}
+            {activeTab === 'overview' && <AdminOverviewPage />}
 
             {activeTab === 'leads' && (
               <div className="animate-in fade-in duration-500 space-y-6">
@@ -1888,154 +1641,12 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
             )}
 
              {activeTab === 'users' && (
-              <div className="animate-in fade-in duration-500">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                   <div>
-                      <h2 className="text-2xl font-bold text-brand-navy">User Management & Permissions</h2>
-                      <p className="text-sm text-slate-500">Control role assignments and granular access levels</p>
-                   </div>
-                   <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-                        <button onClick={() => setUserDirectoryView('students')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest ${userDirectoryView === 'students' ? 'bg-white shadow-sm text-brand-navy' : 'text-slate-400 hover:text-slate-600'}`}>
-                          User Siswa
-                        </button>
-                        <button onClick={() => setUserDirectoryView('staff')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest ${userDirectoryView === 'staff' ? 'bg-white shadow-sm text-brand-navy' : 'text-slate-400 hover:text-slate-600'}`}>
-                          Admin & Staff
-                        </button>
-                      </div>
-                      <button 
-                        onClick={() => openNewUserForm('student')}
-                        className="btn-secondary py-2 px-5"
-                      >
-                         <Plus size={18} />
-                         Add User Siswa
-                      </button>
-                      <button 
-                        onClick={() => openNewUserForm('staff')}
-                        className="btn-primary py-2 px-5"
-                      >
-                         <Plus size={18} />
-                         Add User Admin
-                      </button>
-                      <button
-                        onClick={() => {
-                          syncApprovedStudentsToUsers();
-                          notify('Daftar siswa disinkronkan dari registrasi, pembayaran approved, dan beasiswa approved.');
-                        }}
-                        className="btn-secondary py-2 px-5"
-                      >
-                         <RefreshCw size={18} />
-                         Sync Approved
-                      </button>
-                   </div>
-                </div>
-
-                <div className="grid md:grid-cols-4 gap-4 mb-6">
-                  {[
-                    { label: 'Total User', value: users.length, icon: Users, color: 'text-brand-blue' },
-                    { label: 'Student', value: users.filter((item) => item.role === 'Student').length, icon: GraduationCap, color: 'text-emerald-500' },
-                    { label: 'Gratis', value: users.filter((item) => item.role === 'Student' && item.accountType === 'Free').length, icon: CheckCircle2, color: 'text-emerald-500' },
-                    { label: 'Berbayar/Beasiswa', value: users.filter((item) => item.role === 'Student' && ['Paid', 'Scholarship'].includes(String(item.accountType))).length, icon: Award, color: 'text-brand-orange' },
-                  ].map((stat) => (
-                    <div key={stat.label} className="card-premium p-5 bg-white">
-                      <stat.icon size={20} className={`${stat.color} mb-3`} />
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
-                      <p className="text-2xl font-black text-brand-navy mt-1">{stat.value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="card-premium overflow-hidden">
-                   <table className="w-full text-left">
-                      <thead className="bg-slate-50 border-b border-slate-100">
-                         <tr>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">User Details</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">System Role</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Tipe Akun</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Access Level</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                         {filteredUsers.map((user) => (
-                           <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                              <td className="px-6 py-4">
-                                 <div className="flex items-center gap-3">
-                                    <div className="relative">
-                                      <img src={user.avatar} className="w-10 h-10 rounded-xl object-cover" alt="" />
-                                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
-                                    </div>
-                                    <div>
-                                       <p className="text-sm font-bold text-brand-navy">{user.name || 'New User'}</p>
-                                       <p className="text-[10px] text-slate-400 font-medium">{user.email || 'pending email'}</p>
-                                    </div>
-                                 </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <select 
-                                    value={user.role}
-                                    onChange={(e) => {
-                                      const nextRole = e.target.value as UserAccount['role'];
-                                      const updatedUsers = users.map((u) => {
-                                        const nextAccountType: UserAccount['accountType'] = nextRole === 'Student' ? (u.accountType === 'Staff' ? 'Free' : u.accountType || 'Free') : 'Staff';
-                                        return u.id === user.id ? { ...u, role: nextRole, accountType: nextAccountType } : u;
-                                      });
-                                      persistUsers(updatedUsers);
-                                    }}
-                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest outline-none border border-transparent transition-all hover:border-slate-200 ${
-                                       user.role === 'Admin' ? 'bg-purple-50 text-purple-600' :
-                                       user.role === 'Tutor' || user.role === 'Content Manager' ? 'bg-amber-50 text-amber-600' :
-                                       'bg-blue-50 text-brand-blue'
-                                    }`}
-                                 >
-                                    <option value="Admin">Super Admin</option>
-                                    <option value="Content Manager">Content Manager</option>
-                                    <option value="Support">Support Staff</option>
-                                    <option value="Tutor">Educator</option>
-                                    <option value="Student">Student User</option>
-                                 </select>
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                                  user.accountType === 'Scholarship' ? 'bg-indigo-50 text-indigo-600' :
-                                  user.accountType === 'Paid' ? 'bg-amber-50 text-amber-600' :
-                                  user.accountType === 'Staff' ? 'bg-slate-100 text-slate-500' :
-                                  'bg-emerald-50 text-emerald-600'
-                                }`}>
-                                  {user.accountType || (user.role === 'Student' ? 'Free' : 'Staff')}
-                                </span>
-                                <p className="text-[10px] text-slate-400 mt-1">{user.packageName || '-'}</p>
-                                <p className="text-[10px] text-slate-400">{user.paymentStatus || user.source || '-'}</p>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                    {rolePermissions[(user.role as any) === 'Admin' ? 'Super Admin' : (user.role as any)]?.slice(0, 3).map(tab => (
-                                      <span key={tab} className="text-[8px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">{tab}</span>
-                                    ))}
-                                 </div>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => notify(`Hak akses ${user.name || 'New User'} mengikuti role: ${user.role}.`)} className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
-                                       <Shield size={16} />
-                                    </button>
-                                    <button onClick={() => setEditingUser(user)} className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
-                                       <Edit2 size={16} />
-                                    </button>
-                                    <button 
-                                      onClick={() => deleteUser(user.id)}
-                                      className="p-2 text-slate-400 hover:text-red-500 transition-colors"
-                                    >
-                                       <Trash2 size={16} />
-                                    </button>
-                                 </div>
-                              </td>
-                           </tr>
-                         ))}
-                      </tbody>
-                   </table>
-                </div>
-              </div>
+              <AdminUsersPage
+                domain={usersDomain}
+                programs={programsList}
+                rolePermissions={rolePermissions}
+                notify={notify}
+              />
             )}
 
             {/* Feedback Tab content skipped for brevity... */}
@@ -4913,162 +4524,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
                        </button>
                      </div>
                    </div>
-                 </div>
-               </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
-
-         <AnimatePresence>
-           {editingUser && (
-             <div className="fixed inset-0 z-[124] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
-               <motion.div
-                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                 className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden"
-               >
-                 <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                     <Users size={22} className="text-brand-blue" />
-                     <div>
-                       <h3 className="font-bold">Add / Edit User</h3>
-                       <p className="text-[10px] text-white/50 uppercase tracking-widest">
-                         {editingUser.role === 'Student' ? 'Form khusus user siswa' : 'Form khusus user admin/staff'}
-                       </p>
-                     </div>
-                   </div>
-                   <button onClick={() => setEditingUser(null)} className="p-2 hover:bg-white/10 rounded-full">
-                     <X size={20} />
-                   </button>
-                 </div>
-
-                 <div className="p-8 grid lg:grid-cols-3 gap-8">
-                   <div className="lg:col-span-2 space-y-5">
-                     <div className="grid md:grid-cols-2 gap-4">
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nama Lengkap</label>
-                         <input value={editingUser.name} onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" placeholder="Contoh: Budi Santoso" />
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Email Login</label>
-                         <input type="email" value={editingUser.email} onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" placeholder="nama@email.com" />
-                       </div>
-                     </div>
-
-                     <div className="grid md:grid-cols-3 gap-4">
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Role</label>
-                         <select
-                           value={editingUser.role}
-                           onChange={(e) => {
-                             const nextRole = e.target.value as UserAccount['role'];
-                             setEditingUser({
-                               ...editingUser,
-                               role: nextRole,
-                               accountType: nextRole === 'Student' ? (editingUser.accountType === 'Staff' ? 'Free' : editingUser.accountType || 'Free') : 'Staff'
-                             });
-                           }}
-                           className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none"
-                         >
-                           {editingUser.role === 'Student' ? (
-                             <option value="Student">Student User</option>
-                           ) : (
-                             <>
-                               <option value="Support">Support Staff</option>
-                               <option value="Content Manager">Content Manager</option>
-                               <option value="Admin">Super Admin</option>
-                               <option value="Tutor">Tutor / Educator</option>
-                             </>
-                           )}
-                         </select>
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Status</label>
-                         <select value={editingUser.status} onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value as UserAccount['status'] })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                           <option value="Active">Active</option>
-                           <option value="Pending">Pending</option>
-                           <option value="Inactive">Inactive</option>
-                         </select>
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tanggal Join</label>
-                         <input type="date" value={editingUser.joinedAt} onChange={(e) => setEditingUser({ ...editingUser, joinedAt: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none" />
-                       </div>
-                     </div>
-
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Program / Scope</label>
-                       <select value={editingUser.program || ''} onChange={(e) => setEditingUser({ ...editingUser, program: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                         <option value="">General / Semua Program</option>
-                         {programsList.map((program) => (
-                           <option key={program.id} value={program.title}>{program.title}</option>
-                         ))}
-                       </select>
-                     </div>
-
-                     {editingUser.role === 'Student' && (
-                       <div className="grid md:grid-cols-3 gap-4">
-                         <div>
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipe Siswa</label>
-                           <select value={editingUser.accountType || 'Free'} onChange={(e) => setEditingUser({ ...editingUser, accountType: e.target.value as UserAccount['accountType'] })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                             <option value="Free">Gratis</option>
-                             <option value="Paid">Berbayar</option>
-                             <option value="Scholarship">Beasiswa</option>
-                           </select>
-                         </div>
-                         <div>
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Paket Belajar</label>
-                           <input value={editingUser.packageName || ''} onChange={(e) => setEditingUser({ ...editingUser, packageName: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none" placeholder="Gratis / Premium / Beasiswa" />
-                         </div>
-                         <div>
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Status Pembayaran</label>
-                           <input value={editingUser.paymentStatus || ''} onChange={(e) => setEditingUser({ ...editingUser, paymentStatus: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none" placeholder="Free Active / Approved" />
-                         </div>
-                       </div>
-                     )}
-
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Avatar URL</label>
-                       <input value={editingUser.avatar} onChange={(e) => setEditingUser({ ...editingUser, avatar: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm" />
-                     </div>
-                   </div>
-
-                   <div className="space-y-5">
-                     <div className="card-premium p-5 bg-slate-50">
-                       <div className="flex items-center gap-3 mb-4">
-                         <img src={editingUser.avatar} className="w-12 h-12 rounded-xl object-cover bg-white" alt="" />
-                         <div>
-                           <p className="text-sm font-black text-brand-navy">{editingUser.name || 'Nama User'}</p>
-                           <p className="text-[10px] text-slate-400 font-bold">{editingUser.email || 'email belum diisi'}</p>
-                         </div>
-                       </div>
-                       <span className="inline-flex px-2 py-1 rounded-lg bg-blue-50 text-brand-blue text-[10px] font-black uppercase">{editingUser.role}</span>
-                     </div>
-
-                     <div className="card-premium p-5 bg-white">
-                       <h4 className="font-black text-brand-navy mb-3">Rincian Akses Role</h4>
-                       <div className="flex flex-wrap gap-2">
-                         {(rolePermissions[(editingUser.role as any) === 'Admin' ? 'Super Admin' : (editingUser.role as any) as AdminRole] || ['overview']).map((tab) => (
-                           <span key={tab} className="px-2 py-1 rounded-lg bg-slate-50 text-slate-500 text-[9px] font-black uppercase">{tab}</span>
-                         ))}
-                         {editingUser.role === 'Student' && <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase">student dashboard</span>}
-                         {editingUser.role === 'Tutor' && <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-600 text-[9px] font-black uppercase">kelas & materi</span>}
-                       </div>
-                       <p className="text-[10px] text-slate-400 leading-relaxed mt-4">
-                         Admin dan Content Manager mendapat akses panel demo sesuai role. Student/Tutor tersimpan sebagai akun operasional dan dapat difilter di tabel user.
-                       </p>
-                     </div>
-                   </div>
-                 </div>
-
-                 <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                   <button onClick={() => setEditingUser(null)} className="px-6 py-2.5 rounded-xl text-xs font-black text-slate-500 uppercase tracking-widest hover:bg-slate-100">
-                     Batal
-                   </button>
-                   <button onClick={() => saveUser(editingUser)} className="btn-primary py-2.5 px-8">
-                     <Save size={18} /> Simpan User
-                   </button>
                  </div>
                </motion.div>
              </div>
