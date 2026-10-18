@@ -1,5 +1,5 @@
 /**
- * B1.4D admin workspace verification script (T1 + T2 + T3).
+ * B1.4D admin workspace verification script (T1 + T2 + T3 + T4).
  *
  * Usage:
  *   node scripts/verify-admin-workspace.mjs
@@ -8,7 +8,7 @@
  * ----------------
  * This is a DETERMINISTIC CONTRACT CHECK, not a browser test. It exercises the
  * REAL pure model (`src/features/admin/shell/adminWorkspaceModel.ts`) and the
- * REAL route tree, and asserts the contract B1.4D-T1/T2/T3 is required to
+ * REAL route tree, and asserts the contract B1.4D-T1/T2/T3/T4 is required to
  * satisfy:
  *
  *   A. Tab registry:  exactly 13 unique tabs.
@@ -36,6 +36,14 @@
  *   W. (T3) Search relocated from the shared toolbar into the Users page.
  *   X. (T3) Accessibility SOURCE CONTRACT for the migrated Users surface.
  *   Y. (T3) Security deferrals + routing no-regression.
+ *   Z. (T4) Academic/Question Bank modules + composition wiring.
+ *  AA. (T4) Single question store (no duplicate state in the monolith).
+ *  AB. (T4) Composition + old Question Bank JSX removed from the monolith.
+ *  AC. (T4) Contextual add uses the canonical questions domain.
+ *  AD. (T4) Studio (T5) non-regression: video state stays in AdminDashboard.
+ *  AE. (T4) Question behaviour: source contract + EXECUTED draft factories.
+ *  AF. (T4) Accessibility SOURCE CONTRACT for the migrated Academic surface.
+ *  AG. (T4) Security + storage: no new question key.
  *
  * WHAT THIS DOES NOT PROVE
  * ------------------------
@@ -460,7 +468,8 @@ const adminLayoutCode = stripComments(adminLayoutSrc);
 const shellCtxCode = stripComments(shellCtxSrc);
 const adminDashCode = stripComments(adminDashSrc);
 
-// B1.4D-T3 sources: the extracted Platform + Users modules under features/admin.
+// B1.4D-T3/T4 sources: the extracted Platform + Users + Academic modules under
+// features/admin.
 // The whole tree is concatenated for storage-key discovery (section J); the
 // individual modules are read for the T3 source contracts (sections S–Y).
 const adminFeatureDir = join(srcDir, 'features', 'admin');
@@ -482,11 +491,27 @@ const usersRecordsSrc = readAdminFeature('users/adminUserRecords.ts');
 const userDialogSrc = readAdminFeature('users/AdminUserEditorDialog.tsx');
 const usersBarrelSrc = readAdminFeature('users/index.ts');
 
+// B1.4D-T4 — academic (Question Bank) domain.
+const academicPageSrc = readAdminFeature('academic/AdminQuestionBankPage.tsx');
+const academicHookSrc = readAdminFeature('academic/useAdminQuestionsDomain.ts');
+const academicEditorSrc = readAdminFeature('academic/AdminQuestionEditorDialog.tsx');
+const academicTagsSrc = readAdminFeature('academic/AdminQuestionTagsDialog.tsx');
+const academicImportSrc = readAdminFeature('academic/AdminQuestionImportDialog.tsx');
+const academicDataSrc = readAdminFeature('academic/adminQuestionData.ts');
+const academicBarrelSrc = readAdminFeature('academic/index.ts');
+
 const overviewPageCode = stripComments(overviewPageSrc);
 const usersPageCode = stripComments(usersPageSrc);
 const usersHookCode = stripComments(usersHookSrc);
 const usersRecordsCode = stripComments(usersRecordsSrc);
 const userDialogCode = stripComments(userDialogSrc);
+
+const academicPageCode = stripComments(academicPageSrc);
+const academicHookCode = stripComments(academicHookSrc);
+const academicEditorCode = stripComments(academicEditorSrc);
+const academicTagsCode = stripComments(academicTagsSrc);
+const academicImportCode = stripComments(academicImportSrc);
+const academicDataCode = stripComments(academicDataSrc);
 
 /**
  * Returns the body of a top-level (2-space indented) component function, e.g.
@@ -979,6 +1004,242 @@ check('notify/actionMessage stay owned by AdminDashboard (not the layout)',
     /actionMessage/.test(adminDashCode) &&
     !/actionMessage/.test(adminLayoutCode));
 
+/* ================================================================== */
+/* B1.4D-T4 ADDITIONS                                                 */
+/* ================================================================== */
+
+/* ------------------------------------------------------------------ */
+/* Z. Academic module presence                                         */
+/* ------------------------------------------------------------------ */
+
+section('Z. T4 academic extraction — modules + wiring');
+
+check('AdminQuestionBankPage module exists', academicPageSrc.length > 0);
+check('useAdminQuestionsDomain module exists', academicHookSrc.length > 0);
+check('AdminQuestionEditorDialog module exists', academicEditorSrc.length > 0);
+check('AdminQuestionTagsDialog module exists', academicTagsSrc.length > 0);
+check('AdminQuestionImportDialog module exists', academicImportSrc.length > 0);
+check('adminQuestionData module exists', academicDataSrc.length > 0);
+check('academic barrel exists',
+  /AdminQuestionBankPage/.test(academicBarrelSrc) &&
+    /useAdminQuestionsDomain/.test(academicBarrelSrc));
+check('AdminDashboard renders AdminQuestionBankPage for the questions tab',
+  /\{activeTab === 'questions' && \([\s\S]{0,400}<AdminQuestionBankPage/.test(adminDashCode));
+check('AdminQuestionBankPage receives the canonical domain surface',
+  /domain=\{questionsDomain\}/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* AA. Single Question Bank authority                                  */
+/* ------------------------------------------------------------------ */
+
+section('AA. T4 single Question Bank store (no duplicate state)');
+
+check('AdminDashboard invokes useAdminQuestionsDomain exactly once',
+  (adminDashCode.match(/useAdminQuestionsDomain\(/g) || []).length === 1);
+check('AdminDashboard no longer declares useState<Question[]>',
+  !/useState<\s*Question\[\]\s*>/.test(adminDashCode));
+check('AdminDashboard no longer declares a local editingQuestion state',
+  !/useState<\s*Question \| null\s*>/.test(adminDashCode));
+check('AdminDashboard no longer declares a local availableTags state',
+  !/const \[\s*availableTags\s*,\s*setAvailableTags\s*\]/.test(adminDashCode));
+check('AdminDashboard no longer declares import/tag-modal state duplicates',
+  !/const \[\s*isImportModalOpen\s*,/.test(adminDashCode) &&
+    !/const \[\s*isManageTagsModalOpen\s*,/.test(adminDashCode) &&
+    !/const \[\s*newTagInput\s*,/.test(adminDashCode) &&
+    !/const \[\s*importStatus\s*,/.test(adminDashCode));
+check('AdminDashboard no longer holds a local questions/tags setter',
+  !/setQuestions\(/.test(adminDashCode) && !/setAvailableTags\(/.test(adminDashCode));
+check('AdminDashboard no longer imports the Question type',
+  !/import\s*\{[^}]*\bQuestion\b[^}]*\}\s*from\s*'\.\.\/types'/.test(adminDashSrc));
+check('AdminDashboard no longer references the Question type',
+  !/\bQuestion\[\]/.test(adminDashCode) &&
+    !/:\s*Question\b/.test(adminDashCode) &&
+    !/<Question\b/.test(adminDashCode) &&
+    !/\bQuestion\s*\|/.test(adminDashCode));
+check('the route-mounted page does NOT invoke its own questions hook',
+  !/useAdminQuestionsDomain\(/.test(academicPageCode) &&
+    !/useState<\s*Question\[\]\s*>/.test(academicPageCode));
+check('the questions domain modules do not import AdminDashboard (no cycle)',
+  !/from '[^']*AdminDashboard'/.test(academicHookCode) &&
+    !/from '[^']*AdminDashboard'/.test(academicPageCode) &&
+    !/from '[^']*AdminDashboard'/.test(academicEditorCode));
+
+/* ------------------------------------------------------------------ */
+/* AB. Composition + old JSX removal                                   */
+/* ------------------------------------------------------------------ */
+
+section('AB. T4 composition + old Question Bank JSX removal');
+
+check('the canonical domain surface is passed',
+  /domain=\{questionsDomain\}/.test(adminDashCode));
+check('old Question Bank heading absent from AdminDashboard',
+  !/Question Bank Central/.test(adminDashCode));
+check('old editor/tags/import modal JSX absent from AdminDashboard',
+  !/Question Editor Modal/.test(adminDashCode) &&
+    !/Manage Question Categories/.test(adminDashCode) &&
+    !/Batch Question Import/.test(adminDashCode));
+check('old question table headers absent from AdminDashboard',
+  !/Question Preview/.test(adminDashCode));
+check('the extracted page owns the Question Bank heading',
+  /Question Bank Central/.test(academicPageCode));
+check('the extracted page composes the three dialogs',
+  /AdminQuestionEditorDialog/.test(academicPageCode) &&
+    /AdminQuestionTagsDialog/.test(academicPageCode) &&
+    /AdminQuestionImportDialog/.test(academicPageCode));
+check('AdminDashboard no longer renders the old Add Question draft inline',
+  !/options:\s*\[\s*\{\s*id:\s*'A'/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* AC. Contextual add uses the canonical domain                        */
+/* ------------------------------------------------------------------ */
+
+section('AC. T4 contextual add uses the canonical questions domain');
+
+check('runContextualAdd question branch uses the canonical questions domain',
+  /questionsDomain\.openContextualQuestionDraft\(\)/.test(
+    componentFunctionBody(adminDashCode, 'runContextualAdd')));
+check('no direct duplicate questions store in the monolith',
+  !/setQuestions\(/.test(adminDashCode) && !/const \[\s*questions\s*,/.test(adminDashCode));
+check('runContextualAdd other branches preserved',
+  /activeTab === 'leads'/.test(componentFunctionBody(adminDashCode, 'runContextualAdd')) &&
+    /activeTab === 'users'/.test(componentFunctionBody(adminDashCode, 'runContextualAdd')) &&
+    /activeTab === 'content'/.test(componentFunctionBody(adminDashCode, 'runContextualAdd')));
+
+/* ------------------------------------------------------------------ */
+/* AD. Studio (T5) non-regression                                      */
+/* ------------------------------------------------------------------ */
+
+section('AD. T4 Studio (T5) non-regression — video state stays in AdminDashboard');
+
+for (const name of ['isUploadVideoModalOpen', 'videoLessons', 'editingVideo', 'uploadStatus', 'uploadProgress', 'videoForm']) {
+  check(`Studio state "${name}" remains in AdminDashboard`,
+    new RegExp(`\\b${name}\\b`).test(adminDashCode));
+}
+check('Studio video helpers remain in AdminDashboard',
+  /const simulateVideoUpload = /.test(adminDashCode) &&
+    /const saveVideoLessons = /.test(adminDashCode) &&
+    /const saveVideoEditor = /.test(adminDashCode));
+check('the academic extract did NOT take the video storage key',
+  !/theprams_demo_video_lessons/.test(academicHookCode) &&
+    !/theprams_demo_video_lessons/.test(academicPageCode));
+check('the academic domain imports no Studio/video symbol',
+  !/videoLessons|editingVideo|uploadProgress|simulateVideoUpload/.test(academicHookCode) &&
+    !/videoLessons|editingVideo|uploadProgress|simulateVideoUpload/.test(academicPageCode));
+
+/* ------------------------------------------------------------------ */
+/* AE. Question behaviour (source + executed draft factories)          */
+/* ------------------------------------------------------------------ */
+
+section('AE. T4 question behaviour (source + executed draft factories)');
+
+check('duplicate clones, Date.now id, appends "(Copy)" and prepends',
+  /id:\s*Date\.now\(\)\.toString\(\)/.test(academicHookCode) &&
+    /\(Copy\)/.test(academicHookCode) &&
+    /setQuestions\(\[\s*newQuestion\s*,\s*\.\.\.questions\s*\]\)/.test(academicHookCode) &&
+    /Soal berhasil diduplikasi\./.test(academicHookCode));
+check('save replaces by id or prepends, closes editor and toasts',
+  /questions\.find\(\(q\)\s*=>\s*q\.id === updatedQ\.id\)/.test(academicHookCode) &&
+    /setEditingQuestion\(null\)/.test(academicHookCode) &&
+    /Soal berhasil disimpan\./.test(academicHookCode));
+check('delete uses confirm and toasts',
+  /confirm\('Delete this question\?'\)/.test(academicHookCode) &&
+    /Soal berhasil dihapus\./.test(academicHookCode));
+check('addTag only adds when absent',
+  /if \(!availableTags\.includes\(tag\)\)/.test(academicHookCode));
+check('toggleQuestionTag adds/removes on the editing record',
+  /currentTags\.includes\(tag\)/.test(academicHookCode) &&
+    /currentTags\.filter\(\(t\)\s*=>\s*t !== tag\)/.test(academicHookCode));
+check('CSV import keeps idle/processing/done + 2000/1500 delays',
+  /'idle' \| 'processing' \| 'done'/.test(academicHookSrc) &&
+    /setImportStatus\('processing'\)/.test(academicHookCode) &&
+    /setImportStatus\('done'\)/.test(academicHookCode) &&
+    /2000/.test(academicHookCode) && /1500/.test(academicHookCode));
+check('CSV import remains a simulation (no parser dependency)',
+  !/papaparse|Papa\.parse|parseCsv|csv-parse/i.test(academicImportCode) &&
+    /Simulate parsing/.test(academicHookSrc));
+check('the import dialog keeps no video-upload state',
+  !/uploadStatus|uploadProgress|videoForm/.test(academicImportCode));
+
+// Executed: the two create paths and the seed data (pure data module).
+const questionData = await compileAndImport(
+  join(srcDir, 'features', 'admin', 'academic', 'adminQuestionData.ts'),
+);
+const blankDraft = questionData.createBlankQuestionDraft();
+const contextualDraft = questionData.createContextualQuestionDraft();
+check('executed: "Add Question" draft has five options A-E',
+  blankDraft.options.map((o) => o.id).join(',') === 'A,B,C,D,E');
+check('executed: contextual draft has two options A-B',
+  contextualDraft.options.map((o) => o.id).join(',') === 'A,B');
+check('executed: the two create paths stay DIFFERENT (not normalised)',
+  blankDraft.options.length !== contextualDraft.options.length);
+check('executed: seed data holds the two legacy demo questions',
+  questionData.MOCK_QUESTIONS.length === 2);
+check('executed: initial tag registry matches legacy list',
+  questionData.INITIAL_QUESTION_TAGS.join(',') === 'IRT,SNBT,CPNS,Kedokteran,Matematika');
+check('executed: simulated import yields two demo questions',
+  questionData.buildSimulatedImportQuestions().length === 2);
+
+/* ------------------------------------------------------------------ */
+/* AF. Accessibility source contract (Academic)                        */
+/* ------------------------------------------------------------------ */
+
+section('AF. T4 academic accessibility source contract');
+
+check('row duplicate control has an aria-label',
+  /aria-label=\{`Duplikasi soal \$\{/.test(academicPageCode));
+check('row edit control has an aria-label',
+  /aria-label=\{`Edit soal \$\{/.test(academicPageCode));
+check('row delete control has an aria-label',
+  /aria-label=\{`Hapus soal \$\{/.test(academicPageCode));
+check('row actions area is revealed on focus-within',
+  /focus-within:opacity-100/.test(academicPageCode));
+check('row actions use the design-system IconButton',
+  /IconButton/.test(academicPageCode));
+check('editor dialog close has an aria-label',
+  /aria-label="Tutup editor soal"/.test(academicEditorCode));
+check('tags dialog close has an aria-label',
+  /aria-label="Tutup kategori soal"/.test(academicTagsCode));
+check('import dialog close has an aria-label',
+  /aria-label="Tutup import soal"/.test(academicImportCode));
+check('all three dialog closes declare a 44px min target',
+  /min-w-\[44px\]/.test(academicEditorCode) && /min-h-\[44px\]/.test(academicEditorCode) &&
+    /min-w-\[44px\]/.test(academicTagsCode) && /min-h-\[44px\]/.test(academicTagsCode) &&
+    /min-w-\[44px\]/.test(academicImportCode) && /min-h-\[44px\]/.test(academicImportCode));
+check('correct-answer controls are 44x44',
+  /w-11 h-11/.test(academicEditorCode));
+check('correct-answer controls expose aria-pressed',
+  /aria-pressed=\{question\.correctOptionId === opt\.id\}/.test(academicEditorCode));
+check('tag delete control has an aria-label',
+  /aria-label=\{`Hapus tag \$\{tag\}`\}/.test(academicTagsCode));
+check('selected tags do NOT use bg-brand-blue + text-white',
+  !/bg-brand-blue[^"'`]*text-white|text-white[^"'`]*bg-brand-blue/.test(academicEditorCode));
+check('extracted academic surface has no raw brand text utilities',
+  !/text-brand-blue|text-brand-orange/.test(academicPageCode) &&
+    !/text-brand-blue|text-brand-orange/.test(academicEditorCode) &&
+    !/text-brand-blue|text-brand-orange/.test(academicTagsCode) &&
+    !/text-brand-blue|text-brand-orange/.test(academicImportCode));
+check('academic difficulty badges avoid emerald-600',
+  !/text-emerald-600/.test(academicPageCode));
+
+/* ------------------------------------------------------------------ */
+/* AG. Security / storage                                              */
+/* ------------------------------------------------------------------ */
+
+section('AG. T4 security + storage (no new question key)');
+
+check('no new question storage key introduced',
+  !/theprams_demo_questions\b/.test(adminDashSrc) &&
+    !/theprams_demo_questions\b/.test(adminFeatureSrc));
+check('the question domain introduces no localStorage usage',
+  !/localStorage/.test(academicHookCode) &&
+    !/localStorage/.test(academicPageCode) &&
+    !/localStorage/.test(academicDataCode));
+check('SEC-P1-03 still open: no Supabase/auth/AI in the academic domain',
+  !/@supabase|supabase|GoogleGenAI|@google\/genai|openmaic/i.test(
+    [academicPageSrc, academicHookSrc, academicEditorSrc, academicTagsSrc, academicImportSrc, academicDataSrc].join('\n')));
+check('academic domain adds no access-control language',
+  !/\b(?:403|Forbidden|unauthorized|access control)\b/i.test(academicPageCode));
+
 /* ------------------------------------------------------------------ */
 /* Report                                                              */
 /* ------------------------------------------------------------------ */
@@ -991,7 +1252,7 @@ if (failures.length) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }
-console.log('B1.4D-T3 admin workspace contract: PASS');
+console.log('B1.4D-T4 admin workspace contract: PASS');
 process.exit(0);
 
 /* ------------------------------------------------------------------ */
