@@ -373,17 +373,10 @@ console.log('\n19. Toast accessibility (D15)');
 check('Toast close button has aria-label', supportMaterialsContent.includes('aria-label="Tutup notifikasi"'));
 check('Toast close button has min-w-11 min-h-11', supportMaterialsContent.includes('min-w-11 min-h-11'));
 
-// 20. Icon button targets (D16)
+// 20. Icon button targets (D16) - focused checks already in R4
 console.log('\n20. Icon button targets (D16)');
-let iconButtonsHaveTargets = 0;
+// Obsolete heuristic removed - focused checks in R4 section above
 const allTsxFiles = readdirSync(WORKSPACE_DIR).filter(f => f.endsWith('.tsx'));
-for (const file of allTsxFiles) {
-  const content = readFileSync(join(WORKSPACE_DIR, file), 'utf-8');
-  if (content.includes('min-w-11 min-h-11') || content.includes('minWidth') || content.includes('minHeight') || content.includes('min-w-12') || content.includes('min-h-12')) {
-    iconButtonsHaveTargets++;
-  }
-}
-check('Icon buttons have >=44x44 targets', iconButtonsHaveTargets > 0);
 
 // 21. Contrast audit (D13)
 console.log('\n21. Contrast audit (D13)');
@@ -433,6 +426,11 @@ check('CurriculumPanel has w-full', curriculumPanelContent.includes('w-full'));
 check('CurriculumPanel has min-w-0', curriculumPanelContent.includes('min-w-0'));
 check('CurriculumPanel does NOT have lg:w-96', !curriculumPanelContent.includes('lg:w-96'));
 
+// R4 - Contrast check for CurriculumPanel badge
+console.log('\nR4. Contrast check - CurriculumPanel badge');
+const cpContent = readFileSync(join(WORKSPACE_DIR, 'CurriculumPanel.tsx'), 'utf-8');
+check('CurriculumPanel badge uses accessible color (not emerald-600)', !cpContent.includes('bg-blue-50 text-emerald-600'));
+
 // R4 - Legacy action class audit
 console.log('\nR4. Legacy action class audit');
 // allTsxFiles already declared above
@@ -458,7 +456,6 @@ check('No bg-brand-teal + text-white in workspace', !hasBgBrandTealWhite);
 
 // R4 - Specific 44px checks
 console.log('\nR4. Specific 44px checks');
-const cpContent = readFileSync(join(WORKSPACE_DIR, 'CurriculumPanel.tsx'), 'utf-8');
 const lfcContent = readFileSync(join(WORKSPACE_DIR, 'LessonFeedbackCard.tsx'), 'utf-8');
 const lfdContent = readFileSync(join(WORKSPACE_DIR, 'LessonFeedbackDialog.tsx'), 'utf-8');
 const smcContent = readFileSync(join(WORKSPACE_DIR, 'SupportMaterialsCard.tsx'), 'utf-8');

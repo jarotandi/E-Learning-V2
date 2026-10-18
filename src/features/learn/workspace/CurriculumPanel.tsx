@@ -58,7 +58,7 @@ export function CurriculumPanel({
     <aside className="w-full min-w-0 border-l border-slate-100 bg-white overflow-y-auto">
       <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
         <h3 className="font-bold text-brand-navy">Daftar Modul</h3>
-        <span className="bg-blue-50 text-emerald-600 text-[10px] font-bold px-2 py-1 rounded-md">
+        <span className="bg-blue-50 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-md">
           {remainingLessons} Materi Lagi
         </span>
       </div>
