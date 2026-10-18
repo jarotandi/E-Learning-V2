@@ -36,9 +36,7 @@ import {
   Download,
   Settings,
   Copy,
-  Tags,
   Upload,
-  FileUp,
   Save,
   X,
   Check,
@@ -57,7 +55,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Quote } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { BLOG_POSTS, USER_ACCOUNTS, MOCK_FEEDBACKS, TESTIMONIALS, PROGRAMS } from '../constants';
-import { BlogPost, UserAccount, Lead, Question, Testimonial, Program, ProgramPackage, WebsiteQuestion } from '../types';
+import { BlogPost, UserAccount, Lead, Testimonial, Program, ProgramPackage, WebsiteQuestion } from '../types';
 import {
   ADMIN_ROLE_PERMISSIONS,
   isAdminTabAllowed,
@@ -73,16 +71,15 @@ import {
   isApprovedStudentRecord,
   userFromStudentRecord,
 } from '../features/admin/users';
+import {
+  AdminQuestionBankPage,
+  useAdminQuestionsDomain,
+} from '../features/admin/academic';
 
 const MOCK_LEADS: Lead[] = [
   { id: '1', name: 'Rina Wijaya', email: 'rina@mail.com', phone: '0812345678', programOfInterest: 'SNBT Kedokteran', source: 'Instagram', status: 'Qualified', createdAt: '2026-04-20' },
   { id: '2', name: 'Andi Pratama', email: 'andi@mail.com', phone: '0819876543', programOfInterest: 'SKD CPNS', source: 'Google', status: 'New', createdAt: '2026-04-22' },
   { id: '3', name: 'Siska Putri', email: 'siska@mail.com', phone: '0811223344', programOfInterest: 'Kedinasan', source: 'TikTok', status: 'Contacted', createdAt: '2026-04-23' },
-];
-
-const MOCK_QUESTIONS: Question[] = [
-  { id: '1', subject: 'Penalaran Umum', difficulty: 'Hard', text: 'Semua X adalah Y...', options: [], correctOptionId: 'A', explanation: '...', program: 'SNBT' },
-  { id: '2', subject: 'Penalaran Matematika', difficulty: 'Medium', text: 'Hasil dari 2x + 5...', options: [], correctOptionId: 'B', explanation: '...', program: 'SNBT' },
 ];
 
 const revenueData = [
@@ -893,17 +890,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
         packages: []
       });
     } else if (activeTab === 'questions') {
-      setEditingQuestion({
-        id: Date.now().toString(),
-        subject: 'Penalaran Umum',
-        difficulty: 'Medium',
-        text: '',
-        options: [{ id: 'A', text: '' }, { id: 'B', text: '' }],
-        correctOptionId: 'A',
-        explanation: '',
-        program: 'SNBT',
-        tags: []
-      });
+      questionsDomain.openContextualQuestionDraft();
     } else if (activeTab === 'content') {
       setIsUploadVideoModalOpen(true);
     } else if (activeTab === 'marketing') {
@@ -932,6 +919,15 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     recordAudit,
   });
   const { users, persistUsers } = usersDomain;
+
+  // B1.4D-T4 — Question Bank (academic) domain.
+  //
+  // Same reasoning as Users: the Question Bank state lived ABOVE the
+  // conditional questions JSX so a transient draft survived tab changes. The
+  // canonical (in-memory, demo) question store therefore stays owned by this
+  // PERSISTENT orchestrator, not by the route-mounted AdminQuestionBankPage.
+  // Only `notify` is injected; no finance/users/programs/Studio state.
+  const questionsDomain = useAdminQuestionsDomain({ notify });
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [programPendingSave, setProgramPendingSave] = useState<Program | null>(null);
   const [websiteQuestions, setWebsiteQuestions] = useState<WebsiteQuestion[]>(() => readStorageArray('theprams_demo_website_questions'));
@@ -1379,17 +1375,12 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     };
   }, [financialReportPeriod, financeRows, financeRealizations, assetEntries, financeEntries, financeSummary.pendingRevenue]);
   
-  // Question Bank State
-  const [questions, setQuestions] = useState<Question[]>(MOCK_QUESTIONS);
-  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [availableTags, setAvailableTags] = useState<string[]>(['IRT', 'SNBT', 'CPNS', 'Kedokteran', 'Matematika']);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isManageTagsModalOpen, setIsManageTagsModalOpen] = useState(false);
+  // Studio / Content Library state (T5 — intentionally still owned here).
+  // B1.4D-T4 must NOT relocate this video/upload state while extracting the
+  // question domain that sat alongside it.
   const [isUploadVideoModalOpen, setIsUploadVideoModalOpen] = useState(false);
   const [videoLessons, setVideoLessons] = useState<VideoLessonRecord[]>(() => readStorageArray('theprams_demo_video_lessons', defaultVideoLessons));
   const [editingVideo, setEditingVideo] = useState<VideoLessonRecord | null>(null);
-  const [newTagInput, setNewTagInput] = useState('');
-  const [importStatus, setImportStatus] = useState<'idle' | 'processing' | 'done'>('idle');
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'completed'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   
@@ -1427,82 +1418,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     notify('Detail video berhasil disimpan.');
   };
   
-  // Question Bank Functions
-  const duplicateQuestion = (q: Question) => {
-    const newQuestion: Question = {
-      ...q,
-      id: Date.now().toString(),
-      text: `${q.text} (Copy)`
-    };
-    setQuestions([newQuestion, ...questions]);
-    notify('Soal berhasil diduplikasi.');
-  };
-
-  const saveQuestion = (updatedQ: Question) => {
-    if (questions.find(q => q.id === updatedQ.id)) {
-      setQuestions(questions.map(q => q.id === updatedQ.id ? updatedQ : q));
-    } else {
-      setQuestions([updatedQ, ...questions]);
-    }
-    setEditingQuestion(null);
-    notify('Soal berhasil disimpan.');
-  };
-
-  const deleteQuestion = (id: string) => {
-    if (confirm('Delete this question?')) {
-      setQuestions(questions.filter(q => q.id !== id));
-      notify('Soal berhasil dihapus.');
-    }
-  };
-
-  const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setImportStatus('processing');
-    
-    // Simulate parsing
-    setTimeout(() => {
-      const newQuestions: Question[] = [
-        { 
-          id: (Date.now() + 1).toString(), 
-          subject: 'Penalaran Umum', 
-          difficulty: 'Medium', 
-          text: 'Hasil import CSV 1...', 
-          options: [{id: 'A', text: 'Option A'}, {id: 'B', text: 'Option B'}], 
-          correctOptionId: 'A', 
-          explanation: 'Imported explanation', 
-          program: 'SNBT',
-          tags: ['CSV Import']
-        },
-        { 
-          id: (Date.now() + 2).toString(), 
-          subject: 'Penalaran Matematika', 
-          difficulty: 'Hard', 
-          text: 'Hasil import CSV 2...', 
-          options: [{id: 'A', text: 'Option A'}, {id: 'B', text: 'Option B'}], 
-          correctOptionId: 'B', 
-          explanation: 'Imported explanation 2', 
-          program: 'SKD',
-          tags: ['CSV Import']
-        }
-      ];
-      
-      setQuestions([...newQuestions, ...questions]);
-      setImportStatus('done');
-      setTimeout(() => {
-        setIsImportModalOpen(false);
-        setImportStatus('idle');
-      }, 1500);
-    }, 2000);
-  };
-
-  const addTag = (tag: string) => {
-    if (!availableTags.includes(tag)) {
-      setAvailableTags([...availableTags, tag]);
-    }
-  };
-
   const simulateVideoUpload = () => {
     if (!videoForm.title) return;
     setUploadStatus('uploading');
@@ -1522,15 +1437,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
         return prev + 5;
       });
     }, 100);
-  };
-
-  const toggleQuestionTag = (tag: string) => {
-    if (!editingQuestion) return;
-    const currentTags = editingQuestion.tags || [];
-    const newTags = currentTags.includes(tag) 
-      ? currentTags.filter(t => t !== tag)
-      : [...currentTags, tag];
-    setEditingQuestion({ ...editingQuestion, tags: newTags });
   };
 
   return (
@@ -3026,484 +2932,10 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
             )}
 
             {activeTab === 'questions' && (
-              <div className="animate-in fade-in duration-500 space-y-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                   <div>
-                      <h2 className="text-2xl font-bold text-brand-navy">Question Bank Central</h2>
-                      <p className="text-sm text-slate-500">Manage {questions.length} indexed questions for all tryouts</p>
-                   </div>
-                   <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
-                         <Search size={18} className="text-slate-400" />
-                         <input 
-                           type="text" 
-                           placeholder="Filter questions..." 
-                           className="text-sm bg-transparent border-none focus:ring-0 font-medium text-slate-600 w-32 md:w-auto"
-                         />
-                      </div>
-                      <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
-                         <Filter size={18} className="text-slate-400" />
-                         <select className="text-sm bg-transparent border-none focus:ring-0 font-medium text-slate-600">
-                            <option>All Subjects</option>
-                            <option>Penalaran Umum</option>
-                            <option>Penalaran Matematika</option>
-                         </select>
-                      </div>
-                      <button 
-                        onClick={() => setEditingQuestion({
-                          id: Date.now().toString(),
-                          subject: 'Penalaran Umum',
-                          difficulty: 'Medium',
-                          text: '',
-                          options: [
-                            { id: 'A', text: '' },
-                            { id: 'B', text: '' },
-                            { id: 'C', text: '' },
-                            { id: 'D', text: '' },
-                            { id: 'E', text: '' }
-                          ],
-                          correctOptionId: 'A',
-                          explanation: '',
-                          program: 'SNBT',
-                          tags: []
-                        })}
-                        className="btn-primary py-2 px-6 flex items-center gap-2"
-                      >
-                         <Plus size={18} />
-                         <span className="hidden md:inline">Add Question</span>
-                      </button>
-                      <button 
-                        onClick={() => setIsImportModalOpen(true)}
-                        className="btn-secondary py-2 px-6 flex items-center gap-2"
-                      >
-                         <FileUp size={18} />
-                         <span className="hidden md:inline">Batch Import</span>
-                       </button>
-                       <button 
-                         onClick={() => setIsManageTagsModalOpen(true)}
-                         className="btn-secondary py-2 px-6 flex items-center gap-2"
-                       >
-                          <Tags size={18} />
-                          <span className="hidden md:inline">Manage Tags</span>
-                       </button>
-                    </div>
-                </div>
-
-                <div className="card-premium overflow-hidden">
-                   <table className="w-full text-left">
-                      <thead className="bg-slate-50 border-b border-slate-100">
-                         <tr>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Question Preview</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Metadata</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Tags</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Difficulty</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                         {questions.map((q) => (
-                           <tr key={q.id} className="hover:bg-slate-50/50 transition-colors group">
-                              <td className="py-5 px-6">
-                                 <p className="text-sm font-medium text-brand-navy line-clamp-1 max-w-lg">{q.text || <span className="italic text-slate-300">(No text)</span>}</p>
-                                 <div className="flex gap-2 mt-1">
-                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">Ans: {q.correctOptionId}</span>
-                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">{q.program}</span>
-                                 </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <p className="text-xs font-bold text-slate-600 tracking-tight">{q.subject}</p>
-                                 <p className="text-[10px] text-slate-400 font-medium whitespace-nowrap">ID: {q.id}</p>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <div className="flex flex-wrap gap-1 justify-center max-w-[150px]">
-                                    {q.tags?.map((tag, i) => (
-                                      <span key={i} className="text-[8px] font-black text-brand-blue bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-tighter">
-                                        {tag}
-                                      </span>
-                                    )) || <span className="text-[8px] text-slate-300 font-bold uppercase">-</span>}
-                                 </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider ${
-                                   q.difficulty === 'Hard' ? 'bg-red-50 text-red-600' : 
-                                   q.difficulty === 'Medium' ? 'bg-amber-50 text-amber-600' :
-                                   'bg-emerald-50 text-emerald-600'
-                                 }`}>
-                                    {q.difficulty}
-                                 </span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button 
-                                      onClick={() => duplicateQuestion(q)}
-                                      className="p-2 text-slate-400 hover:text-brand-orange hover:bg-orange-50 rounded-lg transition-colors" 
-                                      title="Duplicate Question"
-                                    >
-                                       <Copy size={16} />
-                                    </button>
-                                    <button 
-                                      onClick={() => setEditingQuestion(q)}
-                                      className="p-2 text-slate-400 hover:text-brand-blue hover:bg-blue-50 rounded-lg transition-colors" 
-                                      title="Edit Question"
-                                    >
-                                       <Edit2 size={16} />
-                                    </button>
-                                    <button 
-                                      onClick={() => deleteQuestion(q.id)}
-                                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" 
-                                      title="Delete Question"
-                                    >
-                                       <Trash2 size={16} />
-                                    </button>
-                                 </div>
-                              </td>
-                           </tr>
-                         ))}
-                      </tbody>
-                   </table>
-                </div>
-
-                {/* Question Editor Modal */}
-                <AnimatePresence>
-                  {editingQuestion && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col my-auto"
-                      >
-                         <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                               <div className="p-2 bg-white/10 rounded-xl">
-                                  <BookOpen size={20} className="text-brand-blue" />
-                               </div>
-                               <div>
-                                  <h3 className="font-bold">Edit Question</h3>
-                                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-black">Question ID: {editingQuestion.id}</p>
-                               </div>
-                            </div>
-                            <button onClick={() => setEditingQuestion(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                               <X size={20} />
-                            </button>
-                         </div>
-
-                         <div className="p-8 grid md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh]">
-                            <div className="space-y-6">
-                               <div>
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Question Content</label>
-                                  <textarea 
-                                    className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none font-medium text-slate-600 h-40 resize-none focus:border-brand-blue transition-colors"
-                                    value={editingQuestion.text}
-                                    onChange={(e) => setEditingQuestion({ ...editingQuestion, text: e.target.value })}
-                                    placeholder="Enter question text here..."
-                                  />
-                               </div>
-
-                               <div>
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Answer Options</label>
-                                  <div className="space-y-3">
-                                    {editingQuestion.options.map((opt, idx) => (
-                                      <div key={idx} className="flex gap-3">
-                                         <button 
-                                           onClick={() => setEditingQuestion({ ...editingQuestion, correctOptionId: opt.id })}
-                                           className={`w-10 h-10 rounded-xl flex items-center justify-center font-black transition-all ${editingQuestion.correctOptionId === opt.id ? 'bg-brand-blue text-white shadow-lg shadow-blue-500/30' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
-                                         >
-                                            {opt.id}
-                                         </button>
-                                         <input 
-                                           className="flex-1 px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm font-medium text-slate-600 focus:border-brand-blue transition-colors"
-                                           value={opt.text}
-                                           onChange={(e) => {
-                                             const newOpts = [...editingQuestion.options];
-                                             newOpts[idx] = { ...opt, text: e.target.value };
-                                             setEditingQuestion({ ...editingQuestion, options: newOpts });
-                                           }}
-                                           placeholder={`Option ${opt.id}...`}
-                                         />
-                                      </div>
-                                    ))}
-                                  </div>
-                               </div>
-                            </div>
-
-                            <div className="space-y-6">
-                               <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Subject</label>
-                                     <select 
-                                       className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm font-bold text-slate-600"
-                                       value={editingQuestion.subject}
-                                       onChange={(e) => setEditingQuestion({ ...editingQuestion, subject: e.target.value as any })}
-                                     >
-                                        <option>Penalaran Umum</option>
-                                        <option>Literasi Bahasa</option>
-                                        <option>Penalaran Matematika</option>
-                                        <option>Pengetahuan Umum</option>
-                                     </select>
-                                  </div>
-                                  <div>
-                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Difficulty</label>
-                                     <select 
-                                       className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm font-bold text-slate-600"
-                                       value={editingQuestion.difficulty}
-                                       onChange={(e) => setEditingQuestion({ ...editingQuestion, difficulty: e.target.value as any })}
-                                     >
-                                        <option>Easy</option>
-                                        <option>Medium</option>
-                                        <option>Hard</option>
-                                     </select>
-                                  </div>
-                               </div>
-
-                               <div>
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Explanation / Discussion</label>
-                                  <textarea 
-                                    className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none font-medium text-slate-600 h-32 resize-none focus:border-brand-blue transition-colors text-sm"
-                                    value={editingQuestion.explanation}
-                                    onChange={(e) => setEditingQuestion({ ...editingQuestion, explanation: e.target.value })}
-                                    placeholder="Explain the correct answer steps..."
-                                  />
-                               </div>
-
-                               <div>
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Organization & Tags</label>
-                                  <div className="space-y-4">
-                                     <div className="flex flex-wrap gap-2">
-                                        {availableTags.map((tag) => (
-                                          <button 
-                                            key={tag}
-                                            onClick={() => toggleQuestionTag(tag)}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${editingQuestion.tags?.includes(tag) ? 'bg-brand-blue text-white border-brand-blue' : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-brand-blue'}`}
-                                          >
-                                             {tag}
-                                          </button>
-                                        ))}
-                                        <div className="flex items-center gap-1">
-                                           <input 
-                                             type="text"
-                                             placeholder="New tag..."
-                                             className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-slate-50 border border-slate-200 outline-none focus:border-brand-blue w-24"
-                                             onKeyDown={(e) => {
-                                               if (e.key === 'Enter') {
-                                                 const val = (e.target as HTMLInputElement).value.trim();
-                                                 if (val && !availableTags.includes(val)) {
-                                                   addTag(val);
-                                                   toggleQuestionTag(val);
-                                                   (e.target as HTMLInputElement).value = '';
-                                                 }
-                                                 e.preventDefault();
-                                               }
-                                             }}
-                                           />
-                                        </div>
-                                     </div>
-                                     <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100">
-                                        <div className="flex gap-2">
-                                           <Tags size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                                           <p className="text-[10px] text-amber-700 font-medium leading-relaxed uppercase tracking-widest">
-                                             Tags help in filtering questions during tryout generation and IRT analysis.
-                                           </p>
-                                        </div>
-                                     </div>
-                                  </div>
-                               </div>
-                            </div>
-                         </div>
-
-                         <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                            <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                               <div className="flex items-center gap-1.5">
-                                  <div className={`w-2 h-2 rounded-full ${editingQuestion.text.length > 0 ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                                  Text
-                               </div>
-                               <div className="flex items-center gap-1.5">
-                                  <div className={`w-2 h-2 rounded-full ${editingQuestion.options.every(o => o.text.length > 0) ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                                  Options
-                               </div>
-                               <div className="flex items-center gap-1.5">
-                                  <div className={`w-2 h-2 rounded-full ${editingQuestion.explanation.length > 0 ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                                  Exp
-                               </div>
-                            </div>
-                            <div className="flex gap-3">
-                               <button 
-                                 onClick={() => setEditingQuestion(null)}
-                                 className="px-6 py-2.5 rounded-xl text-xs font-black text-slate-500 uppercase tracking-widest hover:bg-slate-100 transition-colors"
-                               >
-                                  Cancel
-                               </button>
-                               <button 
-                                 onClick={() => saveQuestion(editingQuestion)}
-                                 className="btn-primary py-2.5 px-8 shadow-xl shadow-blue-500/20"
-                               >
-                                  <Save size={18} />
-                                  Save Question
-                               </button>
-                            </div>
-                         </div>
-                      </motion.div>
-                    </div>
-                  )}
-
-                  {isManageTagsModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                       <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
-                      >
-                         <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                               <Tags size={24} className="text-brand-blue" />
-                               <h3 className="font-bold">Manage Question Categories</h3>
-                            </div>
-                            <button onClick={() => setIsManageTagsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                               <X size={20} />
-                            </button>
-                         </div>
-                         <div className="p-8 space-y-6">
-                            <div className="space-y-4">
-                               <div className="flex gap-2">
-                                  <input 
-                                    type="text" 
-                                    placeholder="Add new category/tag..." 
-                                    value={newTagInput}
-                                    onChange={(e) => setNewTagInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && newTagInput.trim() && (addTag(newTagInput.trim()), setNewTagInput(''))}
-                                    className="flex-1 px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold text-sm"
-                                  />
-                                  <button 
-                                    onClick={() => {
-                                      if (newTagInput.trim()) {
-                                        addTag(newTagInput.trim());
-                                        setNewTagInput('');
-                                      }
-                                    }}
-                                    className="btn-primary px-6"
-                                  >
-                                     Add
-                                  </button>
-                               </div>
-
-                               <div className="flex flex-wrap gap-2 pt-4">
-                                  {availableTags.map(tag => (
-                                    <div key={tag} className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl group hover:border-brand-blue transition-all">
-                                       <span className="text-xs font-bold text-brand-navy">{tag}</span>
-                                       <button 
-                                         onClick={() => setAvailableTags(availableTags.filter(t => t !== tag))}
-                                         className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                       >
-                                          <X size={12} />
-                                       </button>
-                                    </div>
-                                  ))}
-                               </div>
-
-                               {availableTags.length === 0 && (
-                                 <div className="text-center py-12">
-                                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                       <Tags size={32} className="text-slate-200" />
-                                    </div>
-                                    <p className="text-sm font-bold text-slate-400">No categories defined yet.</p>
-                                 </div>
-                               )}
-                            </div>
-
-                            <div className="p-6 bg-blue-50 rounded-2xl flex items-start gap-3">
-                               <Info size={20} className="text-brand-blue shrink-0 mt-0.5" />
-                               <div>
-                                  <h5 className="text-[10px] font-black text-brand-blue uppercase tracking-widest mb-1">Semantic Tagging</h5>
-                                  <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                                    Use consistent tags for better reporting. Suggestions: IRT-Stable, High-Discrimination, or sub-topics.
-                                  </p>
-                                </div>
-                            </div>
-                         </div>
-                       </motion.div>
-                    </div>
-                  )}
-
-                  {isImportModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                       <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
-                      >
-                         <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                               <FileUp size={24} className="text-brand-orange" />
-                               <h3 className="font-bold">Batch Question Import</h3>
-                            </div>
-                            <button onClick={() => setIsImportModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full">
-                               <X size={20} />
-                            </button>
-                         </div>
-                         <div className="p-8 space-y-6">
-                            <div className="p-6 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center text-center group hover:border-brand-blue transition-colors relative">
-                               {importStatus === 'idle' ? (
-                                 <>
-                                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-50 transition-colors">
-                                       <Upload size={32} className="text-slate-400 group-hover:text-brand-blue" />
-                                    </div>
-                                    <h4 className="font-bold text-brand-navy mb-1">Click or drag CSV file</h4>
-                                    <p className="text-xs text-slate-400 mb-6">Compatible with standard The Prams mapping</p>
-                                    <input 
-                                      type="file" 
-                                      accept=".csv"
-                                      onChange={handleCsvImport}
-                                      className="absolute inset-0 opacity-0 cursor-pointer"
-                                    />
-                                    <div className="flex gap-2">
-                                       <span className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-black text-slate-500 uppercase">.CSV</span>
-                                       <span className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-black text-slate-500 uppercase">Max 5MB</span>
-                                    </div>
-                                 </>
-                               ) : importStatus === 'processing' ? (
-                                  <div className="py-8 flex flex-col items-center">
-                                     <div className="w-12 h-12 border-4 border-brand-blue/20 border-t-brand-blue rounded-full animate-spin mb-4" />
-                                     <h4 className="font-bold text-brand-navy mb-1">Processing Questions...</h4>
-                                     <p className="text-xs text-slate-400">Mapping fields and verifying structure</p>
-                                  </div>
-                               ) : (
-                                  <div className="py-8 flex flex-col items-center">
-                                     <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
-                                        <Check size={32} className="text-emerald-500" />
-                                     </div>
-                                     <h4 className="font-bold text-brand-navy mb-1">Import Successful!</h4>
-                                     <p className="text-xs text-slate-400">Questions have been added to your bank</p>
-                                  </div>
-                               )}
-                            </div>
-
-                            <div className="bg-slate-50 p-6 rounded-2xl space-y-4">
-                               <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CSV Mapping Guide</h5>
-                               <div className="grid grid-cols-2 gap-y-2 text-[10px] font-bold">
-                                  <div className="text-slate-500">text</div>
-                                  <div className="text-brand-navy text-right">Question Payload</div>
-                                  <div className="text-slate-500">option_a, b, c...</div>
-                                  <div className="text-brand-navy text-right">Choices Array</div>
-                                  <div className="text-slate-500">correct_ans</div>
-                                  <div className="text-brand-navy text-right">Key (A-E)</div>
-                                  <div className="text-slate-500">tags</div>
-                                  <div className="text-brand-navy text-right">Comma separated</div>
-                               </div>
-                               <button
-                                  onClick={() => downloadTextFile('question-import-template.csv', 'subject,difficulty,text,option_a,option_b,correct_ans,tags\nPenalaran Umum,Medium,Contoh soal...,Pilihan A,Pilihan B,A,SNBT')}
-                                  className="w-full py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-brand-blue hover:text-brand-blue transition-all"
-                               >
-                                  Download CSV Template
-                               </button>
-                            </div>
-                         </div>
-                      </motion.div>
-                    </div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <AdminQuestionBankPage
+                domain={questionsDomain}
+                onDownloadTemplate={() => downloadTextFile('question-import-template.csv', 'subject,difficulty,text,option_a,option_b,correct_ans,tags\nPenalaran Umum,Medium,Contoh soal...,Pilihan A,Pilihan B,A,SNBT')}
+              />
             )}
 
             {activeTab === 'testimonials' && (
