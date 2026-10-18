@@ -45,7 +45,7 @@ export function LessonFeedbackCard({ initialFeedback = '', onSubmit }: LessonFee
     <Card variant="default" padding="lg" className="relative overflow-hidden">
       <div className="absolute top-0 right-0 w-32 h-32 bg-brand-teal/5 rounded-full -translate-y-1/2 translate-x-1/2" />
       <h3 className="font-bold text-brand-navy mb-6 flex items-center gap-3">
-        <div className="p-2 bg-blue-50 rounded-lg text-brand-teal">
+        <div className="p-2 bg-blue-50 rounded-lg text-emerald-600">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
           </svg>

@@ -71,7 +71,7 @@ export function LiveSessionPanel({ isPremium }: LiveSessionPanelProps) {
             <span>{liveSession.time}</span>
           </div>
           <div className="flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-teal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-300">
               <polygon points="23 7 16 12 9 7 16 12 23 7" />
             </svg>
             <span>{liveSession.mode}</span>

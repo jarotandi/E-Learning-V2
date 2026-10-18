@@ -68,7 +68,7 @@ export function LessonContentPanel({
           <button
             onClick={onShare}
             aria-label="Bagikan materi"
-            className="p-3 bg-white rounded-2xl text-slate-500 hover:text-brand-teal border border-slate-100 shadow-sm transition-all hover:scale-110 active:scale-90 min-w-11 min-h-11"
+            className="p-3 bg-white rounded-2xl text-slate-500 hover:text-emerald-600 border border-slate-100 shadow-sm transition-all hover:scale-110 active:scale-90 min-w-11 min-h-11"
           >
             <Share2 size={20} />
           </button>

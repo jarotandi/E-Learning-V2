@@ -34,7 +34,7 @@ current-state ↔ target-destination record.
 | `mentorProfile` | `MentorProfilePage` | 9.2 KB | Guru & Mentor | `/mentors/:mentorId` | B10 |
 | `tryoutListing` | `TryoutListingPage` | 7.7 KB | Assessment Center | `/app/assessment` | B3 |
 | `dashboard` | `StudentDashboard` → `features/learn/dashboard/LearnerDashboardPage` | 23.6 KB → ~1 KB wrapper + feature components | Learner Home | `/app` | **B1.4B** |
-| `learning` | `LearningPage` | 40.1 KB | Lesson Workspace | `/app/learn/:lessonId` | B1.2 |
+| `learning` | `LearningPage` → `features/learn/workspace/LearningWorkspacePage` | 40.1 KB → ~1 KB wrapper + feature components | Lesson Workspace | `/app/learn` | **B1.4C** |
 | `exam` | `TryoutExamPage` | 16.7 KB | Assessment Center / Exam Runner | `/app/assessment` | B3 |
 | `result` | `TryoutResultPage` | 26.5 KB | Assessment Center / Result | `/app/assessment` | B3 |
 | `admin` | `AdminDashboard` | 408.8 KB | Platform Admin (split) | `/admin/*` | B1.3 |
@@ -173,7 +173,7 @@ Confirmed in B1.4B: `StudentDashboard` decomposed from a 23.6 KB self-contained 
 
 **Legacy capabilities preserved:** All 7 sidebar destinations reachable via LearnerLayout sidebar or header disclosure. `theprams_demo_users` localStorage key unchanged. Entitlement logic extracted to `useLegacyLearnerAccess()` — single source of truth.
 
-**Self-chrome registry updated:** `dashboard` removed from `SELF_CHROME_LEGACY_VIEWS`; only `learning` remains. `/app` now renders inside `LearnerLayout` (no double chrome). `/app/learn` remains self-chrome (B1.4C).
+**Self-chrome registry updated:** `dashboard` and `learning` removed from `SELF_CHROME_LEGACY_VIEWS`; both now render inside `LearnerLayout` (no double chrome). `LearningPage` is now a thin wrapper delegating to `LearningWorkspacePage` (feature components in `src/features/learn/workspace/`). `/app/learn` route remains under `LearnerLayout` at `/app/learn` (no URL change, no `:lessonId` segment added per B1.4C scope).
 
 **Gates:** `verify-routes.mjs` 174/0, `verify-design-system.mjs` 50/0, `lint` 0, `build` 0.
 

@@ -18,8 +18,9 @@ Authority: `docs/aksa/10-batch-roadmap.md` (B1 definition),
 | B1.4B — `StudentDashboard` decomposition | **✅ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
 | **B1.4B-R1 — Entitlement parity + Profile accessibility** | **✅ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
 | **B1.4B-R2 — Chrome accessibility closeout** | **✅ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
-| B1.4C — `LearningPage` decomposition | **← NEXT** | this document, §B1.4 |
-| B1.4D — `AdminDashboard` split + `/admin/*` sub-routes | pending | this document, §B1.4 |
+| B1.4C — `LearningPage` decomposition | **✅ COMPLETE** | `08-b1.4c-learning-workspace.md` |
+| B1.4C-R1 — Route & workspace state parity closeout | **✅ COMPLETE** | `08-b1.4c-learning-workspace.md` |
+| B1.4D — `AdminDashboard` split + `/admin/*` sub-routes | **← NEXT** | this document, §B1.4 |
 | B1.4 (whole) | **IN PROGRESS** | this document, §B1.4 |
 | B1.5 — Regression + Visual Acceptance | pending | this document, §B1.5 |
 
@@ -129,7 +130,7 @@ the 21 capabilities becomes unreachable.
 ### B1.4 - Design System + Monolith Decomposition — IN PROGRESS
 
 Split into four sub-batches so each is independently reviewable. B1.4A and B1.4B are done;
-**B1.4C is next.**
+**B1.4C is COMPLETE (R1).**
 
 | Sub-batch | Scope | Status |
 |---|---|---|

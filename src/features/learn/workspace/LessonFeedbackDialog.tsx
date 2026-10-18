@@ -1,14 +1,15 @@
 /**
  * Lesson Feedback Dialog
  * ======================
- * B1.4C — LearningPage decomposition
+ * B1.4C-R1 — LearningPage decomposition
  *
  * Accessible feedback/rating dialog (was "Mentor Modal").
  * Uses disclosure pattern, not role="menu".
+ * Implements proper ARIA dialog semantics.
  */
 
-import { Star, Send, CheckCircle2, X, Monitor, Star as StarIcon } from 'lucide-react';
-import { useState } from 'react';
+import { Star, Send, CheckCircle2, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button, Card } from '@/design-system/components';
 
@@ -28,6 +29,8 @@ export function LessonFeedbackDialog({
   const [rating, setRating] = useState(0);
   const [questionText, setQuestionText] = useState('');
   const [isQuestionSent, setIsQuestionSent] = useState(false);
+  const dialogTitleRef = useRef<HTMLHeadingElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
 
   const handleSubmit = () => {
     if (rating === 0) return;
@@ -35,6 +38,34 @@ export function LessonFeedbackDialog({
     setQuestionText('');
     setRating(0);
   };
+
+  // Handle focus management and Escape key
+  useEffect(() => {
+    if (isOpen) {
+      previousActiveElement.current = document.activeElement as HTMLElement;
+      // Move focus to dialog title
+      setTimeout(() => {
+        dialogTitleRef.current?.focus();
+      }, 0);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+        document.body.style.overflow = '';
+        // Return focus to opener
+        previousActiveElement.current?.focus();
+      };
+    }
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -53,6 +84,9 @@ export function LessonFeedbackDialog({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden relative z-10 pointer-events-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dialog-title"
         >
           <div className="p-8 bg-brand-navy text-white flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -62,7 +96,7 @@ export function LessonFeedbackDialog({
                 </svg>
               </div>
               <div>
-                <h3 className="font-bold text-lg leading-none mb-1">Feedback Pelajaran</h3>
+                <h3 id="dialog-title" ref={dialogTitleRef} tabIndex={-1} className="font-bold text-lg leading-none mb-1">Feedback Pelajaran</h3>
                 <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-none">Bantu kami meningkatkan materi ini</p>
               </div>
             </div>
@@ -112,7 +146,7 @@ export function LessonFeedbackDialog({
                   className="space-y-8"
                 >
                   <div className="text-center space-y-4">
-                    <p className="text-sm font-bold text-slate-500">Beri rating untuk materi "<span className="text-brand-teal">{lessonTitle}</span>"</p>
+                    <p className="text-sm font-bold text-slate-500">Beri rating untuk materi "<span className="text-emerald-600">{lessonTitle}</span>"</p>
                     <div className="flex items-center justify-center gap-2">
                       {[1, 2, 3, 4, 5].map((s) => (
                         <button
@@ -133,7 +167,7 @@ export function LessonFeedbackDialog({
                     value={questionText}
                     onChange={(e) => setQuestionText(e.target.value)}
                     placeholder="Apa pendapatmu tentang video ini? (Opsional)"
-                    className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl min-h-[140px] outline-none focus:ring-4 focus:ring-brand-teal/5 focus:border-brand-teal transition-all font-medium text-sm"
+                    className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl min-h-[140px] outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-600 transition-all font-medium text-sm"
                   />
                   <button
                     type="button"

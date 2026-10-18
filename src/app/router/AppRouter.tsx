@@ -183,23 +183,6 @@ export function AppRoutes() {
           can reach checkout. See guards/RequireLegacyUser.tsx. */}
       <Route path={LEARNER_PATHS.wallet} element={<BareLegacyRoute />} />
 
-      {/* LEGACY-COMPATIBILITY MODE — self-chrome pages.
-          `LearningPage` renders its own workspace chrome.
-          Wrapping it in LearnerLayout would double both. It stays
-          bare, exactly as before the router existed. B1.4C decomposes it. */}
-      {/* LEGACY-COMPATIBILITY MODE — self-chrome pages.
-          `LearningPage` renders its own workspace chrome.
-          Wrapping it in LearnerLayout would double both. It stays
-          bare, exactly as before the router existed. B1.4C decomposes it. */}
-      <Route
-        path={LEARNER_PATHS.learning}
-        element={
-          <Guarded>
-            <BareLegacyRoute />
-          </Guarded>
-        }
-      />
-
       {/* =========================================================== */}
       {/* LEARNER — AKSA shell                                          */}
       {/* =========================================================== */}
@@ -220,14 +203,6 @@ export function AppRoutes() {
         />
         <Route
           path={LEARNER_PATHS.learning}
-          element={
-            <Guarded>
-              <BareLegacyRoute />
-            </Guarded>
-          }
-        />
-        <Route
-          path={LEARNER_PATHS.dashboard}
           element={
             <Guarded>
               <BareLegacyRoute />

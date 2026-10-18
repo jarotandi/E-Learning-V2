@@ -20,6 +20,7 @@ interface LearningWorkspaceToolbarProps {
   progressPercent: number;
   onBackToDashboard: () => void;
   onFinishLearning: () => void;
+  onOpenFeedbackDialog: () => void;
 }
 
 export function LearningWorkspaceToolbar({
@@ -27,6 +28,7 @@ export function LearningWorkspaceToolbar({
   progressPercent,
   onBackToDashboard,
   onFinishLearning,
+  onOpenFeedbackDialog,
 }: LearningWorkspaceToolbarProps) {
   return (
     <div
@@ -60,6 +62,15 @@ export function LearningWorkspaceToolbar({
             <span className="text-xs font-bold text-brand-navy">{progressPercent}%</span>
           </div>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onOpenFeedbackDialog}
+          className="whitespace-nowrap hidden sm:inline-flex"
+          aria-label="Beri rating pelajaran"
+        >
+          Beri Rating Pelajaran
+        </Button>
         <Button
           variant="primary"
           size="sm"

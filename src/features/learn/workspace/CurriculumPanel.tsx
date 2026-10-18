@@ -1,7 +1,7 @@
 /**
  * Curriculum Panel
  * ================
- * B1.4C — LearningPage decomposition
+ * B1.4C-R1 — LearningPage decomposition
  *
  * Right sidebar showing module list with progress, lessons, bookmarks.
  * Designed to work inside LearnerLayout (not as app chrome).
@@ -13,19 +13,24 @@ import {
   Play, 
   Bookmark 
 } from 'lucide-react';
-import { CURRICULUM } from '@/constants';
-import { deriveLessonAccess, calculateModuleProgress, FREE_LESSON_LIMIT } from './learningWorkspaceModel';
+import { 
+  deriveLessonAccess, 
+  calculateModuleProgress, 
+  FREE_LESSON_LIMIT,
+  isLessonAccessible,
+  isLessonLocked,
+} from './learningWorkspaceModel';
 import { Badge, Button, Card } from '@/design-system/components';
 import { useMemo } from 'react';
+import type { Module } from '@/types';
 
 interface CurriculumPanelProps {
-  curriculum: typeof CURRICULUM;
+  curriculum: Module[];
   activeLessonId: string;
   bookmarkedLessons: string[];
   isPremium: boolean;
   onLessonClick: (lessonId: string) => void;
   onToggleBookmark: (lessonId: string) => void;
-  onFinishLearning: () => void;
   onUpgrade: () => void;
 }
 
@@ -36,12 +41,11 @@ export function CurriculumPanel({
   isPremium,
   onLessonClick,
   onToggleBookmark,
-  onFinishLearning,
   onUpgrade,
 }: CurriculumPanelProps) {
   const access = useMemo(
-    () => deriveLessonAccess(isPremium, FREE_LESSON_LIMIT),
-    [isPremium]
+    () => deriveLessonAccess(curriculum, isPremium, FREE_LESSON_LIMIT),
+    [curriculum, isPremium]
   );
 
   const totalLessons = curriculum.reduce((acc, mod) => acc + mod.lessons.length, 0);
@@ -54,16 +58,14 @@ export function CurriculumPanel({
     <aside className="w-full lg:w-96 border-l border-slate-100 bg-white overflow-y-auto">
       <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
         <h3 className="font-bold text-brand-navy">Daftar Modul</h3>
-        <span className="bg-blue-50 text-brand-teal text-[10px] font-bold px-2 py-1 rounded-md">
+        <span className="bg-blue-50 text-emerald-600 text-[10px] font-bold px-2 py-1 rounded-md">
           {remainingLessons} Materi Lagi
         </span>
       </div>
 
       <div className="p-4 space-y-6">
         {curriculum.map((mod) => {
-          const modTotal = mod.lessons.length;
-          const modCompleted = mod.lessons.filter(l => l.isCompleted).length;
-          const modPercent = Math.round((modCompleted / modTotal) * 100);
+          const modPercent = calculateModuleProgress(curriculum, mod.id);
 
           return (
             <div key={mod.id}>
@@ -78,7 +80,7 @@ export function CurriculumPanel({
               </div>
               <div className="space-y-1">
                 {mod.lessons.map((lesson) => {
-                  const isLocked = !access.accessibleLessonIds.has(lesson.id);
+                  const isLocked = isLessonLocked(lesson.id, access);
 
                   const lessonIcon = isLocked ? (
                     <div className="w-7 h-7 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center">
@@ -113,7 +115,7 @@ export function CurriculumPanel({
                         disabled={isLocked}
                         className={`flex-1 flex items-center gap-3 p-3 rounded-2xl text-left transition-colors ${
                           activeLessonId === lesson.id
-                            ? 'bg-blue-50 text-brand-teal border border-brand-teal/10'
+                            ? 'bg-blue-50 text-emerald-600 border border-emerald-200'
                             : 'hover:bg-slate-50 text-slate-600'
                         }`}
                       >
@@ -158,19 +160,6 @@ export function CurriculumPanel({
             <p className="text-[10px] font-medium text-slate-400">Tersedia 01 Mei 2026</p>
           </div>
         </div>
-      </div>
-
-      {/* Bottom Actions */}
-      <div className="sticky bottom-0 p-4 bg-white border-t border-slate-100">
-        <button
-          onClick={onFinishLearning}
-          className="w-full btn-secondary text-sm py-4 group active:scale-95 transition-all"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:rotate-12 transition-transform">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          Selesai Belajar
-        </button>
       </div>
     </aside>
   );

@@ -159,7 +159,7 @@ export function LessonVideoPlayer({
               onClick={onPlayPause}
               disabled={isLocked}
               aria-label={isPlaying ? 'Jeda video' : 'Putar video'}
-              className="text-white hover:text-brand-teal transition-colors min-w-11 min-h-11 p-2 rounded-full hover:bg-white/10"
+              className="text-white hover:text-emerald-300 transition-colors min-w-11 min-h-11 p-2 rounded-full hover:bg-white/10"
             >
               {isPlaying ? <Pause size={24} /> : <Play size={24} className="ml-2" />}
             </button>
