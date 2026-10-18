@@ -28,8 +28,6 @@ import {
   Megaphone,
   Layout,
   Banknote,
-  Video,
-  Play,
   TrendingDown,
   TrendingUp,
   Target,
@@ -75,6 +73,10 @@ import {
   AdminQuestionBankPage,
   useAdminQuestionsDomain,
 } from '../features/admin/academic';
+import {
+  AdminContentLibraryPage,
+  useAdminContentDomain,
+} from '../features/admin/studio/content';
 
 const MOCK_LEADS: Lead[] = [
   { id: '1', name: 'Rina Wijaya', email: 'rina@mail.com', phone: '0812345678', programOfInterest: 'SNBT Kedokteran', source: 'Instagram', status: 'Qualified', createdAt: '2026-04-20' },
@@ -180,23 +182,6 @@ interface NotificationEvent {
   createdAt: string;
 }
 
-interface VideoLessonRecord {
-  id: string;
-  title: string;
-  program: string;
-  duration: string;
-  views: string;
-  date: string;
-  status: 'Draft' | 'Published' | 'Archived';
-  access: 'Free' | 'Premium' | 'Scholarship';
-  thumbnail: string;
-  description: string;
-  mentor: string;
-  module: string;
-  tags: string[];
-  notes: string;
-}
-
 interface BlogEditorAsset {
   id: string;
   type: 'image' | 'document';
@@ -217,13 +202,6 @@ const defaultFinanceEntries: FinanceEntry[] = [
 const defaultAssetEntries: AssetEntry[] = [
   { id: 'asset-laptop', type: 'fixed_asset', name: 'Laptop Editor Konten', category: 'Peralatan Kantor', acquisitionValue: 12000000, currentValue: 10800000, acquisitionDate: '2026-04-01', usefulLifeMonths: 36, depreciationPerMonth: 333333, note: 'Aset tetap untuk produksi materi', createdAt: '2026-04-01' },
   { id: 'asset-cash', type: 'current_asset', name: 'Kas Operasional', category: 'Aset Lancar', acquisitionValue: 25000000, currentValue: 25000000, acquisitionDate: '2026-04-01', usefulLifeMonths: 0, depreciationPerMonth: 0, note: 'Saldo kas demo', createdAt: '2026-04-01' }
-];
-
-const defaultVideoLessons: VideoLessonRecord[] = [
-  { id: 'video-1', title: 'Anatomi Dasar Bagian 1', program: 'Kedokteran Express', duration: '45:20', views: '1.2k', date: '2 hari lalu', status: 'Published', access: 'Premium', thumbnail: 'https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&q=80&w=400', description: 'Pengenalan anatomi dasar untuk calon mahasiswa kedokteran dengan pendekatan visual.', mentor: 'dr. Pramono', module: 'Foundation Kedokteran', tags: ['Kedokteran', 'Anatomi'], notes: 'Tambahkan kuis singkat setelah menit 20.' },
-  { id: 'video-2', title: 'TPA Penalaran Logis', program: 'SNBT Intensive', duration: '32:15', views: '2.5k', date: '3 hari lalu', status: 'Published', access: 'Free', thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=400', description: 'Materi pola penalaran logis, implikasi, negasi, dan penarikan kesimpulan.', mentor: 'Siti Aminah, M.Pd.', module: 'Penalaran Umum', tags: ['SNBT', 'Logika'], notes: 'Cocok sebagai materi gratis setelah tryout.' },
-  { id: 'video-3', title: 'UUD 1945 & Amandemen', program: 'CPNS Masterclass', duration: '58:40', views: '840', date: '5 hari lalu', status: 'Draft', access: 'Premium', thumbnail: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=400', description: 'Pembahasan TWK tentang konstitusi dan perubahan amandemen penting.', mentor: 'Admin The Prams', module: 'TWK CPNS', tags: ['CPNS', 'TWK'], notes: 'Review ulang contoh soal sebelum publish.' },
-  { id: 'video-4', title: 'Persiapan Psikotes', program: 'Kedinasan Special', duration: '25:10', views: '1.1k', date: '1 minggu lalu', status: 'Published', access: 'Scholarship', thumbnail: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&q=80&w=400', description: 'Strategi dasar psikotes untuk sekolah kedinasan dan latihan konsentrasi.', mentor: 'Admin The Prams', module: 'Kedinasan', tags: ['Psikotes', 'Kedinasan'], notes: 'Bisa dibuka untuk siswa beasiswa approved.' },
 ];
 
 const nonDepreciableFixedAssetCategories = ['Tanah/Bangunan'];
@@ -892,7 +870,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     } else if (activeTab === 'questions') {
       questionsDomain.openContextualQuestionDraft();
     } else if (activeTab === 'content') {
-      setIsUploadVideoModalOpen(true);
+      contentDomain.openUpload();
     } else if (activeTab === 'marketing') {
       setIsCampaignEditorOpen(true);
     } else {
@@ -928,6 +906,19 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   // PERSISTENT orchestrator, not by the route-mounted AdminQuestionBankPage.
   // Only `notify` is injected; no finance/users/programs/Studio state.
   const questionsDomain = useAdminQuestionsDomain({ notify });
+
+  // B1.4D-T5A — Content Library (Studio / video) domain.
+  //
+  // Same reasoning as Users/Questions: the Content Library state (video list,
+  // upload modal, editor draft, upload progress) lived ABOVE the conditional
+  // content JSX so a transient upload/editor draft survived tab changes. The
+  // canonical store therefore stays owned by this PERSISTENT orchestrator, not
+  // by the route-mounted AdminContentLibraryPage. `notify` and `recordAudit`
+  // are injected so the hook never imports this component.
+  //
+  // T5A extracts the CONTENT LIBRARY only. The Website/Blog T5B state below is
+  // intentionally NOT part of this domain.
+  const contentDomain = useAdminContentDomain({ notify, recordAudit });
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [programPendingSave, setProgramPendingSave] = useState<Program | null>(null);
   const [websiteQuestions, setWebsiteQuestions] = useState<WebsiteQuestion[]>(() => readStorageArray('theprams_demo_website_questions'));
@@ -1375,69 +1366,9 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     };
   }, [financialReportPeriod, financeRows, financeRealizations, assetEntries, financeEntries, financeSummary.pendingRevenue]);
   
-  // Studio / Content Library state (T5 — intentionally still owned here).
-  // B1.4D-T4 must NOT relocate this video/upload state while extracting the
-  // question domain that sat alongside it.
-  const [isUploadVideoModalOpen, setIsUploadVideoModalOpen] = useState(false);
-  const [videoLessons, setVideoLessons] = useState<VideoLessonRecord[]>(() => readStorageArray('theprams_demo_video_lessons', defaultVideoLessons));
-  const [editingVideo, setEditingVideo] = useState<VideoLessonRecord | null>(null);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'completed'>('idle');
-  const [uploadProgress, setUploadProgress] = useState(0);
-  
-  const [videoForm, setVideoForm] = useState({
-    title: '',
-    description: '',
-    duration: '',
-    program: PROGRAMS[0].title
-  });
-
-  const saveVideoLessons = (nextVideos: VideoLessonRecord[]) => {
-    setVideoLessons(nextVideos);
-    localStorage.setItem('theprams_demo_video_lessons', JSON.stringify(nextVideos));
-  };
-
-  const saveVideoEditor = (video: VideoLessonRecord) => {
-    if (!video.title.trim()) {
-      notify('Judul video wajib diisi.');
-      return;
-    }
-    const sanitized: VideoLessonRecord = {
-      ...video,
-      title: video.title.trim(),
-      program: video.program.trim() || PROGRAMS[0].title,
-      duration: video.duration.trim() || '00:00',
-      thumbnail: video.thumbnail.trim() || defaultVideoLessons[0].thumbnail,
-      tags: video.tags.map((tag) => tag.trim()).filter(Boolean)
-    };
-    const nextVideos = videoLessons.some((item) => item.id === sanitized.id)
-      ? videoLessons.map((item) => item.id === sanitized.id ? sanitized : item)
-      : [sanitized, ...videoLessons];
-    saveVideoLessons(nextVideos);
-    setEditingVideo(null);
-    recordAudit('Content Library', 'Save Video Lesson', sanitized.title);
-    notify('Detail video berhasil disimpan.');
-  };
-  
-  const simulateVideoUpload = () => {
-    if (!videoForm.title) return;
-    setUploadStatus('uploading');
-    setUploadProgress(0);
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setUploadStatus('completed');
-          setTimeout(() => {
-            setIsUploadVideoModalOpen(false);
-            setUploadStatus('idle');
-            setVideoForm({ title: '', description: '', duration: '', program: PROGRAMS[0].title });
-          }, 1500);
-          return 100;
-        }
-        return prev + 5;
-      });
-    }, 100);
-  };
+  // B1.4D-T5A — the Content Library (video list / upload / editor) state and
+  // its helpers were extracted into `useAdminContentDomain`; see `contentDomain`
+  // above. No video/upload state may be re-declared here.
 
   return (
     <div className="min-w-0 flex flex-col bg-slate-50 font-sans">
@@ -1644,94 +1575,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
             )}
 
             {activeTab === 'content' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-2xl font-bold text-brand-navy">Content Management</h2>
-                    <p className="text-sm text-slate-500">Manage video lessons and learning materials</p>
-                  </div>
-                  <button 
-                    onClick={() => setIsUploadVideoModalOpen(true)}
-                    className="btn-primary py-2 px-6 flex items-center gap-2"
-                  >
-                    <Plus size={18} /> Upload Video
-                  </button>
-                </div>
-
-                <div className="grid md:grid-cols-4 gap-6">
-                  <div className="card-premium p-6">
-                    <Video className="text-brand-blue mb-4" size={24} />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Videos</p>
-                    <p className="text-3xl font-black text-brand-navy">{videoLessons.length}</p>
-                  </div>
-                  <div className="card-premium p-6">
-                    <Clock className="text-brand-orange mb-4" size={24} />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Watch Time</p>
-                    <p className="text-3xl font-black text-brand-navy">8.5k hrs</p>
-                  </div>
-                  <div className="card-premium p-6">
-                    <Users className="text-indigo-500 mb-4" size={24} />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Viewers</p>
-                    <p className="text-3xl font-black text-brand-navy">842</p>
-                  </div>
-                  <div className="card-premium p-6">
-                    <CheckCircle2 className="text-emerald-500 mb-4" size={24} />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Completion</p>
-                    <p className="text-3xl font-black text-brand-navy">{Math.round((videoLessons.filter((video) => video.status === 'Published').length / Math.max(videoLessons.length, 1)) * 100)}%</p>
-                  </div>
-                </div>
-
-                <div className="card-premium p-8">
-                  <div className="flex items-center justify-between mb-8">
-                    <h3 className="font-bold text-brand-navy">Recent Lessons</h3>
-                    <div className="flex gap-2">
-                      <select className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none">
-                        <option>All Programs</option>
-                        <option>Kedokteran Express</option>
-                        <option>SNBT Intensive</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    {videoLessons.map((video) => (
-                      <div key={video.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-brand-blue/30 transition-all group">
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-10 bg-slate-100 rounded-lg flex items-center justify-center relative overflow-hidden">
-                            <img src={video.thumbnail} className="absolute inset-0 w-full h-full object-cover opacity-40" alt="" />
-                            <Play size={16} className="text-slate-400 group-hover:text-brand-blue relative z-10" />
-                            <div className="absolute inset-0 bg-brand-blue/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-brand-navy">{video.title}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{video.program}</p>
-                            <div className="flex gap-1 mt-1">
-                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${video.status === 'Published' ? 'bg-emerald-50 text-emerald-600' : video.status === 'Draft' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{video.status}</span>
-                              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-brand-blue text-[8px] font-black uppercase">{video.access}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-8 text-right">
-                          <div className="hidden md:block">
-                            <p className="text-xs font-bold text-brand-navy">{video.duration}</p>
-                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">Duration</p>
-                          </div>
-                          <div className="hidden md:block">
-                            <p className="text-xs font-bold text-brand-navy">{video.views}</p>
-                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">Views</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button onClick={() => setEditingVideo(video)} className="p-2 text-slate-300 hover:text-brand-blue transition-colors"><Edit2 size={16} /></button>
-                            <button onClick={() => {
-                              saveVideoLessons(videoLessons.filter((item) => item.id !== video.id));
-                              notify(`Video "${video.title}" dihapus dari daftar demo.`);
-                            }} className="p-2 text-slate-300 hover:text-red-400 transition-colors"><Trash2 size={16} /></button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <AdminContentLibraryPage domain={contentDomain} programs={programsList} />
             )}
 
             {activeTab === 'marketing' && (
@@ -3543,148 +3387,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
          </AnimatePresence>
 
          <AnimatePresence>
-           {editingVideo && (
-             <div className="fixed inset-0 z-[122] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
-               <motion.div
-                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                 className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden"
-               >
-                 <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                     <Video size={22} className="text-brand-blue" />
-                     <div>
-                       <h3 className="font-bold">Video Lesson Editor</h3>
-                       <p className="text-[10px] text-white/50 uppercase tracking-widest">Metadata, akses, thumbnail, dan catatan materi</p>
-                     </div>
-                   </div>
-                   <button onClick={() => setEditingVideo(null)} className="p-2 hover:bg-white/10 rounded-full">
-                     <X size={20} />
-                   </button>
-                 </div>
-
-                 <div className="p-8 grid lg:grid-cols-3 gap-8">
-                   <div className="lg:col-span-2 space-y-5">
-                     <div className="grid md:grid-cols-2 gap-4">
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Judul Video</label>
-                         <input value={editingVideo.title} onChange={(e) => setEditingVideo({ ...editingVideo, title: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" />
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Program</label>
-                         <select value={editingVideo.program} onChange={(e) => setEditingVideo({ ...editingVideo, program: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold">
-                           {programsList.map((program) => <option key={program.id} value={program.title}>{program.title}</option>)}
-                           <option>Kedokteran Express</option>
-                           <option>SNBT Intensive</option>
-                           <option>CPNS Masterclass</option>
-                           <option>Kedinasan Special</option>
-                         </select>
-                       </div>
-                     </div>
-
-                     <div className="grid md:grid-cols-4 gap-4">
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Durasi</label>
-                         <input value={editingVideo.duration} onChange={(e) => setEditingVideo({ ...editingVideo, duration: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" />
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Views</label>
-                         <input value={editingVideo.views} onChange={(e) => setEditingVideo({ ...editingVideo, views: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" />
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Status</label>
-                         <select value={editingVideo.status} onChange={(e) => setEditingVideo({ ...editingVideo, status: e.target.value as VideoLessonRecord['status'] })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold">
-                           <option>Draft</option>
-                           <option>Published</option>
-                           <option>Archived</option>
-                         </select>
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Akses</label>
-                         <select value={editingVideo.access} onChange={(e) => setEditingVideo({ ...editingVideo, access: e.target.value as VideoLessonRecord['access'] })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold">
-                           <option>Free</option>
-                           <option>Premium</option>
-                           <option>Scholarship</option>
-                         </select>
-                       </div>
-                     </div>
-
-                     <div className="grid md:grid-cols-2 gap-4">
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Mentor</label>
-                         <input value={editingVideo.mentor} onChange={(e) => setEditingVideo({ ...editingVideo, mentor: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" />
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Modul / Chapter</label>
-                         <input value={editingVideo.module} onChange={(e) => setEditingVideo({ ...editingVideo, module: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" />
-                       </div>
-                     </div>
-
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Deskripsi Video</label>
-                       <textarea value={editingVideo.description} onChange={(e) => setEditingVideo({ ...editingVideo, description: e.target.value })} className="w-full h-28 px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none text-sm text-slate-600" />
-                     </div>
-
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Catatan Editor / Materi</label>
-                       <textarea value={editingVideo.notes} onChange={(e) => setEditingVideo({ ...editingVideo, notes: e.target.value })} className="w-full h-24 px-5 py-4 rounded-2xl bg-amber-50 border border-amber-100 outline-none text-sm text-amber-900" />
-                     </div>
-                   </div>
-
-                   <div className="space-y-5">
-                     <div className="card-premium p-5 bg-white">
-                       <div className="aspect-video rounded-2xl overflow-hidden bg-slate-100 mb-4">
-                         <img src={editingVideo.thumbnail} className="w-full h-full object-cover" alt="" />
-                       </div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Thumbnail URL</label>
-                       <input value={editingVideo.thumbnail} onChange={(e) => setEditingVideo({ ...editingVideo, thumbnail: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-xs" />
-                     </div>
-
-                     <div className="card-premium p-5 bg-white">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tags (pisahkan koma)</label>
-                       <input value={editingVideo.tags.join(', ')} onChange={(e) => setEditingVideo({ ...editingVideo, tags: e.target.value.split(',') })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm" />
-                       <div className="flex flex-wrap gap-2 mt-4">
-                         {editingVideo.tags.filter(Boolean).map((tag) => (
-                           <span key={tag} className="px-2 py-1 rounded-lg bg-blue-50 text-brand-blue text-[10px] font-black uppercase">{tag.trim()}</span>
-                         ))}
-                       </div>
-                     </div>
-
-                     <div className="card-premium p-5 bg-slate-50">
-                       <p className="text-sm font-black text-brand-navy mb-3">Checklist Publish</p>
-                       {[
-                         ['Judul', editingVideo.title],
-                         ['Durasi', editingVideo.duration],
-                         ['Thumbnail', editingVideo.thumbnail],
-                         ['Deskripsi', editingVideo.description],
-                       ].map(([label, value]) => (
-                         <div key={label} className="flex items-center justify-between py-2 border-b border-slate-200 last:border-b-0">
-                           <span className="text-xs font-bold text-slate-500">{label}</span>
-                           <CheckCircle2 size={16} className={value ? 'text-emerald-500' : 'text-slate-300'} />
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-                 </div>
-
-                 <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                   <button onClick={() => notify(`Preview video "${editingVideo.title}" dibuka di mode demo.`)} className="btn-secondary py-3 px-6">
-                     <Play size={16} /> Preview
-                   </button>
-                   <div className="flex gap-3">
-                     <button onClick={() => setEditingVideo(null)} className="btn-secondary py-3 px-6">Batal</button>
-                     <button onClick={() => saveVideoEditor(editingVideo)} className="btn-primary py-3 px-8">
-                       <Save size={18} /> Simpan Video
-                     </button>
-                   </div>
-                 </div>
-               </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
-
-         <AnimatePresence>
            {isLeadFormOpen && (
              <div className="fixed inset-0 z-[122] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
                <motion.div
@@ -5165,165 +4867,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
            )}
          </AnimatePresence>
 
-          {/* Video Upload Modal */}
-          <AnimatePresence>
-            {isUploadVideoModalOpen && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-10 pointer-events-none">
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => uploadStatus === 'idle' && setIsUploadVideoModalOpen(false)}
-                  className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm pointer-events-auto"
-                />
-                
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden relative z-10 pointer-events-auto flex flex-col max-h-[90vh]"
-                >
-                  <div className="p-8 bg-brand-navy text-white flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-brand-blue/20 flex items-center justify-center text-brand-blue">
-                        <Video size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg leading-none mb-1">Upload Video Materi</h3>
-                        <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-none">Content Library Management</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => uploadStatus === 'idle' && setIsUploadVideoModalOpen(false)}
-                      className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                    >
-                      <X size={24} />
-                    </button>
-                  </div>
-
-                  <div className="p-10 overflow-y-auto space-y-8">
-                    {uploadStatus === 'idle' ? (
-                      <div className="grid md:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Video Title</label>
-                             <input 
-                               value={videoForm.title}
-                               onChange={(e) => setVideoForm({...videoForm, title: e.target.value})}
-                               placeholder="e.g. Strategi IRT SNBT 2024"
-                               className="w-full px-5 py-3 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-brand-blue/5 transition-all font-medium"
-                             />
-                           </div>
-                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Associated Program</label>
-                             <select 
-                               value={videoForm.program}
-                               onChange={(e) => setVideoForm({...videoForm, program: e.target.value})}
-                               className="w-full px-5 py-3 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-brand-blue/5 transition-all font-bold text-sm"
-                             >
-                               {PROGRAMS.map(p => <option key={p.id}>{p.title}</option>)}
-                             </select>
-                           </div>
-                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Duration (Min:Sec)</label>
-                             <input 
-                               value={videoForm.duration}
-                               onChange={(e) => setVideoForm({...videoForm, duration: e.target.value})}
-                               placeholder="e.g. 45:20"
-                               className="w-full px-5 py-3 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-brand-blue/5 transition-all font-mono"
-                             />
-                           </div>
-                        </div>
-                        <div className="space-y-6">
-                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Video Description</label>
-                             <textarea 
-                               value={videoForm.description}
-                               onChange={(e) => setVideoForm({...videoForm, description: e.target.value})}
-                               placeholder="Jelaskan detail materi pembahasan video ini..."
-                               className="w-full h-44 px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-4 focus:ring-brand-blue/5 transition-all text-sm font-medium resize-none"
-                             />
-                           </div>
-                        </div>
-                        
-                        <div className="md:col-span-2">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Video File</label>
-                           <label className="w-full p-10 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-4 hover:bg-slate-50 hover:border-brand-blue transition-all cursor-pointer group">
-                              <div className="p-4 bg-blue-50 text-brand-blue rounded-2xl group-hover:bg-brand-blue group-hover:text-white transition-colors">
-                                 <Plus size={32} />
-                              </div>
-                              <div className="text-center">
-                                 <p className="text-sm font-bold text-brand-navy">Choose video or drag and drop</p>
-                                 <p className="text-xs text-slate-400 mt-1">MP4, MOV up to 500MB</p>
-                              </div>
-                              <input type="file" className="hidden" accept="video/*" onChange={simulateVideoUpload} />
-                           </label>
-                        </div>
-                      </div>
-                    ) : uploadStatus === 'uploading' ? (
-                      <div className="py-20 flex flex-col items-center justify-center text-center gap-8">
-                         <div className="relative">
-                            <svg className="w-32 h-32 transform -rotate-90">
-                              <circle 
-                                cx="64" cy="64" r="60" 
-                                stroke="currentColor" 
-                                strokeWidth="8" 
-                                fill="transparent" 
-                                className="text-slate-100"
-                              />
-                              <circle 
-                                cx="64" cy="64" r="60" 
-                                stroke="currentColor" 
-                                strokeWidth="8" 
-                                fill="transparent" 
-                                strokeDasharray={377}
-                                strokeDashoffset={377 - (377 * uploadProgress) / 100}
-                                className="text-brand-blue transition-all duration-300"
-                              />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-brand-navy">
-                               {uploadProgress}%
-                            </div>
-                         </div>
-                         <div>
-                            <h4 className="text-xl font-bold text-brand-navy mb-2">Mengupload Video...</h4>
-                            <p className="text-slate-500 font-medium">Harap jangan menutup jendela ini hingga proses selesai.</p>
-                         </div>
-                      </div>
-                    ) : (
-                      <div className="py-20 flex flex-col items-center justify-center text-center gap-8 animate-in zoom-in-95 duration-500">
-                         <div className="w-24 h-24 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl shadow-emerald-500/50">
-                            <Check size={48} strokeWidth={4} />
-                         </div>
-                         <div>
-                            <h4 className="text-2xl font-bold text-brand-navy mb-2">Video Berhasil Diupload!</h4>
-                            <p className="text-slate-500 font-medium">Materi "{videoForm.title}" telah ditambahkan ke database.</p>
-                         </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {uploadStatus === 'idle' && (
-                    <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-4 shrink-0">
-                       <button 
-                          onClick={() => setIsUploadVideoModalOpen(false)}
-                          className="px-6 py-3 text-xs font-black text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest"
-                       >
-                          Cancel
-                       </button>
-                       <button 
-                          disabled={!videoForm.title}
-                          onClick={simulateVideoUpload}
-                          className="btn-primary py-3 px-10 shadow-xl shadow-blue-500/20 disabled:opacity-50"
-                       >
-                          Start Upload
-                       </button>
-                    </div>
-                  )}
-                </motion.div>
-              </div>
-            )}
-          </AnimatePresence>
       </div>
   );
 };
