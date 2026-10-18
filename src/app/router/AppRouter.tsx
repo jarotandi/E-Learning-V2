@@ -52,6 +52,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { lazy, Suspense, type ReactNode } from 'react';
 
+import { AdminRouteBoundary } from './AdminRouteBoundary';
 import { AdminLayout } from '../layouts/AdminLayout';
 import { LearnerLayout } from '../layouts/LearnerLayout';
 import { PublicLayout } from '../layouts/PublicLayout';
@@ -290,10 +291,21 @@ export function AppRoutes() {
       </Route>
 
       {/* =========================================================== */}
-      {/* ADMIN — structural host only                                 */}
+      {/* ADMIN — persistent wildcard branch (B1.4D-T1)                */}
+      {/*                                                              */}
+      {/* ONE branch for every canonical admin URL. React Router keeps  */}
+      {/* this element MOUNTED across tab navigation, so AdminDashboard */}
+      {/* (and all 72 of its state slices) survives /admin ->          */}
+      {/* /admin/users -> /admin/commerce/finance. The boundary renders */}
+      {/* the legacy bridge for known paths, redirects group indexes,   */}
+      {/* and renders Not Found for unknown /admin/*.                   */}
+      {/*                                                              */}
+      {/* Do NOT split this into 13 separate routes: that would remount */}
+      {/* the admin subtree on every tab change and destroy transient  */}
+      {/* state. See AdminRouteBoundary.tsx.                            */}
       {/* =========================================================== */}
       <Route element={<AdminLayout />}>
-        <Route path={ADMIN_PATHS.admin} element={<BareLegacyRoute />} />
+        <Route path="/admin/*" element={<AdminRouteBoundary />} />
       </Route>
 
       {/* =========================================================== */}

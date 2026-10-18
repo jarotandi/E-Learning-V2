@@ -39,7 +39,9 @@
  */
 
 import type { View } from '../../types';
+import { adminPathToTab } from '../../features/admin/shell/adminWorkspaceModel';
 import {
+  ADMIN_PATHS,
   FALLBACK_TRYOUT_ID,
   LEARNER_PATHS,
   PUBLIC_PATHS,
@@ -117,7 +119,7 @@ export function legacyViewToPath(
     case 'payment':
       return LEARNER_PATHS.wallet;
     case 'admin':
-      return '/admin';
+      return ADMIN_PATHS.admin;
     default: {
       // Exhaustiveness guard: adding a `View` without a route is a compile
       // error rather than a silently unreachable capability.
@@ -189,10 +191,14 @@ export function pathToLegacyView(
       return 'profile';
     case LEARNER_PATHS.wallet:
       return 'payment';
-    case '/admin':
-      return 'admin';
     default:
       break;
+  }
+
+  // B1.4D-T1: every canonical admin URL maps to the single legacy `admin`
+  // view, so `LegacyRouteBridge` stays mounted across child navigation.
+  if (adminPathToTab(path) !== null) {
+    return 'admin';
   }
 
   // Parameterised public routes.

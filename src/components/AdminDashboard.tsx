@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Users, 
   GraduationCap,
@@ -63,6 +64,14 @@ import { Quote } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { BLOG_POSTS, USER_ACCOUNTS, MOCK_FEEDBACKS, TESTIMONIALS, PROGRAMS } from '../constants';
 import { BlogPost, UserAccount, Lead, Question, Testimonial, Program, ProgramPackage, WebsiteQuestion } from '../types';
+import {
+  ADMIN_ROLE_PERMISSIONS,
+  adminPathToTab,
+  adminTabToPath,
+  isAdminTabAllowed,
+  type AdminRole,
+  type AdminTab,
+} from '../features/admin/shell/adminWorkspaceModel';
 
 const MOCK_LEADS: Lead[] = [
   { id: '1', name: 'Rina Wijaya', email: 'rina@mail.com', phone: '0812345678', programOfInterest: 'SNBT Kedokteran', source: 'Instagram', status: 'Qualified', createdAt: '2026-04-20' },
@@ -377,8 +386,6 @@ Berikan pola latihan dengan timer dan cara evaluasi.
   }
 ];
 
-type AdminRole = 'Super Admin' | 'Content Manager' | 'Support';
-
 interface AdminMember {
   id: string;
   name: string;
@@ -387,10 +394,32 @@ interface AdminMember {
   lastActive: string;
 }
 
-type AdminTab = 'overview' | 'users' | 'leads' | 'inquiries' | 'marketing' | 'website' | 'finance' | 'programs' | 'content' | 'questions' | 'testimonials' | 'reports' | 'settings';
+// B1.4D-T1: `AdminRole`, `AdminTab`, `rolePermissions` and the tab <-> path
+// mapping now live in the pure model at
+// `src/features/admin/shell/adminWorkspaceModel.ts`. The local duplicate
+// definitions were removed so the routing contract has ONE source of truth.
 
 export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) => void, programs?: Program[], onProgramsChange?: (programs: Program[]) => void, blogPosts?: BlogPost[], onBlogPostsChange?: (posts: BlogPost[]) => void }> = ({ logout, setView, programs = PROGRAMS, onProgramsChange, blogPosts = BLOG_POSTS, onBlogPostsChange }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  // B1.4D-T1: `activeTab` is now URL-driven instead of a local useState.
+  //
+  // WHY: B1.4D gives every legacy admin tab a canonical URL. Deriving the tab
+  // from the pathname keeps the URL as the single source of truth (deep links,
+  // browser Back/Forward, shareable URLs) while leaving all 72 state slices
+  // mounted exactly as before.
+  //
+  // `setActiveTab` is retained as a thin compatibility shim so the ~76 existing
+  // call sites inside this 6,500-line file do NOT need a bulk rewrite: it now
+  // navigates to the canonical path for the tab instead of flipping a useState.
+  //
+  // FALLBACK: `?? 'overview'` only fires for the bare `/admin` route, which is
+  // the canonical overview URL anyway. An unknown /admin/* renders Not Found in
+  // `AdminRouteBoundary` and never reaches this component.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab: AdminTab = adminPathToTab(location.pathname) ?? 'overview';
+  const setActiveTab = (tab: AdminTab) => {
+    navigate(adminTabToPath(tab));
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [adminRole, setAdminRole] = useState<AdminRole>('Super Admin');
@@ -487,14 +516,17 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     { id: '3', name: 'Rudi Hermawan', email: 'help@theprams.com', role: 'Support', lastActive: '1 hari lalu' },
   ]);
 
-  // Tab permissions mapping
-  const rolePermissions: Record<AdminRole, AdminTab[]> = {
-    'Super Admin': ['overview', 'users', 'leads', 'inquiries', 'marketing', 'website', 'finance', 'programs', 'content', 'questions', 'testimonials', 'reports', 'settings'],
-    'Content Manager': ['overview', 'programs', 'content', 'questions', 'testimonials', 'website'],
-    'Support': ['overview', 'users', 'leads', 'inquiries', 'settings', 'finance']
-  };
+  // Tab permissions mapping.
+  //
+  // B1.4D-T1: the registry now lives in the pure model
+  // (`ADMIN_ROLE_PERMISSIONS`). This local alias keeps the ~3 downstream
+  // references inside this file working unchanged.
+  //
+  // NOTE: this is UI presentation filtering ONLY. It is not authorization.
+  // SEC-P1-03 (real admin auth) remains OPEN and is owned by B2.
+  const rolePermissions: Record<AdminRole, AdminTab[]> = ADMIN_ROLE_PERMISSIONS;
 
-  const isTabAllowed = (tab: AdminTab) => rolePermissions[adminRole].includes(tab);
+  const isTabAllowed = (tab: AdminTab) => isAdminTabAllowed(adminRole, tab);
   const campaignTotalBudget = parseCurrencyAmount(campaignForm.totalBudget);
   const campaignDailyBudget = parseCurrencyAmount(campaignForm.dailyBudget);
   const campaignEstimatedDays = campaignDailyBudget > 0 ? Math.max(1, Math.floor(campaignTotalBudget / campaignDailyBudget)) : 0;

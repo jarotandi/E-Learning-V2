@@ -63,6 +63,33 @@ export const LEARNER_PATHS = {
 
 export const ADMIN_PATHS = {
   admin: '/admin',
+  users: '/admin/users',
+  academicQuestions: '/admin/academic/questions',
+  studioContent: '/admin/studio/content',
+  studioWebsite: '/admin/studio/website',
+  reviewInquiries: '/admin/review/inquiries',
+  reviewTestimonials: '/admin/review/testimonials',
+  commercePrograms: '/admin/commerce/programs',
+  commerceLeads: '/admin/commerce/leads',
+  commerceMarketing: '/admin/commerce/marketing',
+  commerceFinance: '/admin/commerce/finance',
+  analytics: '/admin/analytics',
+  settings: '/admin/settings',
+} as const;
+
+/**
+ * B1.4D-T1 group-index convenience redirects.
+ *
+ * `/admin/academic`, `/admin/studio`, `/admin/review` and `/admin/commerce`
+ * are redirect-only convenience URLs — not tabs. They replace themselves with
+ * the canonical child via `replace` navigation so browser Back returns to the
+ * previous page, not the redirect stub.
+ */
+export const ADMIN_GROUP_INDEXES = {
+  academic: '/admin/academic',
+  studio: '/admin/studio',
+  review: '/admin/review',
+  commerce: '/admin/commerce',
 } as const;
 
 export const STUDIO_PATHS = {
