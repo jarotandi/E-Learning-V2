@@ -35,8 +35,13 @@ export function LessonFeedbackDialog({
   const handleSubmit = () => {
     if (rating === 0) return;
     onSubmit(rating, questionText);
-    setQuestionText('');
-    setRating(0);
+    setIsQuestionSent(true);
+    setTimeout(() => {
+      setIsQuestionSent(false);
+      setRating(0);
+      setQuestionText('');
+      onClose();
+    }, 2000);
   };
 
   // Handle focus management and Escape key
@@ -139,7 +144,7 @@ export function LessonFeedbackDialog({
               ) : (
                 <motion.form
                   key="form"
-                  onSubmit={(e) => { e.preventDefault(); if (rating === 0) return; }}
+                  onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
                   initial={{ opacity: 0, scale: 0.95, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -170,17 +175,7 @@ export function LessonFeedbackDialog({
                     className="w-full p-6 bg-slate-50 border border-slate-100 rounded-3xl min-h-[140px] outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-600 transition-all font-medium text-sm"
                   />
                   <button
-                    type="button"
-                    onClick={() => {
-                      if (rating === 0) return;
-                      setIsQuestionSent(true);
-                      setTimeout(() => {
-                        setIsQuestionSent(false);
-                        setRating(0);
-                        setQuestionText('');
-                        onClose();
-                      }, 2000);
-                    }}
+                    type="submit"
                     disabled={rating === 0}
                     className="w-full btn-orange py-5 rounded-[1.5rem] shadow-xl shadow-brand-orange/20 disabled:opacity-50 disabled:shadow-none"
                   >

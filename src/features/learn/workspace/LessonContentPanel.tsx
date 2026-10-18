@@ -27,6 +27,7 @@ interface LessonContentPanelProps {
   onShare: () => void;
   onToggleBookmark: () => void;
   isBookmarked: boolean;
+  onUpgrade: () => void;
 }
 
 export function LessonContentPanel({
@@ -39,6 +40,7 @@ export function LessonContentPanel({
   onShare,
   onToggleBookmark,
   isBookmarked,
+  onUpgrade,
 }: LessonContentPanelProps) {
   return (
     <div className="mb-12">
@@ -92,7 +94,7 @@ export function LessonContentPanel({
             </svg>
             <p className="font-bold text-brand-navy mb-2">Materi ini tersedia untuk akun premium.</p>
             <p className="text-sm text-slate-500 mb-5">Upgrade paket untuk membuka semua video, modul pembelajaran, live session, jadwal, dan rekaman kelas.</p>
-            <button className="btn-primary mx-auto">Upgrade Paket</button>
+            <button onClick={onUpgrade} className="btn-primary mx-auto">Upgrade Paket</button>
           </div>
         ) : (
           <p>

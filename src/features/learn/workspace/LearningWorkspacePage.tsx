@@ -8,19 +8,16 @@
  * Designed to be rendered inside LearnerLayout.
  */
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { View, User } from '@/types';
 import { CURRICULUM, LIVE_SESSIONS } from '@/constants';
 import { 
   deriveLessonAccess, 
   calculateCourseProgress,
-  calculateModuleProgress,
-  formatTime,
   getLessonById,
   FREE_LESSON_LIMIT,
 } from './learningWorkspaceModel';
-import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
+import { motion } from 'motion/react';
 import { LearningWorkspaceToolbar } from './LearningWorkspaceToolbar';
 import { LessonVideoPlayer } from './LessonVideoPlayer';
 import { LessonContentPanel } from './LessonContentPanel';
@@ -29,7 +26,7 @@ import { SupportMaterialsCard } from './SupportMaterialsCard';
 import { LiveSessionPanel } from './LiveSessionPanel';
 import { CurriculumPanel } from './CurriculumPanel';
 import { LessonFeedbackDialog } from './LessonFeedbackDialog';
-import { colors, layout, spacing } from '@/design-system/tokens/brand';
+import { colors, layout } from '@/design-system/tokens/brand';
 import { Tabs, TabsPanel } from '@/design-system/components';
 
 interface LearningWorkspacePageProps {
@@ -78,7 +75,6 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
 
   const { isPremium, freeLessonLimit, accessibleLessonIds } = accessData;
   const isActiveLessonLocked = !accessibleLessonIds.has(activeLesson.id);
-  const liveSession = LIVE_SESSIONS[0];
 
   const toggleComplete = (lessonId: string) => {
     if (!accessibleLessonIds.has(lessonId)) return;
@@ -149,7 +145,7 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
 
   const tabItems = [
     { id: 'content', label: 'Video & Materi', disabled: false },
-    { id: 'live', label: 'Live Session', disabled: !user?.isPremium },
+    { id: 'live', label: user?.isPremium ? 'Live Session' : 'Live Session — Memerlukan akses Premium', disabled: !user?.isPremium },
   ];
 
   return (
@@ -229,7 +225,8 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
                   onShare={() => {}}
                   onToggleBookmark={() => toggleBookmark(activeLesson.id)}
                   isBookmarked={bookmarkedLessons.includes(activeLesson.id)}
-                />
+                    onUpgrade={onUpgrade}
+                  />
 
                 {/* Feedback */}
                 <LessonFeedbackCard
@@ -272,6 +269,22 @@ export function LearningWorkspacePage({ user, setView, onUpgrade }: LearningWork
           onUpgrade={onUpgrade}
         />
       </div>
+
+      {/* Lesson Feedback Dialog - legacy "Beri Rating Pelajaran" capability */}
+      <LessonFeedbackDialog
+        isOpen={isFeedbackDialogOpen}
+        onClose={() => setIsFeedbackDialogOpen(false)}
+        lessonTitle={activeLesson.title}
+        onSubmit={(rating, question) => {
+          setDialogRating(rating);
+          setDialogQuestion(question);
+          setIsDialogSubmitted(true);
+          setTimeout(() => {
+            setIsDialogSubmitted(false);
+            setIsFeedbackDialogOpen(false);
+          }, 2000);
+        }}
+      />
     </>
   );
 }

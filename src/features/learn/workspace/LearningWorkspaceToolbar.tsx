@@ -66,7 +66,7 @@ export function LearningWorkspaceToolbar({
           variant="ghost"
           size="sm"
           onClick={onOpenFeedbackDialog}
-          className="whitespace-nowrap hidden sm:inline-flex"
+          className="whitespace-nowrap"
           aria-label="Beri rating pelajaran"
         >
           Beri Rating Pelajaran

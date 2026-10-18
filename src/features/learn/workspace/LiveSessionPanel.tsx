@@ -123,7 +123,7 @@ export function LiveSessionPanel({ isPremium }: LiveSessionPanelProps) {
             <Calendar size={16} />
           </a>
           <a
-            href="https://meet.google.com/abc-defg-hij"
+            href={liveSession.meetUrl || 'https://meet.google.com/abc-defg-hij'}
             target="_blank"
             rel="noreferrer"
             className="flex-1 px-4 py-3 rounded-xl bg-brand-blue text-white text-xs font-black flex items-center justify-center gap-2 hover:bg-blue-600 transition-all"
