@@ -1,5 +1,5 @@
 /**
- * B1.4D admin workspace verification script (T1 + T2 + T3 + T4).
+ * B1.4D admin workspace verification script (T1 + T2 + T3 + T4 + T5A).
  *
  * Usage:
  *   node scripts/verify-admin-workspace.mjs
@@ -40,10 +40,19 @@
  *  AA. (T4) Single question store (no duplicate state in the monolith).
  *  AB. (T4) Composition + old Question Bank JSX removed from the monolith.
  *  AC. (T4) Contextual add uses the canonical questions domain.
- *  AD. (T4) Studio (T5) non-regression: video state stays in AdminDashboard.
+ *  AD. (T5A) Content Library state moved out of the monolith (supersedes the
+ *      T4 Studio guard, which was the pre-T5A freeze).
  *  AE. (T4) Question behaviour: source contract + EXECUTED draft factories.
  *  AF. (T4) Accessibility SOURCE CONTRACT for the migrated Academic surface.
  *  AG. (T4) Security + storage: no new question key.
+ *  AH. (T5A) Content Library modules + composition wiring.
+ *  AI. (T5A) Single content authority (no duplicate state in the monolith).
+ *  AJ. (T5A) Video storage ownership (canonical key, one owner, 13 keys).
+ *  AK. (T5A) Content behaviour: save/delete/upload parity + EXECUTED seed.
+ *  AL. (T5A) Composition + old Content Library JSX removed from the monolith.
+ *  AM. (T5A) Website / Blog (T5B) non-regression: it stays in AdminDashboard.
+ *  AN. (T5A) Accessibility SOURCE CONTRACT for the migrated Content surface.
+ *  AO. (T5A) Security deferrals (no auth/Supabase/AI added).
  *
  * WHAT THIS DOES NOT PROVE
  * ------------------------
@@ -512,6 +521,23 @@ const academicEditorCode = stripComments(academicEditorSrc);
 const academicTagsCode = stripComments(academicTagsSrc);
 const academicImportCode = stripComments(academicImportSrc);
 const academicDataCode = stripComments(academicDataSrc);
+
+// B1.4D-T5A — Studio / Content Library domain.
+const contentPageSrc = readAdminFeature('studio/content/AdminContentLibraryPage.tsx');
+const contentHookSrc = readAdminFeature('studio/content/useAdminContentDomain.ts');
+const contentEditorSrc = readAdminFeature('studio/content/AdminVideoEditorDialog.tsx');
+const contentUploadSrc = readAdminFeature('studio/content/AdminVideoUploadDialog.tsx');
+const contentDataSrc = readAdminFeature('studio/content/adminContentData.ts');
+const contentBarrelSrc = readAdminFeature('studio/content/index.ts');
+
+const contentPageCode = stripComments(contentPageSrc);
+const contentHookCode = stripComments(contentHookSrc);
+const contentEditorCode = stripComments(contentEditorSrc);
+const contentUploadCode = stripComments(contentUploadSrc);
+const contentDataCode = stripComments(contentDataSrc);
+const contentBarrelCode = stripComments(contentBarrelSrc);
+// Comment-stripped view of the whole feature tree (for CODE-only key counting).
+const adminFeatureCode = stripComments(adminFeatureSrc);
 
 /**
  * Returns the body of a top-level (2-space indented) component function, e.g.
@@ -1106,20 +1132,29 @@ check('runContextualAdd other branches preserved',
     /activeTab === 'content'/.test(componentFunctionBody(adminDashCode, 'runContextualAdd')));
 
 /* ------------------------------------------------------------------ */
-/* AD. Studio (T5) non-regression                                      */
+/* AD. Content Library state moved out of the monolith (T5A)           */
 /* ------------------------------------------------------------------ */
 
-section('AD. T4 Studio (T5) non-regression — video state stays in AdminDashboard');
+section('AD. T5A Content Library moved out of AdminDashboard (supersedes the T4 Studio guard)');
 
+// The T4 guard previously FROZE the Studio/video state inside AdminDashboard so
+// the T4 academic extraction could not disturb it. T5A is the task that
+// legitimately moves that state, so the guard is retired and replaced with the
+// post-T5A contract: the state must now live in the content domain ONLY.
 for (const name of ['isUploadVideoModalOpen', 'videoLessons', 'editingVideo', 'uploadStatus', 'uploadProgress', 'videoForm']) {
-  check(`Studio state "${name}" remains in AdminDashboard`,
-    new RegExp(`\\b${name}\\b`).test(adminDashCode));
+  check(`Studio state "${name}" has LEFT AdminDashboard`,
+    !new RegExp(`\\b${name}\\b`).test(adminDashCode));
 }
-check('Studio video helpers remain in AdminDashboard',
-  /const simulateVideoUpload = /.test(adminDashCode) &&
-    /const saveVideoLessons = /.test(adminDashCode) &&
-    /const saveVideoEditor = /.test(adminDashCode));
-check('the academic extract did NOT take the video storage key',
+check('Studio video helpers have LEFT AdminDashboard',
+  !/const simulateVideoUpload = /.test(adminDashCode) &&
+    !/const saveVideoLessons = /.test(adminDashCode) &&
+    !/const saveVideoEditor = /.test(adminDashCode));
+check('AdminDashboard no longer owns the video storage key',
+  !/theprams_demo_video_lessons/.test(adminDashCode));
+check('AdminDashboard no longer declares the VideoLessonRecord type or seed',
+  !/\bVideoLessonRecord\b/.test(adminDashCode) &&
+    !/\bdefaultVideoLessons\b/.test(adminDashCode));
+check('the academic extract still did NOT take the video storage key',
   !/theprams_demo_video_lessons/.test(academicHookCode) &&
     !/theprams_demo_video_lessons/.test(academicPageCode));
 check('the academic domain imports no Studio/video symbol',
@@ -1240,6 +1275,287 @@ check('SEC-P1-03 still open: no Supabase/auth/AI in the academic domain',
 check('academic domain adds no access-control language',
   !/\b(?:403|Forbidden|unauthorized|access control)\b/i.test(academicPageCode));
 
+/* ================================================================== */
+/* B1.4D-T5A ADDITIONS                                                */
+/* ================================================================== */
+
+/* ------------------------------------------------------------------ */
+/* AH. Content Library module presence                                 */
+/* ------------------------------------------------------------------ */
+
+section('AH. T5A Content Library extraction — modules + wiring');
+
+check('AdminContentLibraryPage module exists', contentPageSrc.length > 0);
+check('useAdminContentDomain module exists', contentHookSrc.length > 0);
+check('AdminVideoEditorDialog module exists', contentEditorSrc.length > 0);
+check('AdminVideoUploadDialog module exists', contentUploadSrc.length > 0);
+check('adminContentData module exists', contentDataSrc.length > 0);
+check('studio/content barrel exists',
+  /AdminContentLibraryPage/.test(contentBarrelSrc) &&
+    /useAdminContentDomain/.test(contentBarrelSrc) &&
+    /AdminVideoEditorDialog/.test(contentBarrelSrc) &&
+    /AdminVideoUploadDialog/.test(contentBarrelSrc));
+check('barrel exposes the content surface only (no Website/Blog file)',
+  !/Website|Blog/i.test(contentBarrelCode));
+check('AdminDashboard renders AdminContentLibraryPage for the content tab',
+  /\{activeTab === 'content' && \([\s\S]{0,200}<AdminContentLibraryPage/.test(adminDashCode));
+check('AdminContentLibraryPage receives the canonical domain surface',
+  /domain=\{contentDomain\}/.test(adminDashCode));
+check('AdminContentLibraryPage receives the editable program list (editor select)',
+  /<AdminContentLibraryPage[\s\S]{0,200}programs=\{programsList\}/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* AI. Single Content authority                                        */
+/* ------------------------------------------------------------------ */
+
+section('AI. T5A single content store (no duplicate state)');
+
+check('AdminDashboard invokes useAdminContentDomain exactly once',
+  (adminDashCode.match(/useAdminContentDomain\(/g) || []).length === 1);
+check('AdminDashboard no longer declares local video state',
+  !/const \[\s*videoLessons\s*,/.test(adminDashCode) &&
+    !/const \[\s*editingVideo\s*,/.test(adminDashCode) &&
+    !/const \[\s*uploadStatus\s*,/.test(adminDashCode) &&
+    !/const \[\s*uploadProgress\s*,/.test(adminDashCode) &&
+    !/const \[\s*videoForm\s*,/.test(adminDashCode) &&
+    !/const \[\s*isUploadVideoModalOpen\s*,/.test(adminDashCode));
+check('AdminDashboard no longer holds local video setters',
+  !/setVideoLessons\(/.test(adminDashCode) &&
+    !/setEditingVideo\(/.test(adminDashCode) &&
+    !/setUploadStatus\(/.test(adminDashCode) &&
+    !/setUploadProgress\(/.test(adminDashCode) &&
+    !/setVideoForm\(/.test(adminDashCode));
+check('the route-mounted page does NOT invoke its own content hook',
+  !/useAdminContentDomain\(/.test(contentPageCode) &&
+    !/useState<[^>]*VideoLessonRecord[^>]*>/.test(contentPageCode));
+check('the content domain modules do not import AdminDashboard (no cycle)',
+  !/from '[^']*AdminDashboard'/.test(contentHookCode) &&
+    !/from '[^']*AdminDashboard'/.test(contentPageCode) &&
+    !/from '[^']*AdminDashboard'/.test(contentEditorCode) &&
+    !/from '[^']*AdminDashboard'/.test(contentUploadCode));
+check('contextual add content branch uses the canonical content domain',
+  /contentDomain\.openUpload\(\)/.test(
+    componentFunctionBody(adminDashCode, 'runContextualAdd')));
+check('runContextualAdd other branches preserved',
+  /activeTab === 'questions'/.test(componentFunctionBody(adminDashCode, 'runContextualAdd')) &&
+    /activeTab === 'marketing'/.test(componentFunctionBody(adminDashCode, 'runContextualAdd')));
+
+/* ------------------------------------------------------------------ */
+/* AJ. Video storage ownership                                         */
+/* ------------------------------------------------------------------ */
+
+section('AJ. T5A video storage (canonical key, one owner, 13 keys)');
+
+check('the content data module owns the canonical key constant',
+  /VIDEO_LESSONS_STORAGE_KEY\s*=\s*'theprams_demo_video_lessons'/.test(contentDataCode));
+check('the content hook reads the key with the legacy fallback',
+  /readStorageArray\(\s*VIDEO_LESSONS_STORAGE_KEY\s*,\s*defaultVideoLessons\s*\)/.test(contentHookCode));
+check('the content hook writes the key with the legacy semantics',
+  /localStorage\.setItem\(\s*VIDEO_LESSONS_STORAGE_KEY\s*,\s*JSON\.stringify\(/.test(contentHookCode));
+const videoKeyOccurrences =
+  ([adminDashCode, adminFeatureCode].join('\n').match(/theprams_demo_video_lessons/g) || []).length;
+check('exactly one logical owner of the video key literal across the admin tree',
+  videoKeyOccurrences === 1, `found ${videoKeyOccurrences}`);
+check('the storage registry is still exactly 13 keys',
+  discovered.size === 13, `found ${discovered.size}`);
+check('no extra content storage key introduced',
+  !/theprams_demo_(?!video_lessons|users|leads|transactions|payment_proofs|finance_entries|finance_realizations|assets|audit_events|notifications|registrations|blog_assets|website_questions)/.test(
+    [contentPageSrc, contentHookSrc, contentEditorSrc, contentUploadSrc, contentDataSrc].join('\n')));
+
+/* ------------------------------------------------------------------ */
+/* AK. Content behaviour (source contract + executed seed)             */
+/* ------------------------------------------------------------------ */
+
+section('AK. T5A content behaviour (save/delete/upload parity + executed seed)');
+
+check('save: empty title notifies and bails',
+  /if \(!video\.title\.trim\(\)\)[\s\S]{0,80}Judul video wajib diisi\./.test(contentHookCode));
+check('save: trims title / program / duration / thumbnail / tags',
+  /title:\s*video\.title\.trim\(\)/.test(contentHookCode) &&
+    /program:\s*video\.program\.trim\(\)\s*\|\|\s*PROGRAMS\[0\]\.title/.test(contentHookCode) &&
+    /duration:\s*video\.duration\.trim\(\)\s*\|\|\s*'00:00'/.test(contentHookCode) &&
+    /thumbnail:\s*video\.thumbnail\.trim\(\)\s*\|\|\s*defaultVideoLessons\[0\]\.thumbnail/.test(contentHookCode) &&
+    /tags:\s*video\.tags\.map\(\(tag\)\s*=>\s*tag\.trim\(\)\)\.filter\(Boolean\)/.test(contentHookCode));
+check('save: replaces by id OR prepends',
+  /videoLessons\.some\(\(item\)\s*=>\s*item\.id === sanitized\.id\)/.test(contentHookCode) &&
+    /\[\s*sanitized\s*,\s*\.\.\.videoLessons\s*\]/.test(contentHookCode));
+check('save: persists, closes editor, audits and toasts',
+  /saveVideoLessons\(nextVideos\)/.test(contentHookCode) &&
+    /setEditingVideo\(null\)/.test(contentHookCode) &&
+    /recordAudit\('Content Library',\s*'Save Video Lesson',\s*sanitized\.title\)/.test(contentHookCode) &&
+    /Detail video berhasil disimpan\./.test(contentHookCode));
+check('delete: filters the demo list and toasts (no confirm invented)',
+  /videoLessons\.filter\(\(item\)\s*=>\s*item\.id !== video\.id\)/.test(contentHookCode) &&
+    /dihapus dari daftar demo\./.test(contentHookCode) &&
+    !/confirm\(/.test(contentHookCode));
+check('upload: idle -> uploading, progress restarts at 0',
+  /setUploadStatus\('uploading'\)/.test(contentHookCode) &&
+    /setUploadProgress\(0\)/.test(contentHookCode));
+check('upload: increments by 5 every 100ms',
+  /return prev \+ 5;/.test(contentHookCode) && /},\s*100\);/.test(contentHookCode));
+check('upload: completes, then after 1500ms closes and resets',
+  /setUploadStatus\('completed'\)/.test(contentHookCode) &&
+    /},\s*1500\);/.test(contentHookCode) &&
+    /setIsUploadModalOpen\(false\)/.test(contentHookCode) &&
+    /setUploadStatus\('idle'\)/.test(contentHookCode) &&
+    /setVideoForm\(createInitialVideoForm\(\)\)/.test(contentHookCode));
+check('upload: blank title is a no-op guard',
+  /if \(!videoForm\.title\) return;/.test(contentHookCode));
+check('upload form program falls back to the first canonical program',
+  /program:\s*PROGRAMS\[0\]\.title/.test(contentHookCode));
+check('upload is a demo: no File API / no real upload dependency',
+  !/FileReader|\.arrayBuffer\(|XMLHttpRequest|fetch\(/.test(contentHookCode) &&
+    !/FileReader|\.arrayBuffer\(/.test(contentUploadCode));
+check('the content domain imports no AdminDashboard-owned symbol',
+  !/notify\('Notifikasi/.test(contentHookCode) &&
+    !/BlogPost|WebsiteQuestion/.test(contentHookCode));
+
+// Executed: the seed list (pure data module).
+const contentData = await compileAndImport(
+  join(srcDir, 'features', 'admin', 'studio', 'content', 'adminContentData.ts'),
+);
+check('executed: canonical video storage key is unchanged',
+  contentData.VIDEO_LESSONS_STORAGE_KEY === 'theprams_demo_video_lessons');
+check('executed: seed holds the four legacy demo lessons',
+  contentData.defaultVideoLessons.length === 4);
+check('executed: seed ids are video-1..video-4',
+  contentData.defaultVideoLessons.map((v) => v.id).join(',') ===
+    'video-1,video-2,video-3,video-4');
+check('executed: seed statuses are Published/Published/Draft/Published',
+  contentData.defaultVideoLessons.map((v) => v.status).join(',') ===
+    'Published,Published,Draft,Published');
+check('executed: seed accesses are Premium/Free/Premium/Scholarship',
+  contentData.defaultVideoLessons.map((v) => v.access).join(',') ===
+    'Premium,Free,Premium,Scholarship');
+check('executed: seed tags preserved (first lesson)',
+  contentData.defaultVideoLessons[0].tags.join(',') === 'Kedokteran,Anatomi');
+check('executed: every seed record keeps all 13 fields',
+  contentData.defaultVideoLessons.every((v) =>
+    ['id', 'title', 'program', 'duration', 'views', 'date', 'status', 'access',
+      'thumbnail', 'description', 'mentor', 'module', 'tags', 'notes']
+      .every((k) => Object.prototype.hasOwnProperty.call(v, k))));
+
+/* ------------------------------------------------------------------ */
+/* AL. Composition + old Content Library JSX removal                    */
+/* ------------------------------------------------------------------ */
+
+section('AL. T5A composition + old Content Library JSX removal');
+
+check('the canonical domain surface is passed',
+  /domain=\{contentDomain\}/.test(adminDashCode));
+check('old Content Library heading absent from AdminDashboard',
+  !/Content Management/.test(adminDashCode));
+check('old Recent Lessons JSX absent from AdminDashboard',
+  !/Recent Lessons/.test(adminDashCode) &&
+    !/Manage video lessons and learning materials/.test(adminDashCode));
+check('old video editor / upload modal JSX absent from AdminDashboard',
+  !/Video Lesson Editor/.test(adminDashCode) &&
+    !/Upload Video Materi/.test(adminDashCode) &&
+    !/Start Upload/.test(adminDashCode));
+check('old content metric labels absent from AdminDashboard',
+  !/Watch Time/.test(adminDashCode) &&
+    !/Active Viewers/.test(adminDashCode));
+check('the extracted page owns the Content Library heading',
+  /Content Management/.test(contentPageCode));
+check('the extracted page composes both dialogs',
+  /AdminVideoEditorDialog/.test(contentPageCode) &&
+    /AdminVideoUploadDialog/.test(contentPageCode));
+check('the extracted page keeps the static demo metrics',
+  /8\.5k hrs/.test(contentPageCode) && /842/.test(contentPageCode));
+check('the extracted page keeps the derived completion metric',
+  /Math\.round\([\s\S]{0,200}Math\.max\(domain\.videoLessons\.length,\s*1\)/.test(contentPageCode));
+
+/* ------------------------------------------------------------------ */
+/* AM. Website / Blog (T5B) non-regression                             */
+/* ------------------------------------------------------------------ */
+
+section('AM. T5A Website / Blog (T5B) non-regression — it stays in AdminDashboard');
+
+check('activeTab === "website" still lives in AdminDashboard',
+  /activeTab === 'website'/.test(adminDashCode));
+check('the Website Editor Panel still lives in AdminDashboard',
+  /Website Editor Panel/.test(adminDashCode));
+for (const name of [
+  'isSaveWebsiteConfirmOpen', 'editingBlogPost', 'previewBlogPost',
+  'blogEditorAssets', 'editingBlogAsset', 'isMiddleInsertOpen',
+  'isBlogAiChatOpen', 'middlePreviewAsset', 'middlePreviewRelatedId',
+  'internetAssetUrl', 'internetAssetName', 'aiChatPrompt', 'blogPostDrafts',
+  'blogEditorSearchTerm', 'blogEditorCategory',
+]) {
+  check(`T5B state "${name}" remains in AdminDashboard`,
+    new RegExp(`\\b${name}\\b`).test(adminDashCode));
+}
+check('the content extract did NOT take any Website/Blog symbol',
+  !/blogPost|website|Blog|Website/i.test(contentHookCode) &&
+    !/blogPost|website|Blog|Website/i.test(contentPageCode));
+check('no Website/Blog feature files were created yet',
+  JSON.stringify(readdirSync(join(adminFeatureDir, 'studio')).sort()) ===
+    JSON.stringify(['content']),
+  JSON.stringify(readdirSync(join(adminFeatureDir, 'studio')).sort()));
+
+/* ------------------------------------------------------------------ */
+/* AN. Accessibility source contract (Content)                         */
+/* ------------------------------------------------------------------ */
+
+section('AN. T5A content accessibility source contract');
+
+check('row edit control has an aria-label',
+  /aria-label=\{`Edit video \$\{/.test(contentPageCode));
+check('row delete control has an aria-label',
+  /aria-label=\{`Hapus video \$\{/.test(contentPageCode));
+check('row actions use the design-system IconButton (≥44px target)',
+  /IconButton/.test(contentPageCode));
+check('editor dialog close has an aria-label',
+  /aria-label="Tutup editor video"/.test(contentEditorCode));
+check('upload dialog close has an aria-label',
+  /aria-label="Tutup upload video"/.test(contentUploadCode));
+check('both dialog closes declare a 44px min target',
+  /min-w-\[44px\]/.test(contentEditorCode) && /min-h-\[44px\]/.test(contentEditorCode) &&
+    /min-w-\[44px\]/.test(contentUploadCode) && /min-h-\[44px\]/.test(contentUploadCode));
+check('editor fields carry accessible names',
+  /aria-label="Judul Video"/.test(contentEditorCode) &&
+    /aria-label="Program"/.test(contentEditorCode) &&
+    /aria-label="Deskripsi Video"/.test(contentEditorCode) &&
+    /aria-label="Thumbnail URL"/.test(contentEditorCode) &&
+    /aria-label="Tags \(pisahkan koma\)"/.test(contentEditorCode));
+check('upload fields carry accessible names',
+  /aria-label="Video Title"/.test(contentUploadCode) &&
+    /aria-label="Associated Program"/.test(contentUploadCode) &&
+    /aria-label="Video Description"/.test(contentUploadCode));
+check('the file input is sr-only (keyboard reachable), not hidden',
+  /type="file"[\s\S]{0,60}className="sr-only"/.test(contentUploadCode) &&
+    !/type="file"[\s\S]{0,60}className="hidden"/.test(contentUploadCode));
+check('selected tags do NOT use bg-brand-blue + text-white',
+  !/bg-brand-blue[^"'`]*text-white|text-white[^"'`]*bg-brand-blue/.test(contentEditorCode) &&
+    !/bg-brand-blue[^"'`]*text-white|text-white[^"'`]*bg-brand-blue/.test(contentUploadCode) &&
+    !/bg-brand-blue[^"'`]*text-white|text-white[^"'`]*bg-brand-blue/.test(contentPageCode));
+check('extracted content surface has no raw brand text utilities',
+  !/text-brand-blue|text-brand-orange/.test(contentPageCode) &&
+    !/text-brand-blue|text-brand-orange/.test(contentEditorCode) &&
+    !/text-brand-blue|text-brand-orange/.test(contentUploadCode));
+check('content status badges avoid emerald-600',
+  !/text-emerald-600/.test(contentPageCode));
+
+/* ------------------------------------------------------------------ */
+/* AO. Security / storage                                              */
+/* ------------------------------------------------------------------ */
+
+section('AO. T5A security deferrals (no auth/Supabase/AI added)');
+
+check('SEC-P1-03 still open: no Supabase/auth/AI in the content domain',
+  !/@supabase|supabase|GoogleGenAI|@google\/genai|openmaic/i.test(
+    [contentPageSrc, contentHookSrc, contentEditorSrc, contentUploadSrc, contentDataSrc].join('\n')));
+check('the content page/dialogs introduce no localStorage usage',
+  !/localStorage/.test(contentPageCode) &&
+    !/localStorage/.test(contentEditorCode) &&
+    !/localStorage/.test(contentUploadCode));
+check('the content data module introduces no localStorage usage',
+  !/localStorage/.test(contentDataCode));
+check('the content domain adds no access-control language',
+  !/\b(?:403|Forbidden|unauthorized|access control)\b/i.test(contentPageCode));
+check('no router change: content path is still /admin/studio/content',
+  allAdminPaths().includes('/admin/studio/content'));
+
 /* ------------------------------------------------------------------ */
 /* Report                                                              */
 /* ------------------------------------------------------------------ */
@@ -1252,7 +1568,7 @@ if (failures.length) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }
-console.log('B1.4D-T4 admin workspace contract: PASS');
+console.log('B1.4D-T5A admin workspace contract: PASS');
 process.exit(0);
 
 /* ------------------------------------------------------------------ */
