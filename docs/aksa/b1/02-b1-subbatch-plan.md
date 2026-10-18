@@ -1,6 +1,6 @@
 # B1 Sub-Batch Plan
 
-B1 Ã¢ÂÂ App Foundation is delivered incrementally. Each sub-batch is independently
+B1 ÃÂ¢ÃÂÃÂ App Foundation is delivered incrementally. Each sub-batch is independently
 verifiable, scoped, and revertable. This document fixes the sequence so B1 does
 not drift into feature work.
 
@@ -11,22 +11,21 @@ Authority: `docs/aksa/10-batch-roadmap.md` (B1 definition),
 
 | Sub-batch | Status | Record |
 |---|---|---|
-| B1.1 Ã¢ÂÂ App Foundation Structure + Design Contract | **Ã¢ÂÂ COMPLETE** | this document, `01-legacy-compatibility-map.md`, `03-client-security-inventory.md` |
-| B1.2 Ã¢ÂÂ Security + Build Foundation Hardening | **Ã¢ÂÂ COMPLETE** | this document, ÃÂ§Security |
-| B1.3 Ã¢ÂÂ Production Router + AKSA App Shell | **Ã¢ÂÂ COMPLETE** | `04-b1.3-router-migration.md` |
-| B1.4A Ã¢ÂÂ Design-System Primitives + Public Header | **Ã¢ÂÂ COMPLETE** | `06-b1.4a-design-system-public-header.md` |
-| B1.4B Ã¢ÂÂ `StudentDashboard` decomposition | **Ã¢ÂÂ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
-| **B1.4B-R1 Ã¢ÂÂ Entitlement parity + Profile accessibility** | **Ã¢ÂÂ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
-| **B1.4B-R2 Ã¢ÂÂ Chrome accessibility closeout** | **Ã¢ÂÂ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
-| B1.4C Ã¢ÂÂ `LearningPage` decomposition | **Ã¢ÂÂ COMPLETE** | `08-b1.4c-learning-workspace.md` |
-| B1.4C-R1 Ã¢ÂÂ Route & workspace state parity closeout | **Ã¢ÂÂ COMPLETE** | `08-b1.4c-learning-workspace.md` |
-| B1.4D Ã¢ÂÂ `AdminDashboard` split + `/admin/*` sub-routes | **Ã¢ÂÂ NEXT** | this document, ÃÂ§B1.4 |
-| B1.4 (whole) | **IN PROGRESS** | this document, ÃÂ§B1.4 |
-| B1.5 Ã¢ÂÂ Regression + Visual Acceptance | pending | this document, ÃÂ§B1.5 |
+| B1.1 ÃÂ¢ÃÂÃÂ App Foundation Structure + Design Contract | **ÃÂ¢ÃÂÃÂ COMPLETE** | this document, `01-legacy-compatibility-map.md`, `03-client-security-inventory.md` |
+| B1.2 ÃÂ¢ÃÂÃÂ Security + Build Foundation Hardening | **ÃÂ¢ÃÂÃÂ COMPLETE** | this document, ÃÂÃÂ§Security |
+| B1.3 ÃÂ¢ÃÂÃÂ Production Router + AKSA App Shell | **ÃÂ¢ÃÂÃÂ COMPLETE** | `04-b1.3-router-migration.md` |
+| B1.4A ÃÂ¢ÃÂÃÂ Design-System Primitives + Public Header | **ÃÂ¢ÃÂÃÂ COMPLETE** | `06-b1.4a-design-system-public-header.md` |
+| B1.4B ÃÂ¢ÃÂÃÂ `StudentDashboard` decomposition | **ÃÂ¢ÃÂÃÂ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
+| **B1.4B-R1 ÃÂ¢ÃÂÃÂ Entitlement parity + Profile accessibility** | **ÃÂ¢ÃÂÃÂ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
+| **B1.4B-R2 ÃÂ¢ÃÂÃÂ Chrome accessibility closeout** | **ÃÂ¢ÃÂÃÂ COMPLETE** | `07-b1.4b-learner-dashboard.md` |
+| B1.4C ÃÂ¢ÃÂÃÂ `LearningPage` decomposition | **ÃÂ¢ÃÂÃÂ COMPLETE** | `08-b1.4c-learning-workspace.md` |
+| B1.4C-R1 ÃÂ¢ÃÂÃÂ Route & workspace state parity closeout | **ÃÂ¢ÃÂÃÂ COMPLETE** | `08-b1.4c-learning-workspace.md` |
+| B1.4D ÃÂ¢ÃÂÃÂ `AdminDashboard` split + `/admin/*` sub-routes | **ÃÂ¢ÃÂÃÂ NEXT** | this document, ÃÂÃÂ§B1.4 |
+| B1.4 (whole) | **IN PROGRESS** | this document, ÃÂÃÂ§B1.4 |
+| B1.5 ÃÂ¢ÃÂÃÂ Regression + Visual Acceptance | pending | this document, ÃÂÃÂ§B1.5 |
 
 B1 is **not** sealed. `AKSA-B1-SEALED` may only be created after B1.4 and B1.5
-both land Ã¢ÂÂ see ÃÂ§B1 Seal Criteria. B1.4 is **not** complete: three of its four
-sub-batches remain, and `AdminDashboard.tsx` (408.8 KB) is still a monolith.
+both land ÃÂ¢ÃÂÃÂ see ÃÂÃÂ§B1 Seal Criteria. B1.4 is **not** complete because B1.4D remains. B1.5 also remains before B1 can be sealed. `AdminDashboard.tsx` (408.8 KB) is still a monolith.
 
 ---
 
@@ -46,14 +45,14 @@ product capability**.
 
 ## Sub-Batch Sequence
 
-### B1.1 - App Foundation Structure + Design Contract Ã¢ÂÂ COMPLETE
+### B1.1 - App Foundation Structure + Design Contract ÃÂ¢ÃÂÃÂ COMPLETE
 
 | Item | Status |
 |---|---|
 | Official design contract (`docs/aksa/design/`) | Done |
 | Brand / design-system / a11y tokens contract | Done |
 | Learner + Studio navigation data contract | Done |
-| Planned route delivery map | Done Ã¢ÂÂ `05-planned-route-delivery-map.md` (B1.3R1) |
+| Planned route delivery map | Done ÃÂ¢ÃÂÃÂ `05-planned-route-delivery-map.md` (B1.3R1) |
 | Source boundary skeleton (`app`, `design-system`, `core`, `features`, `studio`, `integrations`, `shared`) | Done |
 | Legacy compatibility map | Done |
 | Client security inventory | Done |
@@ -61,41 +60,41 @@ product capability**.
 | Runtime behaviour change | **None** |
 | New dependencies | **None** |
 
-### B1.2 - Security + Build Foundation Hardening Ã¢ÂÂ COMPLETE
+### B1.2 - Security + Build Foundation Hardening ÃÂ¢ÃÂÃÂ COMPLETE
 
 Security and build foundation only. **No router, no shells, no feature work.**
 
 | Item | Status |
 |---|---|
-| SEC-P0-01 Ã¢ÂÂ remove `process.env.GEMINI_API_KEY` Vite `define` | **Closed** |
-| SEC-P0-01 Ã¢ÂÂ drop now-unused `loadEnv` | **Closed** |
-| SEC-P0-02 Ã¢ÂÂ remove unused `@google/genai` dependency | **Closed** |
-| SEC-P2-01 Ã¢ÂÂ README no longer instructs client AI secret setup | **Closed** |
-| SEC-P2-02 Ã¢ÂÂ remove legacy `GEMINI_API_KEY` placeholder from `.env.example` | **Closed** |
-| CONF-01 Ã¢ÂÂ realign `@/*` alias to `src/` in tsconfig + Vite | **Closed** |
-| AR-02 Ã¢ÂÂ correct `#009688` accessibility guidance; add `#00796b` | **Closed** |
+| SEC-P0-01 ÃÂ¢ÃÂÃÂ remove `process.env.GEMINI_API_KEY` Vite `define` | **Closed** |
+| SEC-P0-01 ÃÂ¢ÃÂÃÂ drop now-unused `loadEnv` | **Closed** |
+| SEC-P0-02 ÃÂ¢ÃÂÃÂ remove unused `@google/genai` dependency | **Closed** |
+| SEC-P2-01 ÃÂ¢ÃÂÃÂ README no longer instructs client AI secret setup | **Closed** |
+| SEC-P2-02 ÃÂ¢ÃÂÃÂ remove legacy `GEMINI_API_KEY` placeholder from `.env.example` | **Closed** |
+| CONF-01 ÃÂ¢ÃÂÃÂ realign `@/*` alias to `src/` in tsconfig + Vite | **Closed** |
+| AR-02 ÃÂ¢ÃÂÃÂ correct `#009688` accessibility guidance; add `#00796b` | **Closed** |
 | Router / app shells | **Deferred to B1.3** |
 | `AdminDashboard` decomposition | **Deferred to B1.4** |
 | Runtime product behaviour change | **None** |
 
-### B1.3 - Production Router + AKSA App Shell Ã¢ÂÂ COMPLETE
+### B1.3 - Production Router + AKSA App Shell ÃÂ¢ÃÂÃÂ COMPLETE
 
 | Item | Status |
 |---|---|
-| Introduce production router | Done Ã¢ÂÂ `react-router-dom` 7.18.4, `app/router/` |
-| `app/router/` wiring | Done Ã¢ÂÂ route table, lazy boundaries, `*` Ã¢ÂÂ explicit 404 |
-| `app/layouts/LearnerLayout.tsx` | Done Ã¢ÂÂ per `03-learner-shell.md` |
-| `app/layouts/StudioLayout.tsx` | Done Ã¢ÂÂ shell + 10 route boundaries, all placeholders |
-| `app/layouts/PublicLayout.tsx` | Done Ã¢ÂÂ hosts the legacy `Navbar` as sole public chrome owner |
-| `app/layouts/AdminLayout.tsx` | Done Ã¢ÂÂ structural host only, `<Outlet/>` |
-| `app/providers/` | Done Ã¢ÂÂ `LegacyAppStateProvider`; Theme provider not needed, dark mode is B13 |
-| `app/guards/` skeleton | Done Ã¢ÂÂ one routing guard; **enforcement needs B2** |
-| Bind navigation contracts to router | Done Ã¢ÂÂ `learnerNavigation` / `studioNavigation` now render in the shells |
-| Preserve all 21 legacy `View`s | Done Ã¢ÂÂ all 21 in `LEGACY_VIEW_ROUTES`, no dead routes |
+| Introduce production router | Done ÃÂ¢ÃÂÃÂ `react-router-dom` 7.18.4, `app/router/` |
+| `app/router/` wiring | Done ÃÂ¢ÃÂÃÂ route table, lazy boundaries, `*` ÃÂ¢ÃÂÃÂ explicit 404 |
+| `app/layouts/LearnerLayout.tsx` | Done ÃÂ¢ÃÂÃÂ per `03-learner-shell.md` |
+| `app/layouts/StudioLayout.tsx` | Done ÃÂ¢ÃÂÃÂ shell + 10 route boundaries, all placeholders |
+| `app/layouts/PublicLayout.tsx` | Done ÃÂ¢ÃÂÃÂ hosts the legacy `Navbar` as sole public chrome owner |
+| `app/layouts/AdminLayout.tsx` | Done ÃÂ¢ÃÂÃÂ structural host only, `<Outlet/>` |
+| `app/providers/` | Done ÃÂ¢ÃÂÃÂ `LegacyAppStateProvider`; Theme provider not needed, dark mode is B13 |
+| `app/guards/` skeleton | Done ÃÂ¢ÃÂÃÂ one routing guard; **enforcement needs B2** |
+| Bind navigation contracts to router | Done ÃÂ¢ÃÂÃÂ `learnerNavigation` / `studioNavigation` now render in the shells |
+| Preserve all 21 legacy `View`s | Done ÃÂ¢ÃÂÃÂ all 21 in `LEGACY_VIEW_ROUTES`, no dead routes |
 | Real `@/` import adoption | Alias resolves to `src/` (CONF-01, closed in B1.2) |
-| Route contract enforcement | `scripts/verify-routes.mjs` Ã¢ÂÂ 174 passed, 0 failed, exit 0 |
+| Route contract enforcement | `scripts/verify-routes.mjs` ÃÂ¢ÃÂÃÂ 174 passed, 0 failed, exit 0 |
 | Runtime smoke | Zero console errors; deep links, guards, back/forward verified in Chrome |
-| Runtime product behaviour change | **Deliberate and documented** Ã¢ÂÂ the 0.3s view fade-**out** is dropped (DEFECT-1, `04-b1.3-router-migration.md`) |
+| Runtime product behaviour change | **Deliberate and documented** ÃÂ¢ÃÂÃÂ the 0.3s view fade-**out** is dropped (DEFECT-1, `04-b1.3-router-migration.md`) |
 | New dependencies | `react-router-dom` ^7.18.4 (lockfile delta purely additive) |
 
 B1.3R1 (contract correction) followed architect review. Two corrections, no
@@ -127,23 +126,23 @@ Router migration was the highest-risk item in B1. It landed with the legacy
 redirect/alias table, and `scripts/verify-routes.mjs` fails the build if any of
 the 21 capabilities becomes unreachable.
 
-### B1.4 - Design System + Monolith Decomposition Ã¢ÂÂ IN PROGRESS
+### B1.4 - Design System + Monolith Decomposition ÃÂ¢ÃÂÃÂ IN PROGRESS
 
 Split into four sub-batches so each is independently reviewable. B1.4A and B1.4B are done;
-**B1.4C is COMPLETE (R3).**
+B1.4A, B1.4B, and B1.4C are complete. B1.4D is next. B1.4 remains IN PROGRESS.
 
 | Sub-batch | Scope | Status |
 |---|---|---|
-| **B1.4A** | Design-system primitives + `PublicHeader` extraction from `Navbar` | **Ã¢ÂÂ COMPLETE** |
-| **B1.4B** | Decompose `StudentDashboard.tsx` Ã¢ÂÂ `features/learn/*`; adopt `LearnerLayout` instead of self-chrome | **Ã¢ÂÂ COMPLETE** |
-| **B1.4C** | Decompose `LearningPage.tsx` Ã¢ÂÂ `features/learn/*` | **Ã¢ÂÂ NEXT** |
-| **B1.4D** | Split `AdminDashboard.tsx` (408.8 KB) Ã¢ÂÂ `AdminLayout` + 8 admin sections; register `/admin/*` sub-routes | pending |
+| **B1.4A** | Design-system primitives + `PublicHeader` extraction from `Navbar` | **ÃÂ¢ÃÂÃÂ COMPLETE** |
+| **B1.4B** | Decompose `StudentDashboard.tsx` ÃÂ¢ÃÂÃÂ `features/learn/*`; adopt `LearnerLayout` instead of self-chrome | **ÃÂ¢ÃÂÃÂ COMPLETE** |
+| **B1.4C** | Decompose `LearningPage.tsx` ÃÂ¢ÃÂÃÂ `features/learn/*` | **ÃÂ¢ÃÂÃÂ COMPLETE** |
+| **B1.4D** | Split `AdminDashboard.tsx` (408.8 KB) ÃÂ¢ÃÂÃÂ `AdminLayout` + 8 admin sections; register `/admin/*` sub-routes | pending |
 
 The ordering is deliberate: the primitives and the public header land first so
 the learner/admin decompositions have a design system to migrate onto instead of
 copying legacy Tailwind into new files.
 
-#### B1.4A Ã¢ÂÂ what landed
+#### B1.4A ÃÂ¢ÃÂÃÂ what landed
 
 Design-system primitives in `src/design-system/components/` (`Button`,
 `ButtonLink`, `IconButton`, `Card`, `Badge`, `Input`, `Tabs`, `Table`), built on
@@ -152,40 +151,40 @@ the B1.1 token contract with no colour literal in the layer, plus
 
 | Item | Status |
 |---|---|
-| `Button` / `ButtonLink` / `IconButton` | Done Ã¢ÂÂ 5 variants, 3 sizes; `primary` is `#00796b`, never `#009688` |
-| `Card`, `Badge`, `Input`, `Tabs`, `Table` | Done Ã¢ÂÂ presentational only, no domain types, no routing, no data logic |
-| `PublicHeader` extraction | Done Ã¢ÂÂ all 8 legacy destinations preserved, guest handling unchanged |
-| `PublicLayout` owns header + `Outlet` | Done Ã¢ÂÂ `showsLegacyNavbar` rule byte-identical; no double chrome |
-| `Navbar` disposition | Retained, **deprecated**, not deleted Ã¢ÂÂ see B1.4A record |
-| Learner / admin files touched | **None** Ã¢ÂÂ verified by explicit empty `git diff --stat` |
-| Runtime product behaviour change | **Deliberate and documented** Ã¢ÂÂ 4 defects fixed, incl. a 768Ã¢ÂÂ1023px navigation dead zone |
+| `Button` / `ButtonLink` / `IconButton` | Done ÃÂ¢ÃÂÃÂ 5 variants, 3 sizes; `primary` is `#00796b`, never `#009688` |
+| `Card`, `Badge`, `Input`, `Tabs`, `Table` | Done ÃÂ¢ÃÂÃÂ presentational only, no domain types, no routing, no data logic |
+| `PublicHeader` extraction | Done ÃÂ¢ÃÂÃÂ all 8 legacy destinations preserved, guest handling unchanged |
+| `PublicLayout` owns header + `Outlet` | Done ÃÂ¢ÃÂÃÂ `showsLegacyNavbar` rule byte-identical; no double chrome |
+| `Navbar` disposition | Retained, **deprecated**, not deleted ÃÂ¢ÃÂÃÂ see B1.4A record |
+| Learner / admin files touched | **None** ÃÂ¢ÃÂÃÂ verified by explicit empty `git diff --stat` |
+| Runtime product behaviour change | **Deliberate and documented** ÃÂ¢ÃÂÃÂ 4 defects fixed, incl. a 768ÃÂ¢ÃÂÃÂ1023px navigation dead zone |
 | New dependencies | **None** |
 | Route contract | `verify-routes.mjs` 174/0; `verify-design-system.mjs` 50/0 |
 
 Four defects were found and fixed in place, and two token/accessibility
 decisions are recorded for review. Full evidence, the measured contrast audit,
-and the three NOT-VERIFIED items (no Ã¢ÂÂ¥1024px viewport, no screenshots) are in
+and the three NOT-VERIFIED items (no ÃÂ¢ÃÂÃÂ¥1024px viewport, no screenshots) are in
 `06-b1.4a-design-system-public-header.md`.
 
 The brief's enumerated change areas did not include `src/main.tsx`; B1.4A adds
 one CSS import there and the record explains why. Flagged, not buried.
 
-#### B1.4B Ã¢ÂÂ what landed
+#### B1.4B ÃÂ¢ÃÂÃÂ what landed
 
 `StudentDashboard` (23.6 KB) decomposed from self-contained "The Prams" shell into:
 - Thin compatibility wrapper (`src/components/StudentDashboard.tsx`, <1 KB)
 - Feature components in `src/features/learn/dashboard/` (10 files: `LearnerDashboardPage`, `DashboardWelcome`, `DashboardStats`, `ScoreTrendCard`, `ContinueLearningCard`, `FeedbackCard`, `TodayScheduleCard`, `LearningRecommendationsCard`, `legacyLearnerAccess`, `index.ts`)
-- Entitlement logic extracted to `useLegacyLearnerAccess()` Ã¢ÂÂ single source of truth for dashboard + LearnerLayout profile disclosure
+- Entitlement logic extracted to `useLegacyLearnerAccess()` ÃÂ¢ÃÂÃÂ single source of truth for dashboard + LearnerLayout profile disclosure
 
 `LearnerLayout` extended with accessible profile disclosure:
 - Avatar trigger with `aria-expanded`, `aria-controls`, `aria-label="Menu akun {name}"`
-- Menu items: Profil Ã¢ÂÂ `/app/profile`, Keluar Ã¢ÂÂ `requestLogout()` confirmation flow
+- Menu items: Profil ÃÂ¢ÃÂÃÂ `/app/profile`, Keluar ÃÂ¢ÃÂÃÂ `requestLogout()` confirmation flow
 - Escape closes, focus returns to trigger, outside-click closes
 
 Shell integration:
 - `/app` moved from bare route into `LearnerLayout` (no URL change)
-- `SELF_CHROME_LEGACY_VIEWS`: `['dashboard', 'learning']` Ã¢ÂÂ `['learning']`
-- `NAVBAR_HIDDEN_LEGACY_VIEWS` unchanged (PublicHeader Ã¢ÂÂ  LearnerLayout)
+- `SELF_CHROME_LEGACY_VIEWS`: `['dashboard', 'learning']` ÃÂ¢ÃÂÃÂ `['learning']`
+- `NAVBAR_HIDDEN_LEGACY_VIEWS` unchanged (PublicHeader ÃÂ¢ÃÂÃÂ  LearnerLayout)
 
 Legacy capability mapping preserved:
 | Legacy sidebar | New path |
@@ -196,19 +195,19 @@ Legacy capability mapping preserved:
 | Hasil & Ranking | Via result flow (`setView('result')`) |
 | Jadwal | `/app/calendar` |
 | Profil | `/app/profile` (sidebar + header disclosure) |
-| Keluar | Header disclosure Ã¢ÂÂ `requestLogout()` |
+| Keluar | Header disclosure ÃÂ¢ÃÂÃÂ `requestLogout()` |
 
-Entitlement/premium UI gating preserved via `useLegacyLearnerAccess()` Ã¢ÂÂ `theprams_demo_users` unchanged. Assessment Center & Calendar visually disabled for non-premium (opacity-40, Lock icon). No real authorization (B2).
+Entitlement/premium UI gating preserved via `useLegacyLearnerAccess()` ÃÂ¢ÃÂÃÂ `theprams_demo_users` unchanged. Assessment Center & Calendar visually disabled for non-premium (opacity-40, Lock icon). No real authorization (B2).
 
 Design-system primitives used throughout (Card, Button, ButtonLink, Badge). Chart colours migrated to AKSA tokens (tealAccessible/mint). No `text-brand-blue` in new code.
 
 | Item | Status |
 |---|---|
-| Feature decomposition | Done Ã¢ÂÂ 10 components |
-| StudentDashboard wrapper | Done Ã¢ÂÂ thin compatibility layer |
-| LearnerLayout profile disclosure | Done Ã¢ÂÂ accessible, logout relocated |
-| `/app` in LearnerLayout | Done Ã¢ÂÂ no double chrome |
-| Self-chrome registry | Done Ã¢ÂÂ only `learning` remains |
+| Feature decomposition | Done ÃÂ¢ÃÂÃÂ 10 components |
+| StudentDashboard wrapper | Done ÃÂ¢ÃÂÃÂ thin compatibility layer |
+| LearnerLayout profile disclosure | Done ÃÂ¢ÃÂÃÂ accessible, logout relocated |
+| `/app` in LearnerLayout | Done ÃÂ¢ÃÂÃÂ no double chrome |
+| Self-chrome registry | Done ÃÂ¢ÃÂÃÂ only `learning` remains |
 | Legacy capabilities | All 7 preserved |
 | Premium UI gating | Preserved (UI only) |
 | New dependencies | **None** |
@@ -216,9 +215,9 @@ Design-system primitives used throughout (Card, Button, ButtonLink, Badge). Char
 | Design-system contract | `verify-design-system.mjs` 50/0 |
 | Lint / Build | exit 0 |
 
-Four defects from B1.4A carry forward: Ã¢ÂÂ¥1024px dashboard measurement (no viewport resize), visual acceptance vs designs (B1.5), `contrast.emeraldOnWhite` token correction (separate pass), B1.3 TBD spot-check on learner route.
+Four defects from B1.4A carry forward: ÃÂ¢ÃÂÃÂ¥1024px dashboard measurement (no viewport resize), visual acceptance vs designs (B1.5), `contrast.emeraldOnWhite` token correction (separate pass), B1.3 TBD spot-check on learner route.
 
-#### B1.4B-R1 Ã¢ÂÂ Learner Entitlement Parity & Profile Accessibility Correction
+#### B1.4B-R1 ÃÂ¢ÃÂÃÂ Learner Entitlement Parity & Profile Accessibility Correction
 
 Following architect review, two defects were corrected in a focused correction batch:
 
@@ -228,44 +227,44 @@ Following architect review, two defects were corrected in a focused correction b
 | Profile accessibility | `role="menu"` with `tabIndex={-1}` but no ArrowUp/Down/Home/End/roving focus | B1.4A disclosure pattern: `aria-expanded`/`aria-controls`, natural Tab order, Escape + focus return, outside click close |
 
 **Changes:**
-- `src/app/layouts/LearnerLayout.tsx` Ã¢ÂÂ uses `useLegacyLearnerAccess()`, premium-gated nav items, disclosure pattern
-- `src/features/learn/dashboard/legacyLearnerAccess.ts` Ã¢ÂÂ extracted `deriveLegacyLearnerAccess()` pure function
-- `scripts/verify-learner-access.mjs` Ã¢ÂÂ new contract verifier (66 checks)
+- `src/app/layouts/LearnerLayout.tsx` ÃÂ¢ÃÂÃÂ uses `useLegacyLearnerAccess()`, premium-gated nav items, disclosure pattern
+- `src/features/learn/dashboard/legacyLearnerAccess.ts` ÃÂ¢ÃÂÃÂ extracted `deriveLegacyLearnerAccess()` pure function
+- `scripts/verify-learner-access.mjs` ÃÂ¢ÃÂÃÂ new contract verifier (66 checks)
 
-**Gates added:** `npx tsx scripts/verify-learner-access.mjs` Ã¢ÂÂ 66/0 pass
+**Gates added:** `npx tsx scripts/verify-learner-access.mjs` ÃÂ¢ÃÂÃÂ 66/0 pass
 
 | Item | Status |
 |------|--------|
-| Entitlement parity | Done Ã¢ÂÂ single `useLegacyLearnerAccess()` authority |
-| Premium UI gating (Assessment/Calendar) | Done Ã¢ÂÂ visually disabled, no nav for non-premium |
-| Profile disclosure | Done Ã¢ÂÂ disclosure pattern, Tab order, Escape/focus return |
-| Pure derivation function | Done Ã¢ÂÂ `deriveLegacyLearnerAccess()` testable |
-| Learner access verifier | Done Ã¢ÂÂ 66 deterministic checks |
+| Entitlement parity | Done ÃÂ¢ÃÂÃÂ single `useLegacyLearnerAccess()` authority |
+| Premium UI gating (Assessment/Calendar) | Done ÃÂ¢ÃÂÃÂ visually disabled, no nav for non-premium |
+| Profile disclosure | Done ÃÂ¢ÃÂÃÂ disclosure pattern, Tab order, Escape/focus return |
+| Pure derivation function | Done ÃÂ¢ÃÂÃÂ `deriveLegacyLearnerAccess()` testable |
+| Learner access verifier | Done ÃÂ¢ÃÂÃÂ 66 deterministic checks |
 | Route/design-system/lint/build | All pass |
 
-#### B1.4B-R2 Ã¢ÂÂ Learner Chrome Accessibility Closeout
+#### B1.4B-R2 ÃÂ¢ÃÂÃÂ Learner Chrome Accessibility Closeout
 
 Following B1.4B-R1, this batch closes the remaining accessibility gaps in the learner chrome:
 
 | Defect | Before | After |
 |--------|--------|-------|
-| Touch targets | Hamburger/drawer close/profile/logout < 44ÃÂ44 | All Ã¢ÂÂ¥44ÃÂ44 via `min-w-11 min-h-11` |
-| Premium lock naming | No accessible explanation on disabled items | `aria-label="Assessment Center Ã¢ÂÂ Memerlukan akses Premium"` + `title` |
+| Touch targets | Hamburger/drawer close/profile/logout < 44ÃÂÃÂ44 | All ÃÂ¢ÃÂÃÂ¥44ÃÂÃÂ44 via `min-w-11 min-h-11` |
+| Premium lock naming | No accessible explanation on disabled items | `aria-label="Assessment Center ÃÂ¢ÃÂÃÂ Memerlukan akses Premium"` + `title` |
 | Profile disclosure | Verified disclosure pattern (B1.4A) | Confirmed: no `role="menu"`, natural Tab order, Escape/focus return |
 
 **Changes:**
-- `src/app/layouts/LearnerLayout.tsx` Ã¢ÂÂ `min-w-11 min-h-11` on hamburger, drawer close, profile trigger, Profile link, Logout button; `aria-label` + `title` on premium-gated nav items
+- `src/app/layouts/LearnerLayout.tsx` ÃÂ¢ÃÂÃÂ `min-w-11 min-h-11` on hamburger, drawer close, profile trigger, Profile link, Logout button; `aria-label` + `title` on premium-gated nav items
 
 **Gates:** All existing gates pass (174 routes, 50 design-system, 66 learner-access, lint, build)
 
 | Item | Status |
 |------|--------|
-| Touch targets Ã¢ÂÂ¥44ÃÂ44 | Done Ã¢ÂÂ hamburger, drawer close, profile trigger, Profile, Logout |
-| Premium lock accessible name | Done Ã¢ÂÂ `aria-label` + `title` on Assessment/Calendar |
-| Profile disclosure pattern | Confirmed Ã¢ÂÂ disclosure, not menu |
+| Touch targets ÃÂ¢ÃÂÃÂ¥44ÃÂÃÂ44 | Done ÃÂ¢ÃÂÃÂ hamburger, drawer close, profile trigger, Profile, Logout |
+| Premium lock accessible name | Done ÃÂ¢ÃÂÃÂ `aria-label` + `title` on Assessment/Calendar |
+| Profile disclosure pattern | Confirmed ÃÂ¢ÃÂÃÂ disclosure, not menu |
 | Route/design-system/lint/build | All pass |
 
-#### B1.4CÃ¢ÂÂD Ã¢ÂÂ inherited constraints
+#### B1.4CÃÂ¢ÃÂÃÂD ÃÂ¢ÃÂÃÂ inherited constraints
 
 Admin decomposition targets per `03-module-boundaries.md`: platform dashboard,
 users/roles, academic/curriculum, studio/content, validation/review,
@@ -278,13 +277,13 @@ B1.4 also inherits two constraints from B1.3:
 - The per-view exit animation must not be reintroduced until the presence
   mechanism is reliable under `React.lazy` + `Suspense` + `StrictMode`, and only
   behind a browser test that asserts the view actually changes (DEFECT-1).
-- The learner sidebar at Ã¢ÂÂ¥1024px and the bottom bar at <768px were verified
+- The learner sidebar at ÃÂ¢ÃÂÃÂ¥1024px and the bottom bar at <768px were verified
   structurally but not measured at those widths, because the B1.3 harness viewport
-  was fixed at 1000ÃÂ700. **The B1.4 responsive work must close that gap.** The
-  same harness limit blocked a Ã¢ÂÂ¥1024px measurement of the new public header in
+  was fixed at 1000ÃÂÃÂ700. **The B1.4 responsive work must close that gap.** The
+  same harness limit blocked a ÃÂ¢ÃÂÃÂ¥1024px measurement of the new public header in
   B1.4A, so that item is carried into B1.5 rather than assumed done.
 
-### B1.5 Ã¢ÂÂ Regression + Visual Acceptance
+### B1.5 ÃÂ¢ÃÂÃÂ Regression + Visual Acceptance
 
 Status: **pending.**
 
@@ -334,26 +333,26 @@ Per instruction to report conflicts rather than silently rewriting architecture,
 the following discrepancy was found between the B0 architecture contracts and
 the actual repository. **No architecture document was rewritten in B1.1.**
 
-### CONF-01 Ã¢ÂÂ `@/*` path alias resolved to the repository root, not `src/` Ã¢ÂÂ Ã¢ÂÂ RESOLVED in B1.2
+### CONF-01 ÃÂ¢ÃÂÃÂ `@/*` path alias resolved to the repository root, not `src/` ÃÂ¢ÃÂÃÂ ÃÂ¢ÃÂÃÂ RESOLVED in B1.2
 
 | Field | Value |
 |---|---|
 | Severity | P2 (build ergonomics, not runtime behaviour) |
-| Evidence (before) | `tsconfig.json` Ã¢ÂÂ `"paths": { "@/*": ["./*"] }`; `vite.config.ts` Ã¢ÂÂ `'@': path.resolve(__dirname, '.')` |
+| Evidence (before) | `tsconfig.json` ÃÂ¢ÃÂÃÂ `"paths": { "@/*": ["./*"] }`; `vite.config.ts` ÃÂ¢ÃÂÃÂ `'@': path.resolve(__dirname, '.')` |
 | Consequence | `@/design-system/tokens/brand` resolved to `<repo>/design-system/tokens/brand`, which does not exist. The only working alias form was `@/src/design-system/...`. |
 | Existing code | `src/components/*` uses relative imports (`../types`), and `git grep "from '@/" -- src` returned **zero** matches, so the alias was entirely unused. |
 | Decision in B1.1 | New files used **relative imports**, matching existing convention; the design doc example was temporarily shown as relative. |
-| **Resolution in B1.2** | **CLOSED.** Both sides realigned to `src/`: `tsconfig.json` Ã¢ÂÂ `"@/*": ["./src/*"]`; `vite.config.ts` Ã¢ÂÂ `path.resolve(__dirname, 'src')`. Verified by deliberate regression test: reverting `tsconfig.json` to `./*` makes `npm run lint` fail with `TS2307`, proving the guard works. |
-| Guard | `src/app/aliasContractProof.ts` Ã¢ÂÂ compile-time proof; contains no runtime behaviour. |
+| **Resolution in B1.2** | **CLOSED.** Both sides realigned to `src/`: `tsconfig.json` ÃÂ¢ÃÂÃÂ `"@/*": ["./src/*"]`; `vite.config.ts` ÃÂ¢ÃÂÃÂ `path.resolve(__dirname, 'src')`. Verified by deliberate regression test: reverting `tsconfig.json` to `./*` makes `npm run lint` fail with `TS2307`, proving the guard works. |
+| Guard | `src/app/aliasContractProof.ts` ÃÂ¢ÃÂÃÂ compile-time proof; contains no runtime behaviour. |
 | Import migration | Not performed. Existing relative imports remain valid and were not mass-migrated for style. |
 
 Note: `docs/aksa/03-module-boundaries.md` and `design/01-design-system.md` present
 `src/` as the intended root; the fix realigned the *build config* to the
 documented architecture rather than the reverse.
 
-### CONF-02 Ã¢ÂÂ B0 documents list a `gems`/skill-graph-adjacent surface not present in the route map
+### CONF-02 ÃÂ¢ÃÂÃÂ B0 documents list a `gems`/skill-graph-adjacent surface not present in the route map
 
-**Ã¢ÂÂ RESOLVED in B1.3.**
+**ÃÂ¢ÃÂÃÂ RESOLVED in B1.3.**
 
 Not reproduced as a defect: `docs/aksa/04-route-map.md` and
 `design/02-navigation-information-architecture.md` both place "My Path / Skill Map"
@@ -376,7 +375,7 @@ B1.3 was required to include these in its route table and to amend B0's
 
 - `docs/aksa/01-current-state-audit.md` estimates `AdminDashboard.tsx` at
   ~412 KB; measured size is 408.8 KB (418,614 bytes). Within estimation
-  tolerance Ã¢ÂÂ not a defect, but the audit figure is now stale.
+  tolerance ÃÂ¢ÃÂÃÂ not a defect, but the audit figure is now stale.
 - `docs/aksa/01-current-state-audit.md` notes "No GitHub Actions workflow was
   observed". Re-verified in B1.1: no `.github/workflows` directory exists, so
   lint/build evidence remains locally produced.
@@ -390,18 +389,18 @@ B1.3 was required to include these in its route table and to amend B0's
 | ~~Production router~~ | **Done in B1.3** |
 | ~~Shell/layout components~~ | **Done in B1.3** |
 | ~~`app/router/` wiring, legacy redirect/alias table~~ | **Done in B1.3** |
-| Design-system primitives | **Done in B1.4A** Ã¢ÂÂ `Button`, `Card`, `Badge`, `Input`, `Tabs`, `Table` + `IconButton` |
-| Navbar split | **Done in B1.4A** Ã¢ÂÂ `app/layouts/PublicHeader.tsx`; legacy file retained, deprecated |
-| Learner dashboard decomposition | **Done in B1.4B** Ã¢ÂÂ `features/learn/dashboard/`, `LearnerLayout` profile disclosure |
-| `LearningPage` decomposition | B1.4C |
+| Design-system primitives | **Done in B1.4A** ÃÂ¢ÃÂÃÂ `Button`, `Card`, `Badge`, `Input`, `Tabs`, `Table` + `IconButton` |
+| Navbar split | **Done in B1.4A** ÃÂ¢ÃÂÃÂ `app/layouts/PublicHeader.tsx`; legacy file retained, deprecated |
+| Learner dashboard decomposition | **Done in B1.4B** ÃÂ¢ÃÂÃÂ `features/learn/dashboard/`, `LearnerLayout` profile disclosure |
+| `LearningPage` decomposition | Done in B1.4C - features/learn/workspace/, /app/learn inside LearnerLayout |
 | AdminDashboard split | B1.4D |
 | `/admin/*` sub-routes (blocked on the split) | B1.4D |
-| Feature decomposition of public pages | B1.4BÃ¢ÂÂD, as each surface is migrated |
-| Responsive breakpoints verified by measurement, not just structurally | B1.4BÃ¢ÂÂD / B1.5 Ã¢ÂÂ B1.4A could not measure Ã¢ÂÂ¥1024px (fixed 1000px harness viewport) |
+| Feature decomposition of public pages | B1.4BÃÂ¢ÃÂÃÂD, as each surface is migrated |
+| Responsive breakpoints verified by measurement, not just structurally | B1.4BÃÂ¢ÃÂÃÂD / B1.5 ÃÂ¢ÃÂÃÂ B1.4A could not measure ÃÂ¢ÃÂÃÂ¥1024px (fixed 1000px harness viewport) |
 | Guard **enforcement** (mechanism shipped in B1.3, real authz needs B2) | B2 |
 | Educator surface (`/educator/*`) | B2 |
-| Legacy brand replacement (`The Prams` Ã¢ÂÂ AKSA) | **Partly done in B1.4A** Ã¢ÂÂ the public header shell is migrated; page content copy and the remaining surfaces are per-domain, B2+ |
-| localStorage Ã¢ÂÂ server authority | B2 |
+| Legacy brand replacement (`The Prams` ÃÂ¢ÃÂÃÂ AKSA) | **Partly done in B1.4A** ÃÂ¢ÃÂÃÂ the public header shell is migrated; page content copy and the remaining surfaces are per-domain, B2+ |
+| localStorage ÃÂ¢ÃÂÃÂ server authority | B2 |
 | Admin authentication (SEC-P1-03) | B2 |
 | Identity provider / server AI runtime + AI Router (SEC-P1-01) | B5 |
 | Dark mode | B13 |
@@ -417,7 +416,7 @@ B1.3 was required to include these in its route table and to amend B0's
 
 B1 is sealed when:
 
-- all five sub-batches (B1.1 Ã¢ÂÂ B1.5) are on `aksa/b1-app-foundation`,
+- all five sub-batches (B1.1 ÃÂ¢ÃÂÃÂ B1.5) are on `aksa/b1-app-foundation`,
 - every legacy `View` in `01-legacy-compatibility-map.md` remains reachable,
 - `npm ci`, `npm run lint`, `npm run build` pass fresh,
 - SEC-P0-01 and SEC-P0-02 in `03-client-security-inventory.md` are closed with
@@ -429,5 +428,5 @@ B1 is sealed when:
   dependency rather than a B1 deliverable,
 - then `AKSA-B1-SEALED` is created.
 
-B1.1 and B1.2 alone are **not** sealable Ã¢ÂÂ they are foundation sub-batches by
+B1.1 and B1.2 alone are **not** sealable ÃÂ¢ÃÂÃÂ they are foundation sub-batches by
 design.
