@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Users, 
   GraduationCap,
@@ -12,13 +11,11 @@ import {
   Plus,
   Search,
   Bell,
-  PieChart as PieChartIcon,
   Filter,
   Trash2,
   Edit2,
   MessageSquare,
   Star,
-  LogOut,
   UserPlus,
   Award,
   FileText,
@@ -66,12 +63,11 @@ import { BLOG_POSTS, USER_ACCOUNTS, MOCK_FEEDBACKS, TESTIMONIALS, PROGRAMS } fro
 import { BlogPost, UserAccount, Lead, Question, Testimonial, Program, ProgramPackage, WebsiteQuestion } from '../types';
 import {
   ADMIN_ROLE_PERMISSIONS,
-  adminPathToTab,
-  adminTabToPath,
   isAdminTabAllowed,
   type AdminRole,
   type AdminTab,
 } from '../features/admin/shell/adminWorkspaceModel';
+import { useAdminShell } from '../features/admin/shell/AdminShellContext';
 
 const MOCK_LEADS: Lead[] = [
   { id: '1', name: 'Rina Wijaya', email: 'rina@mail.com', phone: '0812345678', programOfInterest: 'SNBT Kedokteran', source: 'Instagram', status: 'Qualified', createdAt: '2026-04-20' },
@@ -400,29 +396,21 @@ interface AdminMember {
 // definitions were removed so the routing contract has ONE source of truth.
 
 export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) => void, programs?: Program[], onProgramsChange?: (programs: Program[]) => void, blogPosts?: BlogPost[], onBlogPostsChange?: (posts: BlogPost[]) => void }> = ({ logout, setView, programs = PROGRAMS, onProgramsChange, blogPosts = BLOG_POSTS, onBlogPostsChange }) => {
-  // B1.4D-T1: `activeTab` is now URL-driven instead of a local useState.
-  //
-  // WHY: B1.4D gives every legacy admin tab a canonical URL. Deriving the tab
-  // from the pathname keeps the URL as the single source of truth (deep links,
-  // browser Back/Forward, shareable URLs) while leaving all 72 state slices
-  // mounted exactly as before.
+  // B1.4D-T2: shell-level state (adminRole, activeTab, navigation) now comes
+  // from AdminShellContext, mounted in AdminLayout. The URL is the single
+  // source of truth for the active tab; the shell derives it from the
+  // pathname. AdminDashboard no longer owns `adminRole` or a local active-tab
+  // state.
   //
   // `setActiveTab` is retained as a thin compatibility shim so the ~76 existing
-  // call sites inside this 6,500-line file do NOT need a bulk rewrite: it now
-  // navigates to the canonical path for the tab instead of flipping a useState.
-  //
-  // FALLBACK: `?? 'overview'` only fires for the bare `/admin` route, which is
-  // the canonical overview URL anyway. An unknown /admin/* renders Not Found in
-  // `AdminRouteBoundary` and never reaches this component.
-  const location = useLocation();
-  const navigate = useNavigate();
-  const activeTab: AdminTab = adminPathToTab(location.pathname) ?? 'overview';
+  // cross-section call sites inside this 6,500-line file do NOT need a bulk
+  // rewrite: it now delegates to the shell's navigateToTab.
+  const { adminRole, activeTab, navigateToTab } = useAdminShell();
   const setActiveTab = (tab: AdminTab) => {
-    navigate(adminTabToPath(tab));
+    navigateToTab(tab);
   };
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
-  const [adminRole, setAdminRole] = useState<AdminRole>('Super Admin');
   const [actionMessage, setActionMessage] = useState('');
   const [isSaveWebsiteConfirmOpen, setIsSaveWebsiteConfirmOpen] = useState(false);
   const [isCampaignEditorOpen, setIsCampaignEditorOpen] = useState(false);
@@ -1680,123 +1668,48 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      {/* Sidebar */}
-      <aside className="w-64 bg-brand-navy text-white border-r border-white/5 hidden lg:flex flex-col shadow-xl">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-brand-blue rounded-xl flex items-center justify-center font-bold text-xl italic shadow-lg shadow-blue-600/30">
-            TP
-          </div>
-          <div>
-            <h1 className="text-lg font-bold leading-none tracking-tight">The Prams</h1>
-            <span className="text-[10px] text-blue-400 uppercase tracking-widest font-semibold">Admin Panel</span>
-          </div>
+    <div className="min-w-0 flex flex-col bg-slate-50 font-sans">
+      {/* Content toolbar (B1.4D-T2 transitional).
+          Search + notification bell were part of the legacy application
+          header. They are business-coupled (searchTerm filters users,
+          notify() uses actionMessage), so they are RE-HOMED here as a
+          content toolbar rather than lifted into the shell. T3 will place
+          user-domain search with Users; notification ownership is later.
+          They must NOT become a sticky second global header. */}
+      <div className="flex items-center justify-between gap-4 px-8 py-4 bg-white border-b border-slate-200">
+        <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-100 max-w-md w-full">
+          <Search size={18} className="text-slate-400" aria-hidden="true" />
+          <input
+           type="text"
+           aria-label="Cari dashboard"
+           placeholder="Search dashboard..."
+           value={searchTerm}
+           onChange={(e) => setSearchTerm(e.target.value)}
+           className="bg-transparent border-none text-sm w-full focus:ring-0"
+          />
         </div>
+        <button
+          onClick={() => notify('Notifikasi: 3 pembayaran menunggu verifikasi dan 2 testimoni pending.')}
+          aria-label="Lihat notifikasi admin"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 border border-slate-100 relative"
+        >
+           <Bell size={20} aria-hidden="true" />
+           <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" aria-hidden="true" />
+        </button>
+      </div>
 
-        <nav className="flex-1 px-4 mt-4 space-y-1 overflow-y-auto">
-            {[
-              { id: 'overview', name: 'Dashboard', icon: PieChartIcon },
-              { id: 'leads', name: 'Manage Leads', icon: UserPlus },
-              { id: 'inquiries', name: 'Pertanyaan Website', icon: MessageSquare },
-              { id: 'users', name: 'User & Roles', icon: Users },
-              { id: 'programs', name: 'Programs', icon: Award },
-              { id: 'content', name: 'Content Library', icon: Video },
-              { id: 'marketing', name: 'Digital Marketing', icon: Megaphone },
-              { id: 'website', name: 'Website Editor', icon: Globe },
-              { id: 'finance', name: 'Financial Center', icon: Banknote },
-              { id: 'questions', name: 'Question Bank', icon: BookOpen },
-              { id: 'testimonials', name: 'Testimonials', icon: MessageSquare },
-              { id: 'reports', name: 'Deep Analytics', icon: LineChartIcon },
-              { id: 'settings', name: 'Settings', icon: Settings },
-            ].filter(item => isTabAllowed(item.id as AdminTab)).map((item) => (
-             <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id as AdminTab)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-r-lg transition-all border-l-4 ${activeTab === item.id ? 'bg-brand-blue/20 text-brand-blue border-brand-blue font-bold' : 'text-slate-400 hover:text-white border-transparent'}`}
-             >
-                <item.icon size={20} />
-                <span className="font-medium">{item.name}</span>
-             </button>
-           ))}
-        </nav>
-        
-        <div className="p-6 mt-auto border-t border-white/5 space-y-4">
-           {adminRole === 'Super Admin' && (
-             <div className="space-y-2 mb-4">
-                <p className="text-[8px] font-black text-white/30 uppercase tracking-widest px-1">Role Switcher (Debug)</p>
-                <div className="grid grid-cols-1 gap-1">
-                   {(['Super Admin', 'Content Manager', 'Support'] as AdminRole[]).map(role => (
-                     <button 
-                       key={role}
-                       onClick={() => {
-                         setAdminRole(role);
-                         setActiveTab('overview');
-                       }}
-                       className={`px-2 py-1 rounded text-[8px] font-bold border transition-all ${adminRole === role ? 'bg-white text-brand-navy border-white' : 'border-white/10 text-white/40 hover:border-white/30'}`}
-                     >
-                        {role}
-                     </button>
-                   ))}
-                </div>
-             </div>
-           )}
-           <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                 <img src="https://i.pravatar.cc/150?u=admin" className="w-10 h-10 rounded-xl" alt="Admin" />
-                 <div className="min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{adminRole === 'Super Admin' ? 'dr. Pramono' : adminRole}</p>
-                    <p className="text-[10px] text-emerald-500 font-bold">{adminRole.toUpperCase()}</p>
-                 </div>
-              </div>
-              <button 
-                onClick={logout} 
-                className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                title="Logout"
-              >
-                 <LogOut size={18} />
-              </button>
-           </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-          <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-20">
-             <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 max-w-md w-full">
-                <Search size={18} className="text-slate-400" />
-                <input 
-                 type="text" 
-                 placeholder="Search dashboard..." 
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-                 className="bg-transparent border-none text-sm w-full focus:ring-0" 
-                />
-             </div>
-             <div className="flex items-center gap-4">
-                <h2 className="hidden md:block text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
-                  Active: {activeTab}
-                </h2>
-                <button
-                  onClick={() => notify('Notifikasi: 3 pembayaran menunggu verifikasi dan 2 testimoni pending.')}
-                  className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 border border-slate-100 relative"
-                >
-                   <Bell size={20} />
-                   <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                </button>
-             </div>
-          </header>
-          <AnimatePresence>
-            {actionMessage && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.96 }}
-                className="fixed right-6 bottom-6 z-[2000] bg-brand-navy text-white px-5 py-4 rounded-2xl shadow-2xl max-w-sm text-sm font-bold"
-              >
-                {actionMessage}
-              </motion.div>
-            )}
-          </AnimatePresence>
+      <AnimatePresence>
+        {actionMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.96 }}
+            className="fixed right-6 bottom-6 z-[2000] bg-brand-navy text-white px-5 py-4 rounded-2xl shadow-2xl max-w-sm text-sm font-bold"
+          >
+            {actionMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
          <div className="p-8">
             {activeTab === 'overview' && (
@@ -6524,7 +6437,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
               </div>
             )}
           </AnimatePresence>
-      </main>
-    </div>
+      </div>
   );
 };

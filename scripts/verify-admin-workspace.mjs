@@ -1,5 +1,5 @@
 /**
- * B1.4D-T1 admin workspace verification script.
+ * B1.4D admin workspace verification script (T1 + T2).
  *
  * Usage:
  *   node scripts/verify-admin-workspace.mjs
@@ -8,7 +8,7 @@
  * ----------------
  * This is a DETERMINISTIC CONTRACT CHECK, not a browser test. It exercises the
  * REAL pure model (`src/features/admin/shell/adminWorkspaceModel.ts`) and the
- * REAL route tree, and asserts the contract B1.4D-T1 is required to satisfy:
+ * REAL route tree, and asserts the contract B1.4D-T1/T2 is required to satisfy:
  *
  *   A. Tab registry:  exactly 13 unique tabs.
  *   B. Domain registry: exactly 8 domains, every tab owned exactly once.
@@ -20,14 +20,24 @@
  *   H. Legacy AdminDashboard still receives its exact six props.
  *   I. Transient-state SOURCE CONTRACT: no `key={pathname}` on the admin path.
  *   J. localStorage key registry: all 13 keys still discoverable in source.
+ *   K. Security deferrals: SEC-P1-03 remains OPEN (B2).
+ *   L. (T2) AdminLayout owns the admin shell chrome.
+ *   M. (T2) AdminDashboard is business content only (shell removed).
+ *   N. (T2) AdminShellContext owns adminRole (no local role state).
+ *   O. (T2) Disallowed direct URL -> UI presentation redirect (replace).
+ *   P. (T2) Mobile navigation source contract (SOURCE CONTRACT only).
+ *   Q. (T2) Migrated shell contrast (no white on brand-blue/orange).
+ *   R. (T2) Legacy contract preservation.
  *
  * WHAT THIS DOES NOT PROVE
  * ------------------------
  * It does NOT prove runtime browser behaviour. Section I is a SOURCE-STRUCTURE
  * assertion only: it proves no code keys the admin subtree by pathname, which
  * is a necessary condition for state persistence but not a sufficient one.
- * Real transient-state survival requires a browser and is marked NOT VERIFIED
- * until then.
+ * Section P is likewise a SOURCE CONTRACT for mobile affordances, not a WCAG
+ * or visual/browser acceptance test. Real transient-state survival and
+ * accessibility acceptance require a browser and are marked NOT VERIFIED
+ * until then (B1.5/T10).
  *
  * No test framework is added. This is one plain Node script.
  */
@@ -430,6 +440,18 @@ section('H. Legacy AdminDashboard six-prop contract preserved');
 const adminDashSrc = readFileSync(
   join(srcDir, 'components', 'AdminDashboard.tsx'), 'utf8');
 
+// B1.4D-T2 sources: the shell owner (AdminLayout) + the shell context.
+const adminLayoutSrc = readFileSync(
+  join(srcDir, 'app', 'layouts', 'AdminLayout.tsx'), 'utf8');
+const shellCtxSrc = readFileSync(
+  join(srcDir, 'features', 'admin', 'shell', 'AdminShellContext.tsx'), 'utf8');
+const navRegistrySrc = readFileSync(
+  join(srcDir, 'features', 'admin', 'shell', 'adminNavigation.ts'), 'utf8');
+// Comment-stripped variants for CODE-only assertions.
+const adminLayoutCode = stripComments(adminLayoutSrc);
+const shellCtxCode = stripComments(shellCtxSrc);
+const adminDashCode = stripComments(adminDashSrc);
+
 const LEGACY_PROPS = [
   'logout', 'setView', 'programs', 'onProgramsChange',
   'blogPosts', 'onBlogPostsChange',
@@ -491,15 +513,19 @@ check('LegacyRouteBridge motion key is currentView (not pathname)',
   /\bkey=\{\s*currentView/.test(bridgeCode) &&
     !KEYED_BY_PATHNAME.test(bridgeCode));
 
-// AdminDashboard must derive activeTab from the URL, not a local useState.
-check('AdminDashboard derives activeTab from the URL',
-  /adminPathToTab\(\s*location\.pathname\s*\)/.test(adminDashSrc));
+// B1.4D-T2: URL -> activeTab derivation moved from AdminDashboard into
+// AdminShellContext (mounted in AdminLayout). The URL remains the single
+// source of truth; there is still no local activeTab useState anywhere.
+check('AdminShellContext derives activeTab from the URL',
+  /adminPathToTab\(\s*location\.pathname\s*\)/.test(shellCtxCode));
+check('AdminShellContext navigateToTab navigates to the canonical path',
+  /navigate\(\s*adminTabToPath\(/.test(shellCtxCode));
 check('AdminDashboard keeps an setActiveTab compatibility shim',
   /const\s+setActiveTab\s*=/.test(adminDashSrc));
-check('AdminDashboard setActiveTab navigates to the canonical path',
-  /navigate\(\s*adminTabToPath\(/.test(adminDashSrc));
 check('AdminDashboard no longer declares activeTab via useState',
   !/useState<AdminTab>/.test(adminDashSrc));
+check('AdminShellContext has no pathname key introduced',
+  !KEYED_BY_PATHNAME.test(shellCtxCode));
 
 // ROLE MATRIX is imported from the pure model (single source of truth).
 check('AdminDashboard imports ADMIN_ROLE_PERMISSIONS from the pure model',
@@ -582,8 +608,142 @@ check('no auth guard wrapped around the admin branch in AppRouter',
 check('AdminRouteBoundary imports no auth/Supabase/AI module',
   !/@supabase|GoogleGenAI|@google\/genai|openmaic/i.test(boundarySrc));
 
+/* ================================================================== */
+/* B1.4D-T2 ADDITIONS                                                 */
+/* ================================================================== */
+
 /* ------------------------------------------------------------------ */
-/* Report                                                            */
+/* L. Shell owner (AdminLayout)                                        */
+/* ------------------------------------------------------------------ */
+
+section('L. T2 shell owner — AdminLayout owns the admin chrome');
+
+// AdminLayout must compose the shell provider, the navigation registry, the
+// role switcher, logout, the mobile navigation contract and the Outlet.
+check('AdminLayout mounts AdminShellProvider',
+  /AdminShellProvider/.test(adminLayoutCode));
+check('AdminLayout renders the AKSA admin navigation items',
+  /ADMIN_NAV_ITEMS/.test(adminLayoutCode));
+check('AdminLayout renders the Outlet for business content',
+  /<Outlet\s*\/?>/.test(adminLayoutCode));
+check('AdminLayout owns the role switcher (Role Switcher (Debug) block)',
+  /Role Switcher \(Debug\)/.test(adminLayoutCode));
+check('AdminLayout owns admin identity (dr. Pramono semantics)',
+  /dr\. Pramono/.test(adminLayoutCode));
+check('AdminLayout wires logout via requestLogout adapter',
+  /requestLogout/.test(adminLayoutCode));
+check('AdminLayout does not call setUser(null) directly',
+  !/setUser\(\s*null\s*\)/.test(adminLayoutCode));
+check('AdminLayout derives navigation with the pure model permission check',
+  /isAdminTabAllowed/.test(adminLayoutCode));
+
+/* ------------------------------------------------------------------ */
+/* M. AdminDashboard content-only                                      */
+/* ------------------------------------------------------------------ */
+
+section('M. T2 AdminDashboard is business content only (shell removed)');
+
+// The legacy application shell must be gone from AdminDashboard. These are
+// CODE assertions over comment-stripped source, so doc mentions of the
+// patterns do not trip them.
+check('AdminDashboard no longer renders an <aside> sidebar',
+  !/<aside\b/.test(adminDashCode));
+check('AdminDashboard has no w-64 shell sidebar',
+  !/w-64\b/.test(adminDashCode));
+check('AdminDashboard has no h-screen application root',
+  !/\bh-screen\b/.test(adminDashCode));
+check('AdminDashboard has no "Role Switcher (Debug)" block',
+  !/Role Switcher \(Debug\)/.test(adminDashCode));
+check('AdminDashboard has no "The Prams" shell branding',
+  !/>The Prams</.test(adminDashCode));
+check('AdminDashboard has no sidebar logout button',
+  !/LogOut\b/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* N. Role state owner                                                 */
+/* ------------------------------------------------------------------ */
+
+section('N. T2 role state — AdminShellContext owns adminRole');
+
+check('AdminDashboard no longer declares useState<AdminRole>',
+  !/useState<\s*AdminRole\s*>/.test(adminDashCode));
+check('AdminShellContext owns the adminRole state',
+  /useState<\s*AdminRole\s*>/.test(shellCtxCode));
+check('AdminDashboard consumes the shell via useAdminShell',
+  /useAdminShell\(\)/.test(adminDashCode));
+check('AdminShellContext role change navigates to overview (/admin)',
+  /navigate\(\s*adminTabToPath\(\s*'overview'\s*\)\s*\)/.test(shellCtxCode));
+check('shell context state limited to adminRole (no business state slices)',
+  !/\b(?:leads?|finance|programs?|questions?|blogPosts?|searchTerm|actionMessage|toast|modal|notification|auditRecords?)\b\s*[,:]/.test(
+    /const\s+\[\s*adminRole[\s\S]*?\]\s*=\s*useState[\s\S]*?\);/.exec(shellCtxCode)?.[0] ?? '',
+  ));
+
+/* ------------------------------------------------------------------ */
+/* O. UI presentation redirect (NOT authorization)                     */
+/* ------------------------------------------------------------------ */
+
+section('O. T2 disallowed direct URL — UI presentation redirect');
+
+// A non-Super-Admin hitting a disallowed tab URL must be redirected back to
+// /admin (presentation only, replace). This is NOT access control.
+check('shell redirects disallowed direct URL back to /admin (replace)',
+  /replace/.test(shellCtxCode) &&
+    /isTabAllowed/.test(shellCtxCode));
+check('no 403 / access-control language introduced in the shell',
+  !/\b(?:403|Forbidden|access control|unauthorized)\b/i.test(shellCtxCode));
+check('SEC-P1-03 still open: no auth/Supabase import in shell context',
+  !/@supabase|GoogleGenAI|@google\/genai/i.test(shellCtxCode));
+
+/* ------------------------------------------------------------------ */
+/* P. Mobile navigation source contract                                */
+/* ------------------------------------------------------------------ */
+
+section('P. T2 mobile navigation source contract (SOURCE CONTRACT only)');
+
+// Source-level checks for the mobile drawer affordances. This does NOT prove
+// runtime/browser accessibility acceptance (that is B1.5/T10).
+check('mobile menu button has aria-expanded',
+  /aria-expanded=\{/.test(adminLayoutCode));
+check('mobile menu button has aria-controls',
+  /aria-controls=/.test(adminLayoutCode));
+check('mobile drawer has an Escape handler',
+  /'Escape'/.test(adminLayoutCode));
+check('mobile menu button declares min 44px target',
+  /min-w-\[44px\]/.test(adminLayoutCode) &&
+    /min-h-\[44px\]/.test(adminLayoutCode));
+check('mobile drawer close button declares min 44px target',
+  /Tutup menu admin/.test(adminLayoutCode) &&
+    /min-w-\[44px\]/.test(adminLayoutCode));
+check('drawer close via backdrop present',
+  /closeMobileNav/.test(adminLayoutCode));
+
+/* ------------------------------------------------------------------ */
+/* Q. Shell contrast / accessibility (migrated shell only)             */
+/* ------------------------------------------------------------------ */
+
+section('Q. T2 migrated shell contrast (normal-size actions)');
+
+// The migrated shell must not use white text on brand-blue / brand-orange
+// for normal-size shell actions. Only AdminLayout (the migrated shell) is
+// scanned — untouched business content is out of T2 scope.
+check('no bg-brand-blue + text-white in migrated shell',
+  !/bg-brand-blue[^"']*text-white|text-white[^"']*bg-brand-blue/.test(adminLayoutCode));
+check('no bg-brand-orange + text-white in migrated shell',
+  !/bg-brand-orange[^"']*text-white|text-white[^"']*bg-brand-orange/.test(adminLayoutCode));
+
+/* ------------------------------------------------------------------ */
+/* R. Legacy contract preservation                                     */
+/* ------------------------------------------------------------------ */
+
+section('R. T2 legacy contract preservation');
+
+// The six AdminDashboard props remain exact (asserted in H), and the
+// routing/storage/persistence contracts must not regress (sections E, I, J).
+check('LegacyRouteBridge still keyed by currentView (no pathname key)',
+  /\bkey=\{\s*currentView/.test(bridgeCode));
+
+/* ------------------------------------------------------------------ */
+/* Report                                                              */
 /* ------------------------------------------------------------------ */
 
 console.log(`\n${'-'.repeat(64)}`);
@@ -594,7 +754,7 @@ if (failures.length) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }
-console.log('B1.4D-T1 admin workspace contract: PASS');
+console.log('B1.4D-T2 admin workspace contract: PASS');
 process.exit(0);
 
 /* ------------------------------------------------------------------ */
