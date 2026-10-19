@@ -1,5 +1,6 @@
 /**
- * B1.4D admin workspace verification script (T1 + T2 + T3 + T4 + T5A + T5B).
+ * B1.4D admin workspace verification script
+ * (T1 + T2 + T3 + T4 + T5A + T5B + T6).
  *
  * Usage:
  *   node scripts/verify-admin-workspace.mjs
@@ -62,10 +63,26 @@
  *  AT. (T5B) Blog behaviour: source contract + EXECUTED data/template module.
  *  AU. (T5B) Pseudo "AI" helper stays LOCAL + deterministic (no API client).
  *  AV. (T5B) Composition + old Website JSX removed from the monolith.
- *  AW. (T5B) T6 boundary — Review / Inquiries (`websiteQuestions`) is NOT taken.
+ *  AW. (T5B) Review / Inquiries boundary — RETIRED by T6. It used to prove the
+ *      Review surface had NOT been taken. It now asserts the INVERSE: the
+ *      Review / Inquiries (`websiteQuestions`) surface has LEFT the monolith
+ *      and is owned by `features/admin/review/inquiries`. Not deleted.
  *  AX. (T5B) T5A Content Library non-regression.
  *  AY. (T5B) Accessibility SOURCE CONTRACT for the migrated Website surface.
  *  AZ. (T5B) Security + storage (13 keys, no new key, SEC-P1-03 open).
+ *  BA. (T6) Review modules present (two focused domains, no combined store).
+ *  BB. (T6) Single Inquiries authority (one hook, no duplicate state).
+ *  BC. (T6) Inquiries storage ownership (canonical key, one owner, 13 keys).
+ *  BD. (T6) Inquiries behaviour: sync / answer / queue / audit / WhatsApp.
+ *  BE. (T6) Inquiries composition + old Review JSX removed from the monolith.
+ *  BF. (T6) Single Testimonials authority (one hook, in-memory only).
+ *  BG. (T6) Testimonial behaviour: seed / filter contract / status / delete
+ *      (source contract + EXECUTED seed and filter predicate).
+ *  BH. (T6) Testimonials composition + old moderation JSX removed.
+ *  BI. (T6) Accessibility SOURCE CONTRACT for the migrated Review surfaces.
+ *  BJ. (T6) T5 non-regression (Content + Website still owned by their modules).
+ *  BK. (T6) T7 / T8 boundary (programs / leads / marketing / finance kept).
+ *  BL. (T6) Security + storage (no backend, no new key, SEC-P1-03 open).
  *
  * WHAT THIS DOES NOT PROVE
  * ------------------------
@@ -585,6 +602,34 @@ const websiteDomainSrc = [
   websiteSaveConfirmSrc,
 ].join('\n');
 const websiteDomainCode = stripComments(websiteDomainSrc);
+
+// B1.4D-T6 — Review domain: TWO focused domains, not one combined Review store.
+// Read defensively so a missing module is a FAILED CHECK, not a crashed script.
+const reviewFeatureDir = join(adminFeatureDir, 'review');
+const inquiriesPageSrc = safeReadAdminFeature('review/inquiries/AdminInquiriesPage.tsx');
+const inquiriesHookSrc = safeReadAdminFeature('review/inquiries/useAdminInquiriesDomain.ts');
+const inquiriesBarrelSrc = safeReadAdminFeature('review/inquiries/index.ts');
+const testimonialsPageSrc = safeReadAdminFeature('review/testimonials/AdminTestimonialsPage.tsx');
+const testimonialsHookSrc = safeReadAdminFeature('review/testimonials/useAdminTestimonialsDomain.ts');
+const testimonialsBarrelSrc = safeReadAdminFeature('review/testimonials/index.ts');
+const reviewBarrelSrc = safeReadAdminFeature('review/index.ts');
+
+const inquiriesPageCode = stripComments(inquiriesPageSrc);
+const inquiriesHookCode = stripComments(inquiriesHookSrc);
+const inquiriesBarrelCode = stripComments(inquiriesBarrelSrc);
+const testimonialsPageCode = stripComments(testimonialsPageSrc);
+const testimonialsHookCode = stripComments(testimonialsHookSrc);
+const testimonialsBarrelCode = stripComments(testimonialsBarrelSrc);
+const reviewBarrelCode = stripComments(reviewBarrelSrc);
+
+// Whole-domain concatenations (raw + comment-stripped) for cross-file assertions.
+const inquiriesDomainSrc = [inquiriesPageSrc, inquiriesHookSrc, inquiriesBarrelSrc].join('\n');
+const inquiriesDomainCode = stripComments(inquiriesDomainSrc);
+const testimonialsDomainSrc =
+  [testimonialsPageSrc, testimonialsHookSrc, testimonialsBarrelSrc].join('\n');
+const testimonialsDomainCode = stripComments(testimonialsDomainSrc);
+const reviewDomainSrc = [inquiriesDomainSrc, testimonialsDomainSrc, reviewBarrelSrc].join('\n');
+const reviewDomainCode = stripComments(reviewDomainSrc);
 
 /**
  * Returns the body of a top-level (2-space indented) component function, e.g.
@@ -1845,28 +1890,32 @@ check('the Website feature renders the legacy panel heading + controls',
     /Editor Info Menarik & Literasi/.test(websitePageCode));
 
 /* ------------------------------------------------------------------ */
-/* AW. T6 boundary — Review / Inquiries NOT taken                      */
+/* AW. Review / Inquiries boundary — RETIRED by T6 (asserts the inverse) */
 /* ------------------------------------------------------------------ */
 
-section('AW. T5B T6 boundary — Review / Inquiries NOT taken');
+section('AW. T5B Review / Inquiries boundary — RETIRED by T6 (inverse)');
 
-check('websiteQuestions state still lives in AdminDashboard',
-  /const \[websiteQuestions, setWebsiteQuestions\]/.test(adminDashCode) &&
-    /readStorageArray\('theprams_demo_website_questions'\)/.test(adminDashCode));
-check('the Review/Inquiries key still lives in AdminDashboard',
-  /theprams_demo_website_questions/.test(adminDashCode));
-check('saveWebsiteQuestions / saveWebsiteQuestionAnswer stay in AdminDashboard',
-  /const saveWebsiteQuestions = /.test(adminDashCode) &&
-    /const saveWebsiteQuestionAnswer = /.test(adminDashCode));
-check('openQuestionWhatsapp stays in AdminDashboard',
-  /const openQuestionWhatsapp = /.test(adminDashCode));
-check('the Website extraction did NOT take the Inquiries storage key',
-  !/theprams_demo_website_questions/.test(websiteDomainCode));
-check('the Website extraction did NOT take websiteQuestions / WebsiteQuestion',
-  !/websiteQuestions/.test(websiteDomainCode) &&
-    !/WebsiteQuestion/.test(websiteDomainCode));
-check('the Website extraction did NOT take the Inquiries helpers',
-  !/saveWebsiteQuestionAnswer|openQuestionWhatsapp/.test(websiteDomainCode));
+// At T5B this section proved the Review / Inquiries surface had NOT been taken.
+// T6 deliberately supersedes that freeze: the surface is now extracted into
+// `features/admin/review/inquiries`. These checks assert the INVERSE, so the
+// T5B claim cannot silently come back.
+check('websiteQuestions state has LEFT AdminDashboard (T6 inverse)',
+  !/const \[websiteQuestions, setWebsiteQuestions\]/.test(adminDashCode));
+check('the Review/Inquiries key has LEFT AdminDashboard (T6 inverse)',
+  !/theprams_demo_website_questions/.test(adminDashCode));
+check('saveWebsiteQuestions / saveWebsiteQuestionAnswer have LEFT AdminDashboard',
+  !/const saveWebsiteQuestions = /.test(adminDashCode) &&
+    !/const saveWebsiteQuestionAnswer = /.test(adminDashCode));
+check('openQuestionWhatsapp has LEFT AdminDashboard',
+  !/const openQuestionWhatsapp = /.test(adminDashCode));
+check('the Website extraction STILL did not absorb the Inquiries concern',
+  !/theprams_demo_website_questions/.test(websiteDomainCode) &&
+    !/websiteQuestions/.test(websiteDomainCode) &&
+    !/WebsiteQuestion/.test(websiteDomainCode) &&
+    !/saveWebsiteQuestionAnswer|openQuestionWhatsapp/.test(websiteDomainCode));
+check('the Inquiries concern landed in the Review/Inquiries domain instead',
+  /theprams_demo_website_questions/.test(inquiriesHookCode) &&
+    /websiteQuestions/.test(inquiriesHookCode));
 
 /* ------------------------------------------------------------------ */
 /* AX. T5A Content Library non-regression                              */
@@ -1965,6 +2014,340 @@ check('no router change: the website path is still /admin/studio/website',
   allAdminPaths().includes('/admin/studio/website'));
 
 /* ------------------------------------------------------------------ */
+/* BA. T6 Review modules + composition wiring                          */
+/* ------------------------------------------------------------------ */
+
+section('BA. T6 Review modules (two focused domains, no combined store)');
+
+check('the Inquiries page + domain hook are present',
+  inquiriesPageSrc.length > 0 && inquiriesHookSrc.length > 0);
+check('the Testimonials page + domain hook are present',
+  testimonialsPageSrc.length > 0 && testimonialsHookSrc.length > 0);
+check('each Review domain has a barrel and the Review barrel exists',
+  inquiriesBarrelSrc.length > 0 &&
+    testimonialsBarrelSrc.length > 0 &&
+    reviewBarrelSrc.length > 0);
+check('the Review barrel re-exports BOTH focused domains',
+  /export \* from '\.\/inquiries'/.test(reviewBarrelCode) &&
+    /export \* from '\.\/testimonials'/.test(reviewBarrelCode));
+check('there is NO combined AdminReviewWorkspacePage (two focused domains)',
+  !existsSync(join(reviewFeatureDir, 'AdminReviewWorkspacePage.tsx')));
+check('AdminDashboard imports the Review domain barrel',
+  /from '\.\.\/features\/admin\/review'/.test(adminDashCode));
+check('AdminDashboard invokes each canonical Review hook EXACTLY once',
+  (adminDashCode.match(/useAdminInquiriesDomain\(/g) || []).length === 1 &&
+    (adminDashCode.match(/useAdminTestimonialsDomain\(/g) || []).length === 1);
+check('AdminDashboard renders both extracted Review pages',
+  /<AdminInquiriesPage/.test(adminDashCode) &&
+    /<AdminTestimonialsPage/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* BB. T6 single Inquiries authority                                   */
+/* ------------------------------------------------------------------ */
+
+section('BB. T6 single Inquiries authority (one hook, no duplicate state)');
+
+check('AdminDashboard no longer declares the websiteQuestions state',
+  !/websiteQuestions/.test(adminDashCode));
+check('AdminDashboard no longer implements the Inquiries helpers',
+  !/saveWebsiteQuestions|saveWebsiteQuestionAnswer|openQuestionWhatsapp/.test(adminDashCode));
+check('the Inquiries state is declared exactly once (in the domain hook)',
+  (inquiriesHookCode.match(/useState<WebsiteQuestion\[\]>/g) || []).length === 1);
+check('the Inquiries PAGE does not invoke the hook (view only)',
+  !/useAdminInquiriesDomain\(/.test(inquiriesPageCode));
+check('the Inquiries page owns no canonical useState',
+  !/useState/.test(inquiriesPageCode));
+check('no import cycle: the Inquiries domain never imports AdminDashboard',
+  !/AdminDashboard/.test(inquiriesDomainCode) &&
+    !/LegacyAppStateProvider/.test(inquiriesDomainCode));
+check('the Inquiries domain injects notify / recordAudit / queueNotification only',
+  /notify: \(message: string\) => void/.test(inquiriesHookCode) &&
+    /recordAudit: \(module: string, action: string, detail: string\) => void/.test(inquiriesHookCode) &&
+    /queueNotification: \(/.test(inquiriesHookCode));
+
+/* ------------------------------------------------------------------ */
+/* BC. T6 inquiries storage ownership                                  */
+/* ------------------------------------------------------------------ */
+
+section('BC. T6 inquiries storage ownership (canonical key, one owner, 13 keys)');
+
+check('the canonical Inquiries key is declared in the Inquiries domain',
+  /INQUIRIES_STORAGE_KEY = 'theprams_demo_website_questions'/.test(inquiriesHookCode));
+check('the canonical Inquiries key has exactly ONE owner across admin source',
+  (adminFeatureCode.match(/theprams_demo_website_questions/g) || []).length === 1 &&
+    /theprams_demo_website_questions/.test(inquiriesHookCode));
+check('the monolith no longer mentions the Inquiries key',
+  !/theprams_demo_website_questions/.test(adminDashCode));
+check('the initial read keeps the legacy readStorageArray semantics',
+  /useState<WebsiteQuestion\[\]>\(\s*\(\) => readStorageArray\(INQUIRIES_STORAGE_KEY\)/.test(inquiriesHookCode));
+check('the write keeps legacy localStorage.setItem(key, JSON.stringify(...))',
+  /localStorage\.setItem\(INQUIRIES_STORAGE_KEY, JSON\.stringify\(nextQuestions\)\)/.test(inquiriesHookCode),
+  'no rename / no migration / no second key');
+check('the sync path re-reads the SAME canonical key',
+  /readStorageArray<WebsiteQuestion>\(INQUIRIES_STORAGE_KEY\)/.test(inquiriesHookCode));
+const t6KeyRegistry = [...new Set(
+  `${adminFeatureCode}\n${adminDashCode}`.match(/theprams_demo_[a-z_]+/g) || [])];
+check('the admin localStorage key registry is still exactly 13 keys',
+  t6KeyRegistry.length === 13, `found ${t6KeyRegistry.length}: ${t6KeyRegistry.join(', ')}`);
+check('the Inquiries domain owns exactly ONE storage key',
+  [...new Set(inquiriesDomainCode.match(/theprams_demo_[a-z_]+/g) || [])].join(',') ===
+    'theprams_demo_website_questions');
+
+/* ------------------------------------------------------------------ */
+/* BD. T6 inquiries behaviour                                          */
+/* ------------------------------------------------------------------ */
+
+section('BD. T6 inquiries behaviour (sync / answer / queue / audit / WhatsApp)');
+
+check('Sync Data is a LOCAL storage refresh (no backend sync invented)',
+  /const syncQuestionsFromStorage = \(\) => \{/.test(inquiriesHookCode) &&
+    /setWebsiteQuestions\(latest\)/.test(inquiriesHookCode) &&
+    /notify\('Data pertanyaan website disinkronkan\.'\)/.test(inquiriesHookCode));
+check('the three metrics preserve the legacy status filters',
+  /total: websiteQuestions\.length/.test(inquiriesHookCode) &&
+    /unanswered: websiteQuestions\.filter\(\(q\) => q\.status === 'Baru'\)\.length/.test(inquiriesHookCode) &&
+    /answered: websiteQuestions\.filter\(\(q\) => q\.status === 'Dibalas'\)\.length/.test(inquiriesHookCode));
+check('save answer preserves adminAnswer / Dibalas / answeredAt locale',
+  /adminAnswer: answer/.test(inquiriesHookCode) &&
+    /status: 'Dibalas' as const/.test(inquiriesHookCode) &&
+    /answeredAt: new Date\(\)\.toLocaleString\('id-ID'\)/.test(inquiriesHookCode));
+check('save answer persists the WHOLE list through saveWebsiteQuestions',
+  /saveWebsiteQuestions\(nextQuestions\)/.test(inquiriesHookCode));
+check('save answer queues the WhatsApp outbox notification verbatim',
+  /queueNotification\('WhatsApp', question\.phone \|\| '-', 'Jawaban pertanyaan The Prams', answer\)/.test(inquiriesHookCode));
+check('save answer records the Website Questions audit entry verbatim',
+  /recordAudit\('Website Questions', 'Answer Question', `\$\{question\.name\} - \$\{question\.phone\}`\)/.test(inquiriesHookCode));
+check('save answer shows the legacy toast',
+  /notify\('Jawaban tersimpan dan masuk outbox WhatsApp\.'\)/.test(inquiriesHookCode));
+check('WhatsApp phone normalization preserves digits + the 62 prefix rule',
+  /String\(question\.phone \|\| ''\)\.replace\(\/\\D\/g, ''\)\.replace\(\/\^0\/, '62'\)/.test(inquiriesHookCode));
+check('WhatsApp navigation preserves the fallback number + window.open + _blank',
+  /6281234567890/.test(inquiriesHookCode) &&
+    /window\.open\(`https:\/\/wa\.me\/\$\{phone \|\| '6281234567890'\}\?text=\$\{encodeURIComponent\(message\)\}`/.test(inquiriesHookCode) &&
+    /'_blank'/.test(inquiriesHookCode));
+check('the WhatsApp message prefers adminAnswer over the greeting fallback',
+  /question\.adminAnswer \|\| `Halo \$\{question\.name\}/.test(inquiriesHookCode));
+check('the answer textarea keeps the legacy DOM-read save path',
+  /document\.getElementById\(`answer-\$\{question\.id\}`\)/.test(inquiriesPageCode));
+
+/* ------------------------------------------------------------------ */
+/* BE. T6 inquiries composition + old JSX removal                      */
+/* ------------------------------------------------------------------ */
+
+section('BE. T6 inquiries composition + old Review JSX removed');
+
+check('AdminDashboard renders AdminInquiriesPage from the domain',
+  /<AdminInquiriesPage domain=\{inquiriesDomain\}/.test(adminDashCode));
+check('the old Inquiries JSX has LEFT the monolith',
+  !/Pertanyaan dari Website/.test(adminDashCode) &&
+    !/Total Pertanyaan/.test(adminDashCode) &&
+    !/Belum Dibalas/.test(adminDashCode) &&
+    !/Sudah Dibalas/.test(adminDashCode) &&
+    !/Simpan Jawaban/.test(adminDashCode) &&
+    !/answer-\$\{question\.id\}/.test(adminDashCode));
+check('the Inquiries page renders the legacy surface',
+  /Pertanyaan dari Website/.test(inquiriesPageCode) &&
+    /Total Pertanyaan/.test(inquiriesPageCode) &&
+    /Belum Dibalas/.test(inquiriesPageCode) &&
+    /Sudah Dibalas/.test(inquiriesPageCode) &&
+    /Sync Data/.test(inquiriesPageCode) &&
+    /Simpan Jawaban/.test(inquiriesPageCode) &&
+    /Belum ada pertanyaan masuk/.test(inquiriesPageCode));
+check('the Inquiries page keeps the WhatsApp action wired to the domain',
+  /onClick=\{\(\) => openQuestionWhatsapp\(question\)\}/.test(inquiriesPageCode));
+
+/* ------------------------------------------------------------------ */
+/* BF. T6 single Testimonials authority                                */
+/* ------------------------------------------------------------------ */
+
+section('BF. T6 single Testimonials authority (one hook, in-memory only)');
+
+check('AdminDashboard no longer declares the testimonials / filter state',
+  !/setTestimonials/.test(adminDashCode) && !/testimonialFilter/.test(adminDashCode));
+check('AdminDashboard no longer implements updateTestimonialStatus',
+  !/const updateTestimonialStatus = /.test(adminDashCode));
+check('the Testimonials state is declared exactly once (in the domain hook)',
+  (testimonialsHookCode.match(/useState<Testimonial\[\]>\(TESTIMONIALS\)/g) || []).length === 1 &&
+    (testimonialsHookCode.match(/useState<TestimonialFilter>\('All'\)/g) || []).length === 1);
+check('the Testimonials PAGE does not invoke the hook (view only)',
+  !/useAdminTestimonialsDomain\(/.test(testimonialsPageCode));
+check('the Testimonials page owns no canonical useState',
+  !/useState/.test(testimonialsPageCode));
+check('no import cycle: the Testimonials domain never imports AdminDashboard',
+  !/AdminDashboard/.test(testimonialsDomainCode) &&
+    !/LegacyAppStateProvider/.test(testimonialsDomainCode));
+check('the Testimonials domain injects notify only',
+  /notify: \(message: string\) => void;/.test(testimonialsHookCode) &&
+    !/recordAudit|queueNotification/.test(testimonialsHookCode));
+
+/* ------------------------------------------------------------------ */
+/* BG. T6 testimonial behaviour + EXECUTED seed                        */
+/* ------------------------------------------------------------------ */
+
+section('BG. T6 testimonial behaviour (seed / filter / status / delete + EXECUTED)');
+
+check('the seed is preserved verbatim from the TESTIMONIALS constant',
+  /import \{ TESTIMONIALS \} from '\.\.\/\.\.\/\.\.\/\.\.\/constants'/.test(testimonialsHookCode) &&
+    /useState<Testimonial\[\]>\(TESTIMONIALS\)/.test(testimonialsHookCode));
+check('the filter union is the legacy All | Pending | Approved',
+  /type TestimonialFilter = 'All' \| 'Pending' \| 'Approved'/.test(testimonialsHookCode));
+check('the page exposes NO Rejected filter tab (contract preserved)',
+  !/Rejected \(/.test(testimonialsPageCode));
+check('the derived pending / approved / rejected lists are preserved',
+  /pendingTestimonials = useMemo\(\(\) => testimonials\.filter\(t => t\.status === 'Pending'\)/.test(testimonialsHookCode) &&
+    /approvedTestimonials = useMemo\(\(\) => testimonials\.filter\(t => t\.status === 'Approved'\)/.test(testimonialsHookCode) &&
+    /rejectedTestimonials = useMemo\(\(\) => testimonials\.filter\(t => t\.status === 'Rejected'\)/.test(testimonialsHookCode));
+check('visibleTestimonials keeps the legacy All-else-status semantics',
+  /if \(testimonialFilter === 'All'\) return testimonials;/.test(testimonialsHookCode) &&
+    /return testimonials\.filter\(\(item\) => item\.status === testimonialFilter\);/.test(testimonialsHookCode));
+check('approve / reject preserve the legacy status updater + toast',
+  /setTestimonials\(prev => prev\.map\(t => t\.id === id \? \{ \.\.\.t, status \} : t\)\)/.test(testimonialsHookCode) &&
+    /notify\(`Testimoni ditandai \$\{status\}\.`\)/.test(testimonialsHookCode));
+check('delete preserves the legacy inline mutation + toast',
+  /setTestimonials\(\(prev\) => prev\.filter\(\(item\) => item\.id !== id\)\)/.test(testimonialsHookCode) &&
+    /notify\('Testimoni dihapus\.'\)/.test(testimonialsHookCode));
+check('Testimonials add NO persistence, NO key and NO audit',
+  !/localStorage/.test(testimonialsDomainCode) &&
+    !/theprams_demo_/.test(testimonialsDomainCode) &&
+    !/recordAudit|queueNotification/.test(testimonialsDomainCode));
+
+// EXECUTED: load the REAL seed and run the REAL `visibleTestimonials` predicate.
+let testimonialSeed = null;
+let testimonialSeedError = '';
+try {
+  const constantsModule = await compileAndImport(join(srcDir, 'constants.ts'));
+  testimonialSeed = constantsModule.TESTIMONIALS;
+} catch (error) {
+  testimonialSeedError = error instanceof Error ? error.message : String(error);
+}
+check('EXECUTED: the real TESTIMONIALS seed loads from src/constants.ts',
+  Array.isArray(testimonialSeed) && testimonialSeed.length > 0,
+  testimonialSeedError || (Array.isArray(testimonialSeed) ? `len ${testimonialSeed.length}` : 'empty'));
+check('EXECUTED: every seed status is inside the Approved/Pending/Rejected contract',
+  Array.isArray(testimonialSeed) &&
+    testimonialSeed.every((t) => ['Pending', 'Approved', 'Rejected'].includes(t.status)));
+check('EXECUTED: seed ids are unique (stable React keys)',
+  Array.isArray(testimonialSeed) &&
+    new Set(testimonialSeed.map((t) => t.id)).size === testimonialSeed.length);
+const visibleFor = (filter) =>
+  !Array.isArray(testimonialSeed) ? []
+    : filter === 'All' ? testimonialSeed
+      : testimonialSeed.filter((item) => item.status === filter);
+check('EXECUTED: All shows everything; Pending/Approved are exact partitions',
+  Array.isArray(testimonialSeed) &&
+    visibleFor('All').length === testimonialSeed.length &&
+    visibleFor('Pending').every((t) => t.status === 'Pending') &&
+    visibleFor('Approved').every((t) => t.status === 'Approved') &&
+    visibleFor('Pending').length === testimonialSeed.filter((t) => t.status === 'Pending').length &&
+    visibleFor('Approved').length === testimonialSeed.filter((t) => t.status === 'Approved').length);
+
+/* ------------------------------------------------------------------ */
+/* BH. T6 testimonials composition + old JSX removal                   */
+/* ------------------------------------------------------------------ */
+
+section('BH. T6 testimonials composition + old moderation JSX removed');
+
+check('AdminDashboard renders AdminTestimonialsPage from the domain',
+  /<AdminTestimonialsPage domain=\{testimonialsDomain\}/.test(adminDashCode));
+check('the old Testimonials Moderation JSX has LEFT the monolith',
+  !/Testimonials Moderation/.test(adminDashCode) &&
+    !/Manage student feedback/.test(adminDashCode));
+check('the Testimonials page renders the legacy surface + counts',
+  /Testimonials Moderation/.test(testimonialsPageCode) &&
+    /Manage student feedback and public testimonials/.test(testimonialsPageCode) &&
+    /All \(\{testimonials\.length\}\)/.test(testimonialsPageCode) &&
+    /Pending \(\{pendingTestimonials\.length\}\)/.test(testimonialsPageCode) &&
+    /Approved \(\{approvedTestimonials\.length\}\)/.test(testimonialsPageCode));
+check('the Approve / Reject / Delete actions are still wired',
+  /updateTestimonialStatus\(t\.id, 'Approved'\)/.test(testimonialsPageCode) &&
+    /updateTestimonialStatus\(t\.id, 'Rejected'\)/.test(testimonialsPageCode) &&
+    /deleteTestimonial\(t\.id\)/.test(testimonialsPageCode));
+check('the motion card interaction is preserved (not rewritten)',
+  /<motion\.div\s+layout/.test(testimonialsPageCode) &&
+    /from 'motion\/react'/.test(testimonialsPageCode));
+
+/* ------------------------------------------------------------------ */
+/* BI. T6 accessibility source contract                                */
+/* ------------------------------------------------------------------ */
+
+section('BI. T6 accessibility source contract for the Review surfaces');
+
+check('inquiry primary actions declare a practical >=44px target',
+  (inquiriesPageCode.match(/min-h-\[44px\]/g) || []).length >= 3);
+check('the answer textarea has an explicit accessible name',
+  /aria-label=\{`Jawaban admin untuk \$\{question\.name\}`\}/.test(inquiriesPageCode) &&
+    /htmlFor=\{`answer-\$\{question\.id\}`\}/.test(inquiriesPageCode));
+check('the testimonial actions carry aria-labels (not title alone)',
+  /aria-label=\{`Setujui testimoni \$\{t\.studentName\}`\}/.test(testimonialsPageCode) &&
+    /aria-label=\{`Tolak testimoni \$\{t\.studentName\}`\}/.test(testimonialsPageCode) &&
+    /aria-label=\{`Hapus testimoni \$\{t\.studentName\}`\}/.test(testimonialsPageCode));
+check('the testimonial action targets declare a practical >=44x44 box',
+  (testimonialsPageCode.match(/min-w-\[44px\]/g) || []).length >= 3 &&
+    (testimonialsPageCode.match(/min-h-\[44px\]/g) || []).length >= 6);
+check('the rating exposes an accessible summary and hides decorative stars',
+  /role="img" aria-label=\{`\$\{t\.rating\} dari 5 bintang`\}/.test(testimonialsPageCode) &&
+    /<Star key=\{s\} size=\{14\} aria-hidden="true"/.test(testimonialsPageCode));
+check('the migrated Review surfaces avoid raw brand / weak contrast tokens',
+  !/text-brand-blue|text-brand-orange|text-emerald-600|text-amber-600|text-red-600/.test(reviewDomainCode));
+
+/* ------------------------------------------------------------------ */
+/* BJ. T6 T5 non-regression                                            */
+/* ------------------------------------------------------------------ */
+
+section('BJ. T6 T5 non-regression (Content + Website untouched)');
+
+check('the T5 domains are still present and invoked once each',
+  (adminDashCode.match(/useAdminContentDomain\(/g) || []).length === 1 &&
+    (adminDashCode.match(/useAdminWebsiteDomain\(/g) || []).length === 1 &&
+    /<AdminContentLibraryPage/.test(adminDashCode) &&
+    /<AdminWebsiteEditorPage/.test(adminDashCode));
+check('the T5 Studio paths are unchanged',
+  allAdminPaths().includes('/admin/studio/content') &&
+    allAdminPaths().includes('/admin/studio/website'));
+check('the Review domain imports no Studio content/website symbol',
+  !/useAdminContentDomain|AdminContentLibraryPage|useAdminWebsiteDomain|AdminWebsiteEditorPage|BLOG_EDITOR_TEMPLATES|videoLessons/.test(reviewDomainCode));
+check('the Website extraction still owns the blog-asset key alone',
+  [...new Set(websiteDomainCode.match(/theprams_demo_[a-zA-Z_]+/g) || [])].join(',') ===
+    'theprams_demo_blog_assets');
+
+/* ------------------------------------------------------------------ */
+/* BK. T6 T7 / T8 boundary                                             */
+/* ------------------------------------------------------------------ */
+
+section('BK. T6 T7 / T8 boundary (no over-extraction)');
+
+check('T7 marketing / programs / leads state still lives in AdminDashboard',
+  /\bprogramsList\b/.test(adminDashCode) &&
+    /\bleadsList\b/.test(adminDashCode) &&
+    /\bcampaignForm\b/.test(adminDashCode));
+check('T8 finance state still lives in AdminDashboard',
+  /\bfinanceTransactions\b/.test(adminDashCode) &&
+    /\bfinanceEntries\b/.test(adminDashCode));
+check('the Review domain does NOT define T7 / T8 state',
+  !/programsList|leadsList|campaignForm|financeTransactions|financeEntries/.test(reviewDomainCode));
+
+/* ------------------------------------------------------------------ */
+/* BL. T6 security + storage                                           */
+/* ------------------------------------------------------------------ */
+
+section('BL. T6 security + storage (no backend, no new key, SEC-P1-03 open)');
+
+check('SEC-P1-03 still open: no Supabase/auth/AI/backend in the Review domain',
+  !/@supabase|supabase|GoogleGenAI|@google\/genai|createClient|\bopenai\b|authorization/i.test(reviewDomainCode));
+check('no WhatsApp SDK / API call: browser navigation only',
+  /window\.open\(/.test(inquiriesHookCode) &&
+    !/api\.whatsapp|\bfetch\(|XMLHttpRequest|navigator\.sendBeacon/i.test(reviewDomainCode));
+check('the Review domain adds no access-control language',
+  !/\b(?:403|Forbidden|unauthorized|access control)\b/i.test(reviewDomainCode));
+check('no new storage key: Inquiries own one, Testimonials own none',
+  [...new Set(inquiriesDomainCode.match(/theprams_demo_[a-z_]+/g) || [])].length === 1 &&
+    !/theprams_demo_/.test(testimonialsDomainCode));
+check('routing frozen: exactly the two canonical Review paths, no detail route',
+  allAdminPaths().includes('/admin/review/inquiries') &&
+    allAdminPaths().includes('/admin/review/testimonials') &&
+    allAdminPaths().filter((p) => p.startsWith('/admin/review/')).length === 2);
+
+/* ------------------------------------------------------------------ */
 /* Report                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -1976,7 +2359,7 @@ if (failures.length) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }
-console.log('B1.4D-T5B admin workspace contract: PASS');
+console.log('B1.4D-T6 admin workspace contract: PASS');
 process.exit(0);
 
 /* ------------------------------------------------------------------ */
