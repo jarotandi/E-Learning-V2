@@ -11,8 +11,6 @@ import {
   Filter,
   Trash2,
   Edit2,
-  MessageSquare,
-  Star,
   UserPlus,
   Award,
   FileText,
@@ -35,7 +33,6 @@ import {
   Upload,
   Save,
   X,
-  Check,
   Info,
   RefreshCw
 } from 'lucide-react';
@@ -44,9 +41,8 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, LineChart, Line 
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
-import { Quote } from 'lucide-react';
-import { BLOG_POSTS, USER_ACCOUNTS, MOCK_FEEDBACKS, TESTIMONIALS, PROGRAMS } from '../constants';
-import { BlogPost, UserAccount, Lead, Testimonial, Program, ProgramPackage, WebsiteQuestion } from '../types';
+import { BLOG_POSTS, USER_ACCOUNTS, MOCK_FEEDBACKS, PROGRAMS } from '../constants';
+import { BlogPost, UserAccount, Lead, Program, ProgramPackage } from '../types';
 import {
   ADMIN_ROLE_PERMISSIONS,
   isAdminTabAllowed,
@@ -79,6 +75,12 @@ import {
   AdminBlogPreviewDialog,
   useAdminWebsiteDomain,
 } from '../features/admin/studio/website';
+import {
+  AdminInquiriesPage,
+  useAdminInquiriesDomain,
+  AdminTestimonialsPage,
+  useAdminTestimonialsDomain,
+} from '../features/admin/review';
 
 const MOCK_LEADS: Lead[] = [
   { id: '1', name: 'Rina Wijaya', email: 'rina@mail.com', phone: '0812345678', programOfInterest: 'SNBT Kedokteran', source: 'Instagram', status: 'Qualified', createdAt: '2026-04-20' },
@@ -777,8 +779,15 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     }
   };
   
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(TESTIMONIALS);
-  const [testimonialFilter, setTestimonialFilter] = useState<'All' | 'Pending' | 'Approved'>('All');
+  // B1.4D-T6 — Review / Testimonials domain.
+  //
+  // The testimonials list + moderation filter used to live inline here, ABOVE
+  // the conditional `activeTab === 'testimonials'` JSX. They now live in a
+  // focused domain hook invoked by THIS persistent orchestrator, so a filter
+  // selection still survives client-side tab changes. Testimonials stay
+  // IN-MEMORY (seeded from the TESTIMONIALS constant) — no persistence is
+  // added, and only `notify` is injected.
+  const testimonialsDomain = useAdminTestimonialsDomain({ notify });
   const [programsList, setProgramsList] = useState<Program[]>(programs);
 
   // B1.4D-T3 — Users domain.
@@ -829,35 +838,18 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   const websiteDomain = useAdminWebsiteDomain({ blogPosts, onBlogPostsChange, notify, recordAudit });
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [programPendingSave, setProgramPendingSave] = useState<Program | null>(null);
-  const [websiteQuestions, setWebsiteQuestions] = useState<WebsiteQuestion[]>(() => readStorageArray('theprams_demo_website_questions'));
+  // B1.4D-T6 — Review / Inquiries domain.
+  //
+  // The Inquiries state used to live inline here, ABOVE the conditional
+  // `activeTab === 'inquiries'` JSX. It now lives in a focused domain hook
+  // invoked by THIS persistent orchestrator (not by the route-mounted page),
+  // preserving the legacy transient state. `queueNotification`/`recordAudit`/
+  // `notify` are injected so the hook never imports this component.
+  const inquiriesDomain = useAdminInquiriesDomain({ notify, recordAudit, queueNotification });
 
   useEffect(() => {
     setProgramsList(programs);
   }, [programs]);
-
-  const saveWebsiteQuestions = (nextQuestions: WebsiteQuestion[]) => {
-    setWebsiteQuestions(nextQuestions);
-    localStorage.setItem('theprams_demo_website_questions', JSON.stringify(nextQuestions));
-  };
-
-  const saveWebsiteQuestionAnswer = (question: WebsiteQuestion, answer: string) => {
-    const nextQuestions = websiteQuestions.map((item) => item.id === question.id ? {
-      ...item,
-      adminAnswer: answer,
-      status: 'Dibalas' as const,
-      answeredAt: new Date().toLocaleString('id-ID')
-    } : item);
-    saveWebsiteQuestions(nextQuestions);
-    queueNotification('WhatsApp', question.phone || '-', 'Jawaban pertanyaan The Prams', answer);
-    recordAudit('Website Questions', 'Answer Question', `${question.name} - ${question.phone}`);
-    notify('Jawaban tersimpan dan masuk outbox WhatsApp.');
-  };
-
-  const openQuestionWhatsapp = (question: WebsiteQuestion) => {
-    const phone = String(question.phone || '').replace(/\D/g, '').replace(/^0/, '62');
-    const message = question.adminAnswer || `Halo ${question.name}, terima kasih sudah bertanya ke Bimbel The Prams. Saya bantu jawab pertanyaan kamu: ${question.question}`;
-    window.open(`https://wa.me/${phone || '6281234567890'}?text=${encodeURIComponent(message)}`, '_blank');
-  };
 
   const saveProgram = (updatedProg: Program) => {
     const sanitizedProgram: Program = {
@@ -921,21 +913,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
       return matchesSearch && matchesCategory;
     });
   }, [programsList, programSearchTerm, programCategoryFilter]);
-
-
-  const pendingTestimonials = useMemo(() => testimonials.filter(t => t.status === 'Pending'), [testimonials]);
-  const approvedTestimonials = useMemo(() => testimonials.filter(t => t.status === 'Approved'), [testimonials]);
-  const rejectedTestimonials = useMemo(() => testimonials.filter(t => t.status === 'Rejected'), [testimonials]);
-
-  const updateTestimonialStatus = (id: string, status: 'Approved' | 'Rejected') => {
-    setTestimonials(prev => prev.map(t => t.id === id ? { ...t, status } : t));
-    notify(`Testimoni ditandai ${status}.`);
-  };
-
-  const visibleTestimonials = useMemo(() => {
-    if (testimonialFilter === 'All') return testimonials;
-    return testimonials.filter((item) => item.status === testimonialFilter);
-  }, [testimonialFilter, testimonials]);
 
   const financeRows = useMemo(() => {
     const demoRows = [
@@ -1213,89 +1190,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
             {/* Feedback Tab content skipped for brevity... */}
 
             {activeTab === 'inquiries' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-brand-navy">Pertanyaan dari Website</h2>
-                    <p className="text-sm text-slate-500">Menampung semua pertanyaan dari form kontak dan tombol WhatsApp, termasuk nomor penanya.</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const latest = readStorageArray<WebsiteQuestion>('theprams_demo_website_questions');
-                      setWebsiteQuestions(latest);
-                      notify('Data pertanyaan website disinkronkan.');
-                    }}
-                    className="btn-secondary py-2 px-5 flex items-center gap-2"
-                  >
-                    <RefreshCw size={18} /> Sync Data
-                  </button>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-4">
-                  {[
-                    { label: 'Total Pertanyaan', value: websiteQuestions.length, color: 'text-brand-blue' },
-                    { label: 'Belum Dibalas', value: websiteQuestions.filter((q) => q.status === 'Baru').length, color: 'text-brand-orange' },
-                    { label: 'Sudah Dibalas', value: websiteQuestions.filter((q) => q.status === 'Dibalas').length, color: 'text-emerald-500' },
-                  ].map((stat) => (
-                    <div key={stat.label} className="card-premium p-6">
-                      <MessageSquare className={`${stat.color} mb-3`} size={22} />
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
-                      <p className="text-3xl font-black text-brand-navy mt-1">{stat.value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="space-y-4">
-                  {websiteQuestions.length === 0 && (
-                    <div className="card-premium p-10 text-center">
-                      <p className="font-bold text-brand-navy">Belum ada pertanyaan masuk.</p>
-                      <p className="text-sm text-slate-500 mt-1">Pertanyaan dari halaman kontak dan direct WhatsApp akan muncul di sini.</p>
-                    </div>
-                  )}
-                  {websiteQuestions.map((question) => (
-                    <div key={question.id} className="card-premium p-6 bg-white">
-                      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2 mb-3">
-                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${question.status === 'Dibalas' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{question.status}</span>
-                            <span className="px-2 py-1 rounded-lg bg-blue-50 text-brand-blue text-[10px] font-black uppercase">{question.source}</span>
-                            <span className="text-[10px] text-slate-400 font-bold">{question.createdAt}</span>
-                          </div>
-                          <h3 className="text-lg font-black text-brand-navy">{question.name}</h3>
-                          <p className="text-xs text-slate-500 mt-1">{question.email} - WA: {question.phone || '-'}</p>
-                          <p className="text-xs font-bold text-brand-blue mt-1">{question.programOfInterest}</p>
-                          <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{question.question}</p>
-                          </div>
-                        </div>
-                        <div className="lg:w-[420px] space-y-3">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Jawaban Admin</label>
-                          <textarea
-                            id={`answer-${question.id}`}
-                            defaultValue={question.adminAnswer || `Halo ${question.name}, terima kasih sudah menghubungi The Prams. `}
-                            className="w-full h-32 px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 outline-none text-sm text-slate-600"
-                          />
-                          {question.answeredAt && <p className="text-[10px] text-slate-400">Terakhir dijawab: {question.answeredAt}</p>}
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                const textarea = document.getElementById(`answer-${question.id}`) as HTMLTextAreaElement | null;
-                                saveWebsiteQuestionAnswer(question, textarea?.value || '');
-                              }}
-                              className="flex-1 btn-primary py-2.5"
-                            >
-                              <Save size={16} /> Simpan Jawaban
-                            </button>
-                            <button onClick={() => openQuestionWhatsapp(question)} className="px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-xs">
-                              WhatsApp
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <AdminInquiriesPage domain={inquiriesDomain} />
             )}
 
             {activeTab === 'content' && (
@@ -2123,97 +2018,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
             )}
 
             {activeTab === 'testimonials' && (
-              <div className="animate-in fade-in duration-500 space-y-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                   <div>
-                      <h2 className="text-2xl font-bold text-brand-navy">Testimonials Moderation</h2>
-                      <p className="text-sm text-slate-500">Manage student feedback and public testimonials</p>
-                   </div>
-                   <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-                      <button onClick={() => setTestimonialFilter('All')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest ${testimonialFilter === 'All' ? 'bg-white shadow-sm text-brand-navy' : 'text-slate-400 hover:text-slate-600'}`}>All ({testimonials.length})</button>
-                      <button onClick={() => setTestimonialFilter('Pending')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest ${testimonialFilter === 'Pending' ? 'bg-white shadow-sm text-brand-navy' : 'text-slate-400 hover:text-slate-600'}`}>Pending ({pendingTestimonials.length})</button>
-                      <button onClick={() => setTestimonialFilter('Approved')} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest ${testimonialFilter === 'Approved' ? 'bg-white shadow-sm text-brand-navy' : 'text-slate-400 hover:text-slate-600'}`}>Approved ({approvedTestimonials.length})</button>
-                   </div>
-                </div>
-                
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                   {visibleTestimonials.map((t) => (
-                     <motion.div 
-                       layout
-                       key={t.id} 
-                       className={`card-premium p-6 flex flex-col gap-4 border-l-4 transition-all ${
-                         t.status === 'Approved' ? 'border-l-emerald-500' : 
-                         t.status === 'Rejected' ? 'border-l-red-500' : 
-                         'border-l-amber-500'
-                       }`}
-                     >
-                        <div className="flex items-center justify-between">
-                           <div className="flex items-center gap-3">
-                              <img src={t.image} className="w-10 h-10 rounded-xl object-cover" alt="" />
-                              <div>
-                                 <p className="text-sm font-bold text-brand-navy">{t.studentName}</p>
-                                 <p className="text-[10px] text-slate-400 font-medium">{t.createdAt}</p>
-                              </div>
-                           </div>
-                           <div className="flex items-center gap-0.5">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star key={s} size={14} className={s <= t.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-100 fill-slate-100'} />
-                              ))}
-                           </div>
-                        </div>
-
-                        <div className="flex-1">
-                          <div className="p-3 bg-slate-50 rounded-xl">
-                            <Quote size={20} className="text-slate-200 mb-2" />
-                            <p className="text-xs text-slate-600 italic leading-relaxed">"{t.content}"</p>
-                          </div>
-                          
-                          <div className="mt-4 space-y-1">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Program</p>
-                            <p className="text-xs font-bold text-brand-blue">{t.programId || 'General'}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                           <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest ${
-                             t.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' : 
-                             t.status === 'Rejected' ? 'bg-red-50 text-red-600' : 
-                             'bg-amber-50 text-amber-600'
-                           }`}>
-                              {t.status}
-                           </span>
-
-                           <div className="flex gap-2">
-                             {t.status !== 'Approved' && (
-                               <button 
-                                 onClick={() => updateTestimonialStatus(t.id, 'Approved')}
-                                 className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-500 hover:text-white transition-all shadow-sm shadow-emerald-500/10"
-                                 title="Approve"
-                               >
-                                  <Check size={16} />
-                               </button>
-                             )}
-                             {t.status !== 'Rejected' && (
-                               <button 
-                                 onClick={() => updateTestimonialStatus(t.id, 'Rejected')}
-                                 className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm shadow-red-500/10"
-                                 title="Reject"
-                               >
-                                  <X size={16} />
-                               </button>
-                             )}
-                             <button onClick={() => {
-                               setTestimonials((prev) => prev.filter((item) => item.id !== t.id));
-                               notify('Testimoni dihapus.');
-                             }} className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-200 transition-all">
-                                <Trash2 size={16} />
-                             </button>
-                           </div>
-                        </div>
-                     </motion.div>
-                   ))}
-                </div>
-              </div>
+              <AdminTestimonialsPage domain={testimonialsDomain} />
             )}
 
             {activeTab === 'reports' && (
