@@ -631,6 +631,45 @@ const testimonialsDomainCode = stripComments(testimonialsDomainSrc);
 const reviewDomainSrc = [inquiriesDomainSrc, testimonialsDomainSrc, reviewBarrelSrc].join('\n');
 const reviewDomainCode = stripComments(reviewDomainSrc);
 
+// B1.4D-T7A — Commerce / Programs + Leads domain.
+// Read defensively so a missing module is a FAILED CHECK, not a crashed script.
+const commerceFeatureDir = join(adminFeatureDir, 'commerce');
+const programsPageSrc = safeReadAdminFeature('commerce/programs/AdminProgramsPage.tsx');
+const programsHookSrc = safeReadAdminFeature('commerce/programs/useAdminProgramsDomain.ts');
+const programsEditorSrc = safeReadAdminFeature('commerce/programs/AdminProgramEditorDialog.tsx');
+const programsConfirmSrc = safeReadAdminFeature('commerce/programs/AdminProgramSaveConfirmDialog.tsx');
+const programsBarrelSrc = safeReadAdminFeature('commerce/programs/index.ts');
+const leadsPageSrc = safeReadAdminFeature('commerce/leads/AdminLeadsPage.tsx');
+const leadsHookSrc = safeReadAdminFeature('commerce/leads/useAdminLeadsDomain.ts');
+const leadsEditorSrc = safeReadAdminFeature('commerce/leads/AdminLeadEditorDialog.tsx');
+const leadsConvertSrc = safeReadAdminFeature('commerce/leads/AdminLeadConvertDialog.tsx');
+const leadsDetailSrc = safeReadAdminFeature('commerce/leads/AdminLeadDetailDialog.tsx');
+const leadsDataSrc = safeReadAdminFeature('commerce/leads/adminLeadsData.ts');
+const leadsBarrelSrc = safeReadAdminFeature('commerce/leads/index.ts');
+const commerceBarrelSrc = safeReadAdminFeature('commerce/index.ts');
+
+const programsPageCode = stripComments(programsPageSrc);
+const programsHookCode = stripComments(programsHookSrc);
+const programsEditorCode = stripComments(programsEditorSrc);
+const programsConfirmCode = stripComments(programsConfirmSrc);
+const programsBarrelCode = stripComments(programsBarrelSrc);
+const leadsPageCode = stripComments(leadsPageSrc);
+const leadsHookCode = stripComments(leadsHookSrc);
+const leadsEditorCode = stripComments(leadsEditorSrc);
+const leadsConvertCode = stripComments(leadsConvertSrc);
+const leadsDetailCode = stripComments(leadsDetailSrc);
+const leadsDataCode = stripComments(leadsDataSrc);
+const leadsBarrelCode = stripComments(leadsBarrelSrc);
+const commerceBarrelCode = stripComments(commerceBarrelSrc);
+
+// Whole-domain concatenations (raw + comment-stripped) for cross-file assertions.
+const programsDomainSrc = [programsPageSrc, programsHookSrc, programsEditorSrc, programsConfirmSrc, programsBarrelSrc].join('\n');
+const programsDomainCode = stripComments(programsDomainSrc);
+const leadsDomainSrc = [leadsPageSrc, leadsHookSrc, leadsEditorSrc, leadsConvertSrc, leadsDetailSrc, leadsDataSrc, leadsBarrelSrc].join('\n');
+const leadsDomainCode = stripComments(leadsDomainSrc);
+const commerceDomainSrc = [programsDomainSrc, leadsDomainSrc, commerceBarrelSrc].join('\n');
+const commerceDomainCode = stripComments(commerceDomainSrc);
+
 /**
  * Returns the body of a top-level (2-space indented) component function, e.g.
  * `const convertLeadToStudent = (...) => { ... };`. Used to prove that a
@@ -1042,8 +1081,8 @@ section('V. T3 cross-domain consumers still share the one store');
 
 check('Finance approval flow persists through the shared store',
   /persistUsers\(/.test(componentFunctionBody(adminDashCode, 'updateFinanceRecordStatus')));
-check('Lead conversion persists through the shared store',
-  /persistUsers\(/.test(componentFunctionBody(adminDashCode, 'convertLeadToStudent')));
+check('Lead conversion persists through the shared store (in Leads domain)',
+  /persistUsers\(/.test(componentFunctionBody(leadsHookCode, 'convertLeadToStudent')));
 check('contextual add persists through the shared store',
   /persistUsers\(\s*\[/.test(adminDashCode));
 check('record adapters are imported, not re-declared in the monolith',
@@ -1394,7 +1433,7 @@ check('AdminDashboard renders AdminContentLibraryPage for the content tab',
 check('AdminContentLibraryPage receives the canonical domain surface',
   /domain=\{contentDomain\}/.test(adminDashCode));
 check('AdminContentLibraryPage receives the editable program list (editor select)',
-  /<AdminContentLibraryPage[\s\S]{0,200}programs=\{programsList\}/.test(adminDashCode));
+  /<AdminContentLibraryPage[\s\S]{0,200}programs=\{programsDomain\.programsList\}/.test(adminDashCode));
 
 /* ------------------------------------------------------------------ */
 /* AI. Single Content authority                                        */
@@ -2316,10 +2355,8 @@ check('the Website extraction still owns the blog-asset key alone',
 
 section('BK. T6 T7 / T8 boundary (no over-extraction)');
 
-check('T7 marketing / programs / leads state still lives in AdminDashboard',
-  /\bprogramsList\b/.test(adminDashCode) &&
-    /\bleadsList\b/.test(adminDashCode) &&
-    /\bcampaignForm\b/.test(adminDashCode));
+check('T7B marketing state still lives in AdminDashboard (T7A extracted programs/leads)',
+  /\bcampaignForm\b/.test(adminDashCode));
 check('T8 finance state still lives in AdminDashboard',
   /\bfinanceTransactions\b/.test(adminDashCode) &&
     /\bfinanceEntries\b/.test(adminDashCode));
@@ -2348,6 +2385,420 @@ check('routing frozen: exactly the two canonical Review paths, no detail route',
     allAdminPaths().filter((p) => p.startsWith('/admin/review/')).length === 2);
 
 /* ------------------------------------------------------------------ */
+/* BM. T7A Commerce Programs modules + composition wiring               */
+/* ------------------------------------------------------------------ */
+
+section('BM. T7A Commerce Programs modules + composition wiring');
+
+check('the Programs page + domain hook + editor + confirm + barrel are present',
+  programsPageSrc.length > 0 && programsHookSrc.length > 0 &&
+  programsEditorSrc.length > 0 && programsConfirmSrc.length > 0 && programsBarrelSrc.length > 0);
+check('the Commerce barrel re-exports BOTH focused domains (programs + leads)',
+  /export \* from '\.\/programs'/.test(commerceBarrelCode) &&
+    /export \* from '\.\/leads'/.test(commerceBarrelCode));
+check('there is NO combined AdminCommerceWorkspacePage (two focused domains)',
+  !existsSync(join(commerceFeatureDir, 'AdminCommerceWorkspacePage.tsx')));
+check('AdminDashboard imports the Commerce domain barrel',
+  /from '\.\.\/features\/admin\/commerce'/.test(adminDashCode));
+check('AdminDashboard invokes the canonical Programs hook EXACTLY once',
+  (adminDashCode.match(/useAdminProgramsDomain\(/g) || []).length === 1);
+check('AdminDashboard renders the extracted Programs page',
+  /<AdminProgramsPage/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* BN. T7A single Programs authority                                    */
+/* ------------------------------------------------------------------ */
+
+section('BN. T7A single Programs authority (one hook, no duplicate state)');
+
+check('AdminDashboard no longer declares the programsList state',
+  !/const \[programsList, setProgramsList\]/.test(adminDashCode));
+check('AdminDashboard no longer declares editingProgram / programPendingSave / search / filter',
+  !/const \[editingProgram, setEditingProgram\]/.test(adminDashCode) &&
+    !/const \[programPendingSave, setProgramPendingSave\]/.test(adminDashCode) &&
+    !/const \[programSearchTerm, setProgramSearchTerm\]/.test(adminDashCode) &&
+    !/const \[programCategoryFilter, setProgramCategoryFilter\]/.test(adminDashCode));
+check('AdminDashboard no longer implements the Programs helpers',
+  !/const saveProgram = /.test(adminDashCode) &&
+    !/const deleteProgram = /.test(adminDashCode) &&
+    !/const resetProgramsToDefault = /.test(adminDashCode) &&
+    !/const programCategories = /.test(adminDashCode) &&
+    !/const filteredProgramsList = /.test(adminDashCode));
+check('the Programs state is declared exactly once (in the domain hook)',
+  (programsHookCode.match(/useState<Program\[\]>\(programs\)/g) || []).length === 1 &&
+    (programsHookCode.match(/useState<Program \| null>\(null\)/g) || []).length === 2 &&
+    (programsHookCode.match(/useState\(''\)/g) || []).length === 1 &&
+    (programsHookCode.match(/useState\('All'\)/g) || []).length === 1);
+check('the Programs PAGE does not invoke the hook (view only)',
+  !/useAdminProgramsDomain\(/.test(programsPageCode));
+check('the Programs page owns no canonical useState',
+  !/useState/.test(programsPageCode));
+check('no import cycle: the Programs domain never imports AdminDashboard',
+  !/AdminDashboard/.test(programsDomainCode) &&
+    !/LegacyAppStateProvider/.test(programsDomainCode));
+check('the Programs domain injects only programs / onProgramsChange / notify / recordAudit',
+  /programs: Program\[\];/.test(programsHookCode) &&
+    /onProgramsChange\?: \(programs: Program\[\]\) => void/.test(programsHookCode) &&
+    /notify: \(message: string\) => void/.test(programsHookCode) &&
+    /recordAudit: \(module: string, action: string, detail: string\) => void/.test(programsHookCode));
+
+/* ------------------------------------------------------------------ */
+/* BO. T7A program prop bridge                                          */
+/* ------------------------------------------------------------------ */
+
+section('BO. T7A program prop bridge (initial list + re-sync + onProgramsChange)');
+
+check('the hook initializes from the legacy programs prop',
+  /useState<Program\[\]>\(programs\)/.test(programsHookCode));
+check('the prop re-sync useEffect is preserved',
+  /useEffect\(\(\) => \{\s*setProgramsList\(programs\);/.test(programsHookCode) &&
+    /\[\s*programs\s*\]/.test(programsHookCode));
+check('onProgramsChange is invoked on save',
+  /onProgramsChange\?\.\(nextPrograms\)/.test(programsHookCode));
+check('onProgramsChange is invoked on delete',
+  /onProgramsChange\?\.\(nextPrograms\)/.test(programsHookCode));
+check('onProgramsChange is invoked on reset',
+  /onProgramsChange\?\.\(PROGRAMS\)/.test(programsHookCode));
+check('the six AdminDashboard props are unchanged',
+  /logout.*setView.*programs.*onProgramsChange.*blogPosts.*onBlogPostsChange/.test(adminDashSrc));
+
+/* ------------------------------------------------------------------ */
+/* BP. T7A program behaviour                                            */
+/* ------------------------------------------------------------------ */
+
+section('BP. T7A program behaviour (sanitization + confirm + search + contextual draft)');
+
+check('saveProgram preserves id/title/category/description/target/price/image/color/facilities/curriculum/packages sanitization',
+  /id: updatedProg\.id\.trim\(\) \|\| `program-\$\{Date\.now\(\)\}`/.test(programsHookCode) &&
+    /title: updatedProg\.title\.trim\(\) \|\| 'Program Tanpa Nama'/.test(programsHookCode) &&
+    /category: updatedProg\.category\.trim\(\) \|\| 'General'/.test(programsHookCode) &&
+    /description: updatedProg\.description\.trim\(\) \|\| 'Deskripsi program belum diisi\.'/.test(programsHookCode) &&
+    /target: updatedProg\.target\.trim\(\) \|\| 'Siswa umum'/.test(programsHookCode) &&
+    /price: updatedProg\.price\.trim\(\) \|\| 'Rp 0'/.test(programsHookCode) &&
+    /image: updatedProg\.image\.trim\(\) \|\| PROGRAMS\[0\]\.image/.test(programsHookCode) &&
+    /color: updatedProg\.color\.trim\(\) \|\| 'bg-brand-blue'/.test(programsHookCode) &&
+    /facilities: \(updatedProg\.facilities \|\| \[\]\)\.map\(\(item\) => item\.trim\(\)\)\.filter\(Boolean\)/.test(programsHookCode) &&
+    /curriculum: \(updatedProg\.curriculum \|\| \[\]\)\.filter\(\(item\) => item\.topic\.trim\(\) \|\| item\.description\.trim\(\)\)/.test(programsHookCode) &&
+    /packages: \(updatedProg\.packages \|\| \[\]\)\.map\(\(pkg, index\) => \(\{/.test(programsHookCode));
+check('package sanitization: id fallback / name fallback / price / duration / features filter',
+  /id: pkg\.id \|\| `pkg-\$\{Date\.now\(\)\}-\$\{index\}`/.test(programsHookCode) &&
+    /name: pkg\.name\.trim\(\) \|\| `Paket \$\{index \+ 1\}`/.test(programsHookCode) &&
+    /price: pkg\.price\.trim\(\) \|\| 'Rp 0'/.test(programsHookCode) &&
+    /duration: pkg\.duration\.trim\(\) \|\| '-'/.test(programsHookCode) &&
+    /features: pkg\.features\.map\(\(feature\) => feature\.trim\(\)\)\.filter\(Boolean\)/.test(programsHookCode));
+check('deleteProgram preserves browser confirm + filter + audit + toast',
+  /confirm\('Apakah Anda yakin ingin menghapus program ini\?'\)/.test(programsHookCode) &&
+    /nextPrograms = programsList\.filter\(p => p\.id !== id\)/.test(programsHookCode) &&
+    /recordAudit\('Program Inventory', 'Delete Program', id\)/.test(programsHookCode) &&
+    /notify\('Program berhasil dihapus\.'\)/.test(programsHookCode));
+check('resetProgramsToDefault preserves browser confirm + PROGRAMS + audit + toast',
+  /confirm\('Reset semua program demo ke data awal\?'\)/.test(programsHookCode) &&
+    /setProgramsList\(PROGRAMS\)/.test(programsHookCode) &&
+    /notify\('Program demo dikembalikan ke data awal\.'\)/.test(programsHookCode));
+check('search/filter preserves title/category/description/schedule keywords + category exact match',
+  /programSearchTerm\.toLowerCase\(\)/.test(programsHookCode) &&
+    /\$\{program\.title\} \$\{program\.category\} \$\{program\.description\} \$\{program\.schedule \|\| ''\}/.test(programsHookCode) &&
+    /programCategoryFilter === 'All' \|\| program\.category === programCategoryFilter/.test(programsHookCode));
+check('contextual draft openContextualProgramDraft preserves all fields verbatim',
+  /id: `program-\$\{Date\.now\(\)\}`/.test(programsHookCode) &&
+    /title: 'Program Baru'/.test(programsHookCode) &&
+    /category: 'Persiapan Akademik'/.test(programsHookCode) &&
+    /description: 'Deskripsi singkat program baru\.'/.test(programsHookCode) &&
+    /target: 'Siswa umum'/.test(programsHookCode) &&
+    /price: 'Rp 0'/.test(programsHookCode) &&
+    /facilities: \['Tryout', 'Modul Digital'\]/.test(programsHookCode) &&
+    /image: PROGRAMS\[0\]\.image/.test(programsHookCode) &&
+    /color: 'bg-brand-blue'/.test(programsHookCode) &&
+    /packages: \[\]/.test(programsHookCode));
+
+/* ------------------------------------------------------------------ */
+/* BQ. T7A program cross-domain                                         */
+/* ------------------------------------------------------------------ */
+
+section('BQ. T7A program cross-domain (SAME programsList feeds Users + Content + Leads)');
+
+check('Users domain receives programsDomain.programsList',
+  /programs: programsDomain\.programsList/.test(adminDashCode));
+check('Content Library editor receives programsDomain.programsList',
+  /<AdminContentLibraryPage[\s\S]{0,200}programs=\{programsDomain\.programsList\}/.test(adminDashCode));
+check('Leads domain receives programsDomain.programsList',
+  /programs: programsDomain\.programsList/.test(adminDashCode));
+check('Programs page receives the Programs domain (provides programsList)',
+  /<AdminProgramsPage[\s\S]{0,100}domain=\{programsDomain\}/.test(adminDashCode));
+check('NO second programsList useState exists anywhere in admin source',
+  (adminDashCode.match(/useState<Program\[\]>/g) || []).length === 0);
+
+/* ------------------------------------------------------------------ */
+/* BR. T7A Leads modules + composition wiring                           */
+/* ------------------------------------------------------------------ */
+
+section('BR. T7A Leads modules + composition wiring');
+
+check('the Leads page + domain hook + data + editor/convert/detail dialogs + barrel are present',
+  leadsPageSrc.length > 0 && leadsHookSrc.length > 0 && leadsDataSrc.length > 0 &&
+  leadsEditorSrc.length > 0 && leadsConvertSrc.length > 0 && leadsDetailSrc.length > 0 && leadsBarrelSrc.length > 0);
+check('AdminDashboard invokes the canonical Leads hook EXACTLY once',
+  (adminDashCode.match(/useAdminLeadsDomain\(/g) || []).length === 1);
+check('AdminDashboard renders the extracted Leads page',
+  /<AdminLeadsPage/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* BS. T7A single Leads authority                                       */
+/* ------------------------------------------------------------------ */
+
+section('BS. T7A single Leads authority (one hook, no duplicate state)');
+
+check('AdminDashboard no longer declares the Leads state',
+  !/const \[leadsList, setLeadsList\]/.test(adminDashCode) &&
+    !/const \[selectedLead, setSelectedLead\]/.test(adminDashCode) &&
+    !/const \[leadPendingConvert, setLeadPendingConvert\]/.test(adminDashCode) &&
+    !/const \[isLeadFormOpen, setIsLeadFormOpen\]/.test(adminDashCode) &&
+    !/const \[leadForm, setLeadForm\]/.test(adminDashCode) &&
+    !/const \[leadNoteDraft, setLeadNoteDraft\]/.test(adminDashCode));
+check('AdminDashboard no longer implements the Leads helpers',
+  !/const addDemoLead = /.test(adminDashCode) &&
+    !/const openNewLeadForm = /.test(adminDashCode) &&
+    !/const saveLeadForm = /.test(adminDashCode) &&
+    !/const convertLeadToStudent = /.test(adminDashCode) &&
+    !/const updateLeadStatus = /.test(adminDashCode) &&
+    !/const openLeadWhatsapp = /.test(adminDashCode) &&
+    !/const allLeads = /.test(adminDashCode));
+check('the Leads state is declared exactly once (in the domain hook)',
+  (leadsHookCode.match(/useState<Lead\[\]>\(MOCK_LEADS\)/g) || []).length === 1 &&
+    (leadsHookCode.match(/useState<Lead \| null>\(null\)/g) || []).length === 2 &&
+    (leadsHookCode.match(/useState\(false\)/g) || []).length >= 1 &&
+    (leadsHookCode.match(/useState\(''/g) || []).length >= 1);
+check('the Leads PAGE does not invoke the hook (view only)',
+  !/useAdminLeadsDomain\(/.test(leadsPageCode));
+check('the Leads page owns no canonical useState',
+  !/useState/.test(leadsPageCode));
+check('no import cycle: the Leads domain never imports AdminDashboard',
+  !/AdminDashboard/.test(leadsDomainCode) &&
+    !/LegacyAppStateProvider/.test(leadsDomainCode));
+check('the Leads domain injects programs / users / persistUsers / notify / recordAudit only',
+  /programs: Program\[\];/.test(leadsHookCode) &&
+    /users: UserAccount\[\];/.test(leadsHookCode) &&
+    /persistUsers: \(users: UserAccount\[\]\) => void/.test(leadsHookCode) &&
+    /notify: \(message: string\) => void/.test(leadsHookCode) &&
+    /recordAudit: \(module: string, action: string, detail: string\) => void/.test(leadsHookCode));
+
+/* ------------------------------------------------------------------ */
+/* BT. T7A lead storage                                                 */
+/* ------------------------------------------------------------------ */
+
+section('BT. T7A lead storage (exact theprams_demo_leads, old semantics, 13 keys)');
+
+check('the canonical Leads key is declared in the Leads data module',
+  /LEAD_STORAGE_KEY = 'theprams_demo_leads'/.test(leadsDataCode));
+check('the canonical Leads key is owned by the Leads domain (single logical owner)',
+  /theprams_demo_leads/.test(leadsDomainCode) &&
+    !/theprams_demo_leads/.test(programsDomainCode) &&
+    !/theprams_demo_leads/.test(inquiriesDomainCode) &&
+    !/theprams_demo_leads/.test(testimonialsDomainCode) &&
+    !/theprams_demo_leads/.test(websiteDomainCode) &&
+    !/theprams_demo_leads/.test(contentHookCode) &&
+    !/theprams_demo_leads/.test(usersHookCode) &&
+    !/theprams_demo_leads/.test(adminDashCode));
+check('the monolith no longer mentions the Leads key',
+  !/theprams_demo_leads/.test(adminDashCode));
+check('the local read keeps legacy JSON.parse(getItem || \'[]\') + catch [] semantics',
+  /JSON\.parse\(localStorage\.getItem\(LEAD_STORAGE_KEY\) \|\| '\[\]'\)/.test(leadsHookCode) &&
+    /catch \{[\s\S]{0,80}return \[\]/.test(leadsHookCode));
+check('the write keeps legacy localStorage.setItem(key, JSON.stringify(...))',
+  /localStorage\.setItem\(LEAD_STORAGE_KEY, JSON\.stringify\(nextLocalLeads\)\)/.test(leadsHookCode),
+  'no rename / no migration / no second key');
+const t7aKeyRegistry = [...new Set(
+  `${adminFeatureCode}\n${adminDashCode}`.match(/theprams_demo_[a-z_]+/g) || [])];
+check('the admin localStorage key registry is still exactly 13 keys',
+  t7aKeyRegistry.length === 13, `found ${t7aKeyRegistry.length}: ${t7aKeyRegistry.join(', ')}`);
+check('the Leads domain owns exactly ONE storage key',
+  [...new Set(leadsDomainCode.match(/theprams_demo_[a-z_]+/g) || [])].join(',') ===
+    'theprams_demo_leads');
+
+/* ------------------------------------------------------------------ */
+/* BU. T7A lead behaviour                                               */
+/* ------------------------------------------------------------------ */
+
+section('BU. T7A lead behaviour (addDemoLead / form / save / update / convert / WhatsApp)');
+
+check('addDemoLead is IN-MEMORY only (no localStorage write)',
+  /setLeadsList\(\[newLead, \.\.\.leadsList\]\)/.test(leadsHookCode) &&
+    !/localStorage\.setItem/.test(componentFunctionBody(leadsHookCode, 'addDemoLead')));
+check('openNewLeadForm resets name/email/phone + programOfInterest from first program + source Admin Input + status New',
+  /name: ''/.test(leadsHookCode) &&
+    /email: ''/.test(leadsHookCode) &&
+    /phone: ''/.test(leadsHookCode) &&
+    /programOfInterest: programs\[0\]\?\.title \|\| 'SNBT Kedokteran'/.test(leadsHookCode) &&
+    /source: 'Admin Input'/.test(leadsHookCode) &&
+    /status: 'New'/.test(leadsHookCode));
+check('saveLeadForm validates name + phone required + writes to localLeads + audit + toast',
+  /!leadForm\.name\.trim\(\) \|\| !leadForm\.phone\.trim\(\)/.test(leadsHookCode) &&
+    /id: `lead-\$\{Date\.now\(\)\}`/.test(leadsHookCode) &&
+    /email: leadForm\.email\.trim\(\) \|\| '-'/.test(leadsHookCode) &&
+    /nextLocalLeads = \[newLead, \.\.\.localLeads\]/.test(leadsHookCode) &&
+    /localStorage\.setItem\(LEAD_STORAGE_KEY, JSON\.stringify\(nextLocalLeads\)\)/.test(leadsHookCode) &&
+    /recordAudit\('Lead Management', 'Create Lead'/.test(leadsHookCode) &&
+    /notify\('Lead baru berhasil ditambahkan\.'\)/.test(leadsHookCode));
+check('updateLeadStatus preserves dual-store semantics + lastContactedAt for Contacted/Qualified/Converted + selectedLead + noteDraft',
+  /const localLeadExists = localLeads\.some\(\(item\) => item\.id === lead\.id\)/.test(leadsHookCode) &&
+    /localStorage\.setItem\(LEAD_STORAGE_KEY, JSON\.stringify\(nextLocalLeads\)\)/.test(leadsHookCode) &&
+    /setLeadsList\(\(prev\) => prev\.map\(\(item\) => item\.id === lead\.id \? nextLead : item\)\)/.test(leadsHookCode) &&
+    /lastContactedAt: \['Contacted', 'Qualified', 'Converted'\].includes\(status\)/.test(leadsHookCode) &&
+    /setSelectedLead\(nextLead\)/.test(leadsHookCode) &&
+    /setLeadNoteDraft\(nextLead\.note \|\| ''\)/.test(leadsHookCode));
+check('convertLeadToStudent uses canonical Users persistUsers (same email + role Student) + exact UserAccount fields',
+  /persistUsers\(\[/.test(leadsHookCode) &&
+    /id: `student-\$\{lead\.id\}`/.test(leadsHookCode) &&
+    /name: lead\.name/.test(leadsHookCode) &&
+    /email: lead\.email/.test(leadsHookCode) &&
+    /role: 'Student'/.test(leadsHookCode) &&
+    /program: lead\.programOfInterest/.test(leadsHookCode) &&
+    /status: 'Active'/.test(leadsHookCode) &&
+    /avatar: `https:\/\/i\.pravatar\.cc\/150\?u=\$\{lead\.id\}`/.test(leadsHookCode) &&
+    /accountType: 'Free'/.test(leadsHookCode) &&
+    /packageName: 'Trial \/ Lead'/.test(leadsHookCode) &&
+    /paymentStatus: 'Converted'/.test(leadsHookCode) &&
+    /source: 'Konversi Lead'/.test(leadsHookCode));
+check('WhatsApp phone normalization + fallback + greeting + New->Contacted transition',
+  /String\(lead\.phone \|\| ''\)\.replace\(\/\\D\/g, ''\)\.replace\(\/\^0\/, '62'\)/.test(leadsHookCode) &&
+    /6281234567890/.test(leadsHookCode) &&
+    /Halo \$\{lead\.name\}, saya admin The Prams/.test(leadsHookCode) &&
+    /lead\.status === 'New' \? 'Contacted' : lead\.status/.test(leadsHookCode) &&
+    /window\.open\(`https:\/\/wa\.me\//.test(leadsHookCode) &&
+    /'_blank'/.test(leadsHookCode));
+
+/* ------------------------------------------------------------------ */
+/* BV. T7A Users cross-domain                                           */
+/* ------------------------------------------------------------------ */
+
+section('BV. T7A Users cross-domain (Leads receives usersDomain.users + persistUsers)');
+
+check('Leads receives usersDomain.users + usersDomain.persistUsers',
+  /users: usersDomain\.users/.test(adminDashCode) &&
+    /persistUsers: usersDomain\.persistUsers/.test(adminDashCode));
+check('NO second UserAccount persistence implementation in Leads',
+  !/const persistUsers = /.test(leadsHookCode) &&
+    !/localStorage\.setItem.*user/.test(leadsHookCode));
+
+/* ------------------------------------------------------------------ */
+/* BW. T7A composition                                                  */
+/* ------------------------------------------------------------------ */
+
+section('BW. T7A composition (Programs + Leads tabs render extracted pages)');
+
+check('Programs tab renders AdminProgramsPage from programsDomain',
+  /<AdminProgramsPage domain=\{programsDomain\}/.test(adminDashCode));
+check('Leads tab renders AdminLeadsPage from leadsDomain',
+  /<AdminLeadsPage domain=\{leadsDomain\}/.test(adminDashCode));
+check('Old Programs JSX absent from AdminDashboard',
+  !/Program Inventory & Curriculum/.test(adminDashCode) &&
+    !/Manage all educational offerings/.test(adminDashCode) &&
+    !/onClick=\{\(\) => setEditingProgram\(item\)\}/.test(adminDashCode));
+check('Old Leads JSX absent from AdminDashboard',
+  !/Lead Management/.test(adminDashCode) &&
+    !/Capture and convert potential students/.test(adminDashCode) &&
+    !/onClick=\{openNewLeadForm\}/.test(adminDashCode) &&
+    !/allLeads\.map\(\(lead\) =>/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* BX. T7A accessibility source contract                                */
+/* ------------------------------------------------------------------ */
+
+section('BX. T7A accessibility source contract for Programs + Leads surfaces');
+
+check('Programs primary actions declare a practical >=44px target',
+  (programsPageCode.match(/min-h-\[44px\]/g) || []).length >= 3);
+check('Programs row Edit/Delete have aria-labels and >=44px targets',
+  /aria-label=\{`Edit program \$\{item\.title\}`\}/.test(programsPageCode) &&
+    /aria-label=\{`Hapus program \$\{item\.title\}`\}/.test(programsPageCode) &&
+    (programsPageCode.match(/min-w-\[44px\]/g) || []).length >= 2 &&
+    (programsPageCode.match(/min-h-\[44px\]/g) || []).length >= 2);
+check('Programs editor close + footer actions have aria-labels + >=44px',
+  /aria-label="Tutup editor program"/.test(programsEditorCode) &&
+    /min-w-\[44px\] min-h-\[44px\]/.test(programsEditorCode) &&
+    /min-h-\[44px\]/.test(programsConfirmCode) &&
+    (programsConfirmCode.match(/min-h-\[44px\]/g) || []).length >= 2);
+check('Leads row actions have aria-labels + >=44px + focus-within reveal',
+  /aria-label=\{`Convert \$\{lead\.name\} menjadi siswa`\}/.test(leadsPageCode) &&
+    /aria-label=\{`Lihat detail lead \$\{lead\.name\}`\}/.test(leadsPageCode) &&
+    (leadsPageCode.match(/min-w-\[44px\]/g) || []).length >= 2 &&
+    (leadsPageCode.match(/min-h-\[44px\]/g) || []).length >= 2 &&
+    /group-focus-within:opacity-100/.test(leadsPageCode));
+check('Leads dialog closes have aria-labels + >=44px targets',
+  /aria-label="Tutup formulir lead"/.test(leadsEditorCode) &&
+    /aria-label="Tutup detail lead"/.test(leadsDetailCode) &&
+    (leadsEditorCode.match(/min-w-\[44px\] min-h-\[44px\]/g) || []).length >= 1 &&
+    (leadsDetailCode.match(/min-w-\[44px\] min-h-\[44px\]/g) || []).length >= 1);
+check('Leads form fields carry accessible names',
+  /aria-label="Nama lead"/.test(leadsEditorCode) &&
+    /aria-label="Nomor WhatsApp lead"/.test(leadsEditorCode) &&
+    /aria-label="Email lead"/.test(leadsEditorCode) &&
+    /aria-label="Status pipeline lead"/.test(leadsEditorCode) &&
+    /aria-label="Minat program lead"/.test(leadsEditorCode) &&
+    /aria-label="Sumber lead"/.test(leadsEditorCode) &&
+    /aria-label="Catatan awal lead"/.test(leadsEditorCode) &&
+    /aria-label="Catatan follow-up lead"/.test(leadsDetailCode));
+check('Programs / Leads migrated surfaces avoid raw brand / weak contrast tokens',
+  !/text-brand-blue|text-brand-orange|text-emerald-600|text-amber-600|text-red-600/.test(commerceDomainCode));
+
+/* ------------------------------------------------------------------ */
+/* BY. T7A T7B Marketing freeze                                         */
+/* ------------------------------------------------------------------ */
+
+section('BY. T7A T7B Marketing freeze (Marketing state/helpers/JSX/modal stay in AdminDashboard)');
+
+check('Marketing state still lives in AdminDashboard',
+  /\bisCampaignEditorOpen\b/.test(adminDashCode) &&
+    /\bcampaignForm\b/.test(adminDashCode) &&
+    /\bcampaignTotalBudget\b/.test(adminDashCode));
+check('Marketing helpers still in AdminDashboard',
+  /\bcurrencyOptions\b/.test(adminDashCode) &&
+    /\bparseCurrencyAmount\b/.test(adminDashCode) &&
+    /\bformatCurrencyAmount\b/.test(adminDashCode));
+check('the Commerce domain does NOT define Marketing state',
+  !/isCampaignEditorOpen|campaignForm|campaignTotalBudget|campaignDailyBudget|campaignEstimatedDays|currencyOptions|parseCurrencyAmount|formatCurrencyAmount/.test(commerceDomainCode));
+check('AdminDashboard still renders Marketing & Campaigns JSX',
+  /Marketing & Campaigns/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* BZ. T7A T8 / T9 boundary                                             */
+/* ------------------------------------------------------------------ */
+
+section('BZ. T7A T8 / T9 boundary (no over-extraction)');
+
+check('T8 Finance state still lives in AdminDashboard',
+  /\bfinanceTransactions\b/.test(adminDashCode) &&
+    /\bfinanceEntries\b/.test(adminDashCode) &&
+    /\bfinanceRealizations\b/.test(adminDashCode) &&
+    /\bassetEntries\b/.test(adminDashCode));
+check('T9 Admin Team state still lives in AdminDashboard',
+  /\badminTeam\b/.test(adminDashCode));
+check('the Commerce domain does NOT define T8 / T9 state',
+  !/financeTransactions|financeEntries|financeRealizations|assetEntries|paymentProofs|adminTeam/.test(commerceDomainCode));
+
+/* ------------------------------------------------------------------ */
+/* CA. T7A security + storage                                           */
+/* ------------------------------------------------------------------ */
+
+section('CA. T7A security + storage (no backend, no new key, SEC-P1-03 open)');
+
+check('SEC-P1-03 still open: no Supabase/auth/AI/backend in the Commerce domain',
+  !/@supabase|supabase|GoogleGenAI|@google\/genai|createClient|\bopenai\b|authorization/i.test(commerceDomainCode));
+check('no WhatsApp SDK / API call: browser navigation only',
+  /window\.open\(/.test(leadsHookCode) &&
+    !/api\.whatsapp|\bfetch\(|XMLHttpRequest|navigator\.sendBeacon/i.test(commerceDomainCode));
+check('the Commerce domain adds no access-control language',
+  !/\b(?:403|Forbidden|unauthorized|access control)\b/i.test(commerceDomainCode));
+check('no new storage key: Programs own none, Leads own theprams_demo_leads',
+  !/theprams_demo_/.test(programsDomainCode) &&
+    [...new Set(leadsDomainCode.match(/theprams_demo_[a-z_]+/g) || [])].join(',') ===
+    'theprams_demo_leads');
+check('routing frozen: exactly the two canonical Commerce paths (programs + leads), marketing + finance stay in monolith',
+  allAdminPaths().includes('/admin/commerce/programs') &&
+    allAdminPaths().includes('/admin/commerce/leads') &&
+    allAdminPaths().filter((p) => p.startsWith('/admin/commerce/')).length === 4);
+
+/* ------------------------------------------------------------------ */
 /* Report                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -2359,7 +2810,7 @@ if (failures.length) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }
-console.log('B1.4D-T6 admin workspace contract: PASS');
+console.log('B1.4D-T7A admin workspace contract: PASS');
 process.exit(0);
 
 /* ------------------------------------------------------------------ */

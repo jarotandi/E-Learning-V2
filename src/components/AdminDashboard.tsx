@@ -1,40 +1,31 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Users, 
-  BookOpen, 
-  Rocket, 
-  DollarSign, 
-  MoreVertical,
   Plus,
   Search,
   Bell,
   Filter,
   Trash2,
   Edit2,
-  UserPlus,
-  Award,
-  FileText,
   Shield,
-  ThumbsUp,
   Calendar,
-  Clock,
-  LineChart as LineChartIcon,
-  BarChart as BarChartIcon,
-  Globe,
-  Wallet,
-  Megaphone,
   Layout,
-  Banknote,
-  TrendingDown,
+  Wallet,
   TrendingUp,
   Target,
   Download,
-  Settings,
   Upload,
   Save,
   X,
-  Info,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  Megaphone,
+  Banknote,
+  Clock,
+  Award,
+  DollarSign,
+  TrendingDown,
+  LineChart as LineChartIcon
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -42,7 +33,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import { BLOG_POSTS, USER_ACCOUNTS, MOCK_FEEDBACKS, PROGRAMS } from '../constants';
-import { BlogPost, UserAccount, Lead, Program, ProgramPackage } from '../types';
+import { BlogPost, UserAccount, Program } from '../types';
 import {
   ADMIN_ROLE_PERMISSIONS,
   isAdminTabAllowed,
@@ -81,12 +72,18 @@ import {
   AdminTestimonialsPage,
   useAdminTestimonialsDomain,
 } from '../features/admin/review';
+import {
+  AdminProgramsPage,
+  useAdminProgramsDomain,
+  AdminProgramEditorDialog,
+  AdminProgramSaveConfirmDialog,
+  AdminLeadsPage,
+  useAdminLeadsDomain,
+  AdminLeadEditorDialog,
+  AdminLeadConvertDialog,
+  AdminLeadDetailDialog,
+} from '../features/admin/commerce';
 
-const MOCK_LEADS: Lead[] = [
-  { id: '1', name: 'Rina Wijaya', email: 'rina@mail.com', phone: '0812345678', programOfInterest: 'SNBT Kedokteran', source: 'Instagram', status: 'Qualified', createdAt: '2026-04-20' },
-  { id: '2', name: 'Andi Pratama', email: 'andi@mail.com', phone: '0819876543', programOfInterest: 'SKD CPNS', source: 'Google', status: 'New', createdAt: '2026-04-22' },
-  { id: '3', name: 'Siska Putri', email: 'siska@mail.com', phone: '0811223344', programOfInterest: 'Kedinasan', source: 'TikTok', status: 'Contacted', createdAt: '2026-04-23' },
-];
 
 const revenueData = [
   { name: 'Mon', rev: 4000, students: 240 },
@@ -121,7 +118,6 @@ const formatCurrencyAmount = (value: string | number, currencyCode = 'IDR') => {
   return `${currency.symbol} ${amount.toLocaleString(currency.locale)}`;
 };
 
-const LEAD_STORAGE_KEY = 'theprams_demo_leads';
 
 const parseRupiah = (value: string | number | undefined) => {
   if (typeof value === 'number') return value;
@@ -252,8 +248,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     landingPage: '/tryout-gratis',
     note: 'Fokus akuisisi lead WhatsApp dan pendaftaran tryout gratis.'
   });
-  const [programSearchTerm, setProgramSearchTerm] = useState('');
-  const [programCategoryFilter, setProgramCategoryFilter] = useState('All');
   const [financeTransactions, setFinanceTransactions] = useState<any[]>(() => readStorageArray('theprams_demo_transactions'));
   const [paymentProofs, setPaymentProofs] = useState<any[]>(() => readStorageArray('theprams_demo_payment_proofs'));
   const [financeEntries, setFinanceEntries] = useState<FinanceEntry[]>(() => readStorageArray('theprams_demo_finance_entries', defaultFinanceEntries));
@@ -292,28 +286,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   const [paymentTypeFilter, setPaymentTypeFilter] = useState('All');
   const [financeMetricDetail, setFinanceMetricDetail] = useState<null | { title: string; rows: any[]; description: string }>(null);
   const [selectedFinanceRecord, setSelectedFinanceRecord] = useState<any | null>(null);
-  const [leadsList, setLeadsList] = useState<Lead[]>(MOCK_LEADS);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [leadPendingConvert, setLeadPendingConvert] = useState<Lead | null>(null);
-  const [isLeadFormOpen, setIsLeadFormOpen] = useState(false);
-  const [leadForm, setLeadForm] = useState<Omit<Lead, 'id' | 'createdAt'>>({
-    name: '',
-    email: '',
-    phone: '',
-    programOfInterest: programs[0]?.title || 'SNBT Kedokteran',
-    source: 'Admin Input',
-    status: 'New',
-    note: '',
-    lastContactedAt: ''
-  });
-  const [leadNoteDraft, setLeadNoteDraft] = useState('');
-  const localLeads: Lead[] = (() => {
-    try {
-      return JSON.parse(localStorage.getItem(LEAD_STORAGE_KEY) || '[]');
-    } catch {
-      return [];
-    }
-  })();
   const localTransactions = (() => {
     try {
       return JSON.parse(localStorage.getItem('theprams_demo_transactions') || '[]');
@@ -636,113 +608,11 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     window.open(`https://wa.me/${phone || '6281234567890'}?text=${encodeURIComponent(buildReviewTemplate(tx))}`, '_blank');
   };
 
-  const addDemoLead = () => {
-    const newLead: Lead = {
-      id: `lead-${Date.now()}`,
-      name: 'Lead Baru',
-      email: 'leadbaru@mail.com',
-      phone: '081234000999',
-      programOfInterest: 'SNBT Kedokteran',
-      source: 'Admin Input',
-      status: 'New',
-      createdAt: new Date().toISOString().slice(0, 10)
-    };
-    setLeadsList([newLead, ...leadsList]);
-    notify('Lead baru ditambahkan.');
-  };
 
-  const allLeads = useMemo(() => [...localLeads, ...leadsList], [localLeads, leadsList]);
 
-  const openNewLeadForm = () => {
-    setLeadForm({
-      name: '',
-      email: '',
-      phone: '',
-      programOfInterest: programsList[0]?.title || 'SNBT Kedokteran',
-      source: 'Admin Input',
-      status: 'New',
-      note: '',
-      lastContactedAt: ''
-    });
-    setIsLeadFormOpen(true);
-  };
-
-  const saveLeadForm = () => {
-    if (!leadForm.name.trim() || !leadForm.phone.trim()) {
-      notify('Nama dan nomor WhatsApp lead wajib diisi.');
-      return;
-    }
-    const newLead: Lead = {
-      id: `lead-${Date.now()}`,
-      name: leadForm.name.trim(),
-      email: leadForm.email.trim() || '-',
-      phone: leadForm.phone.trim(),
-      programOfInterest: leadForm.programOfInterest.trim() || 'Konsultasi Program',
-      source: leadForm.source.trim() || 'Admin Input',
-      status: leadForm.status,
-      note: leadForm.note?.trim(),
-      lastContactedAt: leadForm.lastContactedAt || undefined,
-      createdAt: new Date().toISOString().slice(0, 10)
-    };
-    const nextLocalLeads = [newLead, ...localLeads];
-    localStorage.setItem(LEAD_STORAGE_KEY, JSON.stringify(nextLocalLeads));
-    setIsLeadFormOpen(false);
-    recordAudit('Lead Management', 'Create Lead', `${newLead.name} - ${newLead.programOfInterest}`);
-    notify('Lead baru berhasil ditambahkan.');
-  };
-
-  const convertLeadToStudent = (lead: Lead) => {
-    const exists = users.some((user) => user.email === lead.email && user.role === 'Student');
-    if (!exists) {
-      persistUsers([
-        {
-          id: `student-${lead.id}`,
-          name: lead.name,
-          email: lead.email,
-          role: 'Student',
-          program: lead.programOfInterest,
-          status: 'Active',
-          avatar: `https://i.pravatar.cc/150?u=${lead.id}`,
-          joinedAt: new Date().toISOString().slice(0, 10),
-          accountType: 'Free',
-          packageName: 'Trial / Lead',
-          paymentStatus: 'Converted',
-          source: 'Konversi Lead'
-        },
-        ...users
-      ]);
-    }
-    updateLeadStatus(lead, 'Converted', 'Lead dikonversi menjadi siswa gratis/trial.');
-    setLeadPendingConvert(null);
-    notify(exists ? `${lead.name} sudah terdaftar sebagai siswa. Status lead ditandai Converted.` : `${lead.name} berhasil dikonversi menjadi siswa.`);
-  };
-
-  const updateLeadStatus = (lead: Lead, status: Lead['status'], note?: string) => {
-    const nextLead: Lead = {
-      ...lead,
-      status,
-      note: note ?? lead.note,
-      lastContactedAt: ['Contacted', 'Qualified', 'Converted'].includes(status) ? new Date().toLocaleString('id-ID') : lead.lastContactedAt
-    };
-    const localLeadExists = localLeads.some((item) => item.id === lead.id);
-    if (localLeadExists) {
-      const nextLocalLeads = localLeads.map((item) => item.id === lead.id ? nextLead : item);
-      localStorage.setItem(LEAD_STORAGE_KEY, JSON.stringify(nextLocalLeads));
-    } else {
-      setLeadsList((prev) => prev.map((item) => item.id === lead.id ? nextLead : item));
-    }
-    setSelectedLead(nextLead);
-    setLeadNoteDraft(nextLead.note || '');
-  };
-
-  const openLeadWhatsapp = (lead: Lead) => {
-    const phone = String(lead.phone || '').replace(/\D/g, '').replace(/^0/, '62');
-    window.open(`https://wa.me/${phone || '6281234567890'}?text=${encodeURIComponent(`Halo ${lead.name}, saya admin The Prams. Saya melihat kamu tertarik dengan ${lead.programOfInterest}. Boleh saya bantu jelaskan pilihan program yang paling sesuai?`)}`, '_blank');
-    updateLeadStatus(lead, lead.status === 'New' ? 'Contacted' : lead.status, lead.note);
-  };
 
   const runContextualAdd = () => {
-    if (activeTab === 'leads') addDemoLead();
+    if (activeTab === 'leads') leadsDomain.addDemoLead();
     else if (activeTab === 'users') {
       const newUser: UserAccount = {
         id: Date.now().toString(),
@@ -756,18 +626,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     persistUsers([newUser, ...users]);
     notify('Staff baru ditambahkan.');
     } else if (activeTab === 'programs') {
-      setEditingProgram({
-        id: `program-${Date.now()}`,
-        title: 'Program Baru',
-        category: 'Persiapan Akademik',
-        description: 'Deskripsi singkat program baru.',
-        target: 'Siswa umum',
-        price: 'Rp 0',
-        facilities: ['Tryout', 'Modul Digital'],
-        image: PROGRAMS[0].image,
-        color: 'bg-brand-blue',
-        packages: []
-      });
+      programsDomain.openContextualProgramDraft();
     } else if (activeTab === 'questions') {
       questionsDomain.openContextualQuestionDraft();
     } else if (activeTab === 'content') {
@@ -788,7 +647,14 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   // IN-MEMORY (seeded from the TESTIMONIALS constant) — no persistence is
   // added, and only `notify` is injected.
   const testimonialsDomain = useAdminTestimonialsDomain({ notify });
-  const [programsList, setProgramsList] = useState<Program[]>(programs);
+  // B1.4D-T7A — Commerce Programs domain.
+  //
+  // Programs becomes the CANONICAL source for the editable program list. The
+  // legacy prop bridge is preserved (initial state from `programs` + the
+  // `useEffect` re-sync) with NO persistence added. The same `programsList`
+  // now feeds the Users domain, the Content Library editor, the Leads domain
+  // and the Programs page — there is deliberately NO second programs store.
+  const programsDomain = useAdminProgramsDomain({ programs, onProgramsChange, notify, recordAudit });
 
   // B1.4D-T3 — Users domain.
   //
@@ -800,11 +666,25 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   // contextual add. `notify`/`recordAudit`/`programsList` are injected so the
   // hook never imports this component.
   const usersDomain = useAdminUsersDomain({
-    programs: programsList,
+    programs: programsDomain.programsList,
     notify,
     recordAudit,
   });
   const { users, persistUsers } = usersDomain;
+  // B1.4D-T7A — Commerce Leads domain.
+  //
+  // Leads has a DUAL data source (persisted `theprams_demo_leads` + the
+  // in-memory seed/demo list). It consumes the SAME canonical Programs list
+  // and the SAME canonical Users store (`users` / `persistUsers`) so Lead →
+  // Student conversion persists through `usersDomain.persistUsers` — no second
+  // Users store and no second UserAccount persistence implementation.
+  const leadsDomain = useAdminLeadsDomain({
+    programs: programsDomain.programsList,
+    users: usersDomain.users,
+    persistUsers: usersDomain.persistUsers,
+    notify,
+    recordAudit,
+  });
 
   // B1.4D-T4 — Question Bank (academic) domain.
   //
@@ -836,8 +716,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   // `notify` and `recordAudit` are injected so the hook never imports this
   // component.
   const websiteDomain = useAdminWebsiteDomain({ blogPosts, onBlogPostsChange, notify, recordAudit });
-  const [editingProgram, setEditingProgram] = useState<Program | null>(null);
-  const [programPendingSave, setProgramPendingSave] = useState<Program | null>(null);
   // B1.4D-T6 — Review / Inquiries domain.
   //
   // The Inquiries state used to live inline here, ABOVE the conditional
@@ -847,72 +725,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   // `notify` are injected so the hook never imports this component.
   const inquiriesDomain = useAdminInquiriesDomain({ notify, recordAudit, queueNotification });
 
-  useEffect(() => {
-    setProgramsList(programs);
-  }, [programs]);
 
-  const saveProgram = (updatedProg: Program) => {
-    const sanitizedProgram: Program = {
-      ...updatedProg,
-      id: updatedProg.id.trim() || `program-${Date.now()}`,
-      title: updatedProg.title.trim() || 'Program Tanpa Nama',
-      category: updatedProg.category.trim() || 'General',
-      description: updatedProg.description.trim() || 'Deskripsi program belum diisi.',
-      target: updatedProg.target.trim() || 'Siswa umum',
-      price: updatedProg.price.trim() || 'Rp 0',
-      image: updatedProg.image.trim() || PROGRAMS[0].image,
-      color: updatedProg.color.trim() || 'bg-brand-blue',
-      facilities: (updatedProg.facilities || []).map((item) => item.trim()).filter(Boolean),
-      curriculum: (updatedProg.curriculum || []).filter((item) => item.topic.trim() || item.description.trim()),
-      packages: (updatedProg.packages || []).map((pkg, index) => ({
-        ...pkg,
-        id: pkg.id || `pkg-${Date.now()}-${index}`,
-        name: pkg.name.trim() || `Paket ${index + 1}`,
-        price: pkg.price.trim() || 'Rp 0',
-        duration: pkg.duration.trim() || '-',
-        features: pkg.features.map((feature) => feature.trim()).filter(Boolean)
-      }))
-    };
-    let nextPrograms: Program[];
-    if (programsList.find(p => p.id === sanitizedProgram.id)) {
-      nextPrograms = programsList.map(p => p.id === sanitizedProgram.id ? sanitizedProgram : p);
-    } else {
-      nextPrograms = [...programsList, sanitizedProgram];
-    }
-    setProgramsList(nextPrograms);
-    onProgramsChange?.(nextPrograms);
-    setEditingProgram(null);
-    recordAudit('Program Inventory', 'Save Program', sanitizedProgram.title);
-    notify('Program berhasil disimpan dan tersinkron ke menu program.');
-  };
-
-  const deleteProgram = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus program ini?')) {
-      const nextPrograms = programsList.filter(p => p.id !== id);
-      setProgramsList(nextPrograms);
-      onProgramsChange?.(nextPrograms);
-      recordAudit('Program Inventory', 'Delete Program', id);
-      notify('Program berhasil dihapus.');
-    }
-  };
-
-  const resetProgramsToDefault = () => {
-    if (confirm('Reset semua program demo ke data awal?')) {
-      setProgramsList(PROGRAMS);
-      onProgramsChange?.(PROGRAMS);
-      notify('Program demo dikembalikan ke data awal.');
-    }
-  };
-
-  const programCategories = useMemo(() => ['All', ...Array.from(new Set(programsList.map((program) => program.category)))], [programsList]);
-  const filteredProgramsList = useMemo(() => {
-    return programsList.filter((program) => {
-      const keyword = programSearchTerm.toLowerCase();
-      const matchesSearch = `${program.title} ${program.category} ${program.description} ${program.schedule || ''}`.toLowerCase().includes(keyword);
-      const matchesCategory = programCategoryFilter === 'All' || program.category === programCategoryFilter;
-      return matchesSearch && matchesCategory;
-    });
-  }, [programsList, programSearchTerm, programCategoryFilter]);
 
   const financeRows = useMemo(() => {
     const demoRows = [
@@ -1107,81 +920,13 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
             {activeTab === 'overview' && <AdminOverviewPage />}
 
             {activeTab === 'leads' && (
-              <div className="animate-in fade-in duration-500 space-y-6">
-                <div className="flex justify-between items-center">
-                   <div>
-                      <h2 className="text-2xl font-bold text-brand-navy">Lead Management</h2>
-                      <p className="text-sm text-slate-500">Capture and convert potential students</p>
-                   </div>
-                   <button onClick={openNewLeadForm} className="btn-primary py-2 px-6">
-                      <Plus size={18} />
-                      Add New Lead
-                   </button>
-                </div>
-
-                <div className="card-premium overflow-hidden">
-                   <table className="w-full text-left">
-                      <thead className="bg-slate-50 border-b border-slate-100">
-                         <tr>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Lead Name</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Interest</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Source</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                         {allLeads.map((lead) => (
-                           <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors group">
-                              <td className="px-6 py-4">
-                                 <p className="text-sm font-bold text-brand-navy">{lead.name}</p>
-                                 <p className="text-[10px] text-slate-400 font-medium">{lead.email}</p>
-                              </td>
-                              <td className="px-6 py-4 text-sm font-bold text-slate-600">{lead.programOfInterest}</td>
-                              <td className="px-6 py-4">
-                                 <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[10px] font-bold uppercase">{lead.source}</span>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
-                                    lead.status === 'Qualified' ? 'bg-emerald-50 text-emerald-600' :
-                                    'bg-amber-50 text-amber-600'
-                                 }`}>
-                                    {lead.status}
-                                 </span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                 <div className="flex items-center justify-end gap-2 group-hover:opacity-100 opacity-0 transition-opacity">
-                                    <button
-                                      onClick={() => setLeadPendingConvert(lead)}
-                                      className="p-2 text-brand-blue hover:bg-blue-50 rounded-lg"
-                                      title="Convert to Student"
-                                    >
-                                       <UserPlus size={16} />
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setSelectedLead(lead);
-                                        setLeadNoteDraft(lead.note || '');
-                                      }}
-                                      className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg"
-                                      title="Detail Lead"
-                                    >
-                                       <MoreVertical size={16} />
-                                    </button>
-                                 </div>
-                              </td>
-                           </tr>
-                         ))}
-                      </tbody>
-                   </table>
-                </div>
-              </div>
+              <AdminLeadsPage domain={leadsDomain} />
             )}
 
              {activeTab === 'users' && (
               <AdminUsersPage
                 domain={usersDomain}
-                programs={programsList}
+                programs={programsDomain.programsList}
                 rolePermissions={rolePermissions}
                 notify={notify}
               />
@@ -1194,7 +939,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
             )}
 
             {activeTab === 'content' && (
-              <AdminContentLibraryPage domain={contentDomain} programs={programsList} />
+              <AdminContentLibraryPage domain={contentDomain} programs={programsDomain.programsList} />
             )}
 
             {activeTab === 'marketing' && (
@@ -1871,143 +1616,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
             )}
 
             {activeTab === 'programs' && (
-              <div className="animate-in fade-in duration-500 space-y-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                   <div>
-                      <h2 className="text-2xl font-bold text-brand-navy">Program Inventory & Curriculum</h2>
-                      <p className="text-sm text-slate-500">Manage all educational offerings and their detailed specifications</p>
-                   </div>
-                   <div className="flex items-center gap-3 w-full md:w-auto">
-                      <div className="flex-1 flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl">
-                        <Search size={18} className="text-slate-400" />
-                        <input
-                          type="text"
-                          value={programSearchTerm}
-                          onChange={(event) => setProgramSearchTerm(event.target.value)}
-                          placeholder="Search programs..."
-                          className="text-sm bg-transparent border-none focus:ring-0 font-medium"
-                        />
-                      </div>
-                      <button
-                        onClick={resetProgramsToDefault}
-                        className="btn-secondary py-2 px-5 whitespace-nowrap"
-                      >
-                         Reset
-                      </button>
-                      <button
-                        onClick={() => runContextualAdd()}
-                        className="btn-primary py-2 px-6 whitespace-nowrap"
-                      >
-                         <Plus size={18} />
-                         New Program
-                      </button>
-                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                   {[
-                     { label: 'Courses', value: String(programsList.length), icon: BookOpen, color: 'text-brand-blue' },
-                     { label: 'Packages', value: String(programsList.reduce((sum, program) => sum + (program.packages?.length || 0), 0)), icon: DollarSign, color: 'text-emerald-500' },
-                     { label: 'Categories', value: String(programCategories.length - 1), icon: TrendingUp, color: 'text-brand-orange' },
-                     { label: 'Published', value: String(programsList.length), icon: Globe, color: 'text-indigo-500' }
-                   ].map((p, i) => (
-                     <div key={i} className="card-premium p-5 flex flex-col gap-2">
-                        <div className={`w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center ${p.color}`}>
-                           <p.icon size={20} />
-                        </div>
-                        <div>
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{p.label}</p>
-                           <p className="text-lg font-black text-brand-navy">{p.value}</p>
-                        </div>
-                     </div>
-                   ))}
-                </div>
-
-                <div className="card-premium overflow-hidden">
-                   <div className="p-6 border-b border-slate-100 flex items-center gap-4">
-                      <label className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-bold text-slate-500">
-                         <Filter size={14} />
-                         <span>Category:</span>
-                         <select
-                           value={programCategoryFilter}
-                           onChange={(event) => setProgramCategoryFilter(event.target.value)}
-                           className="bg-transparent outline-none font-black text-slate-600"
-                         >
-                           {programCategories.map((category) => (
-                             <option key={category} value={category}>{category}</option>
-                           ))}
-                         </select>
-                      </label>
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-bold text-slate-500">
-                         <TrendingUp size={14} />
-                         <span>Sort: Newest</span>
-                      </div>
-                   </div>
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50/50">
-                         <tr>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Program & Schedule</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Visibility</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                         {filteredProgramsList.map((item) => (
-                           <tr key={item.id} className="hover:bg-slate-50/30 transition-colors group">
-                              <td className="px-6 py-4">
-                                 <div className="flex items-center gap-4">
-                                   <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
-                                      <img src={item.image} className="w-full h-full object-cover" alt="" />
-                                   </div>
-                                   <div>
-                                      <p className="text-sm font-bold text-brand-navy line-clamp-1">{item.title}</p>
-                                      <p className="text-[10px] text-slate-400 font-medium italic">{item.schedule || 'TBA'}</p>
-                                   </div>
-                                 </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <span className="px-2 py-1 bg-blue-50 text-brand-blue rounded-lg text-[10px] font-black uppercase tracking-wider">{item.category}</span>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <p className="text-sm font-black text-brand-navy">{item.price}</p>
-                                 <p className="text-[9px] text-slate-400 font-bold uppercase">{item.packages?.length || 0} Packages</p>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                    Active
-                                 </span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button 
-                                      onClick={() => setEditingProgram(item)}
-                                      className="p-2 text-slate-400 hover:text-brand-blue hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-100"
-                                    >
-                                      <Edit2 size={16} />
-                                    </button>
-                                    <button 
-                                      onClick={() => deleteProgram(item.id)}
-                                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-100"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                 </div>
-                              </td>
-                           </tr>
-                         ))}
-                      </tbody>
-                   </table>
-                   {filteredProgramsList.length === 0 && (
-                     <div className="p-10 text-center text-sm font-bold text-slate-400">
-                       Tidak ada program yang cocok dengan filter editor.
-                     </div>
-                   )}
-
-                </div>
-              </div>
+              <AdminProgramsPage domain={programsDomain} onNewProgram={runContextualAdd} />
             )}
 
             {activeTab === 'questions' && (
@@ -2492,283 +2101,11 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
 
           <AdminWebsiteSaveConfirmDialog domain={websiteDomain} />
 
-         <AnimatePresence>
-           {isLeadFormOpen && (
-             <div className="fixed inset-0 z-[122] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
-               <motion.div
-                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                 className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden"
-               >
-                 <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                     <UserPlus size={22} className="text-brand-orange" />
-                     <div>
-                       <h3 className="font-bold">Add New Lead</h3>
-                       <p className="text-[10px] text-white/50 uppercase tracking-widest">Input calon siswa baru ke pipeline follow-up</p>
-                     </div>
-                   </div>
-                   <button onClick={() => setIsLeadFormOpen(false)} className="p-2 hover:bg-white/10 rounded-full">
-                     <X size={20} />
-                   </button>
-                 </div>
+          <AdminLeadEditorDialog domain={leadsDomain} />
 
-                 <div className="p-8 space-y-6">
-                   <div className="grid md:grid-cols-2 gap-4">
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nama Lead</label>
-                       <input value={leadForm.name} onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" placeholder="Contoh: Rina Wijaya" />
-                     </div>
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nomor WhatsApp</label>
-                       <input value={leadForm.phone} onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" placeholder="0812-xxxx-xxxx" />
-                     </div>
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Email</label>
-                       <input type="email" value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold" placeholder="nama@email.com" />
-                     </div>
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Status Pipeline</label>
-                       <select value={leadForm.status} onChange={(e) => setLeadForm({ ...leadForm, status: e.target.value as Lead['status'] })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold">
-                         <option value="New">New</option>
-                         <option value="Contacted">Contacted</option>
-                         <option value="Qualified">Qualified</option>
-                         <option value="Converted">Converted</option>
-                         <option value="Lost">Lost</option>
-                       </select>
-                     </div>
-                   </div>
+          <AdminLeadConvertDialog domain={leadsDomain} />
 
-                   <div className="grid md:grid-cols-2 gap-4">
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Minat Program</label>
-                       <select value={leadForm.programOfInterest} onChange={(e) => setLeadForm({ ...leadForm, programOfInterest: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold">
-                         {programsList.map((program) => (
-                           <option key={program.id} value={program.title}>{program.title}</option>
-                         ))}
-                         <option value="Konsultasi Program">Konsultasi Program</option>
-                         <option value="Tryout Gratis">Tryout Gratis</option>
-                       </select>
-                     </div>
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Sumber Lead</label>
-                       <select value={leadForm.source} onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold">
-                         <option>Admin Input</option>
-                         <option>Form Kontak Website</option>
-                         <option>Tryout Gratis</option>
-                         <option>WhatsApp</option>
-                         <option>Instagram</option>
-                         <option>Google</option>
-                         <option>TikTok</option>
-                         <option>Referral</option>
-                       </select>
-                     </div>
-                   </div>
-
-                   <div>
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Catatan Awal</label>
-                     <textarea value={leadForm.note || ''} onChange={(e) => setLeadForm({ ...leadForm, note: e.target.value })} className="w-full h-28 px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none text-sm text-slate-600" placeholder="Contoh: Tertarik paket premium, minta dihubungi malam hari." />
-                   </div>
-
-                   <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100">
-                     <div className="flex items-start gap-3">
-                       <Info size={18} className="text-brand-blue shrink-0 mt-0.5" />
-                       <p className="text-xs text-slate-600 leading-relaxed">
-                         Lead yang ditambahkan di sini belum otomatis menjadi siswa. Gunakan tombol Convert to Student jika calon siswa sudah siap dimasukkan ke daftar user siswa.
-                       </p>
-                     </div>
-                   </div>
-                 </div>
-
-                 <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                   <button onClick={() => setIsLeadFormOpen(false)} className="btn-secondary py-3 px-6">
-                     Batal
-                   </button>
-                   <button onClick={saveLeadForm} className="btn-primary py-3 px-8">
-                     <Save size={18} /> Simpan Lead
-                   </button>
-                 </div>
-               </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
-
-         <AnimatePresence>
-           {leadPendingConvert && (
-             <div className="fixed inset-0 z-[126] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-               <motion.div
-                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                 className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8"
-               >
-                 <div className="w-14 h-14 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center mb-6">
-                   <UserPlus size={26} />
-                 </div>
-                 <h3 className="text-xl font-black text-brand-navy mb-2">Convert lead menjadi siswa?</h3>
-                 <p className="text-sm text-slate-500 leading-relaxed mb-6">
-                   Lead <span className="font-bold text-brand-navy">{leadPendingConvert.name}</span> akan dibuat sebagai user siswa trial/gratis dan status lead berubah menjadi Converted.
-                 </p>
-                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 mb-8">
-                   <p className="text-xs font-bold text-brand-navy">{leadPendingConvert.programOfInterest}</p>
-                   <p className="text-[10px] text-slate-400 mt-1">{leadPendingConvert.email} - {leadPendingConvert.phone}</p>
-                 </div>
-                 <div className="grid grid-cols-2 gap-3">
-                   <button
-                     onClick={() => setLeadPendingConvert(null)}
-                     className="btn-secondary py-3"
-                   >
-                     Batal
-                   </button>
-                   <button
-                     onClick={() => convertLeadToStudent(leadPendingConvert)}
-                     className="btn-primary py-3"
-                   >
-                     Ya, Convert
-                   </button>
-                 </div>
-               </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
-
-         <AnimatePresence>
-           {selectedLead && (
-             <div className="fixed inset-0 z-[123] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
-               <motion.div
-                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                 className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden"
-               >
-                 <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                     <UserPlus size={22} className="text-brand-orange" />
-                     <div>
-                       <h3 className="font-bold">Detail Lead</h3>
-                       <p className="text-[10px] text-white/50 uppercase tracking-widest">Calon siswa sebelum menjadi user aktif</p>
-                     </div>
-                   </div>
-                   <button onClick={() => setSelectedLead(null)} className="p-2 hover:bg-white/10 rounded-full">
-                     <X size={20} />
-                   </button>
-                 </div>
-
-                 <div className="p-8 grid lg:grid-cols-3 gap-8">
-                   <div className="lg:col-span-2 space-y-6">
-                     <div className="grid md:grid-cols-2 gap-4">
-                       {[
-                         ['Nama', selectedLead.name],
-                         ['Email', selectedLead.email],
-                         ['WhatsApp', selectedLead.phone],
-                         ['Tanggal Masuk', selectedLead.createdAt],
-                         ['Minat Program', selectedLead.programOfInterest],
-                         ['Sumber Lead', selectedLead.source],
-                       ].map(([label, value]) => (
-                         <div key={label} className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-                           <p className="text-sm font-bold text-brand-navy break-words">{value || '-'}</p>
-                         </div>
-                       ))}
-                     </div>
-
-                     <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100">
-                       <div className="flex items-start gap-3">
-                         <Info size={18} className="text-brand-blue shrink-0 mt-0.5" />
-                         <div>
-                           <p className="text-sm font-black text-brand-navy mb-1">Interpretasi Lead</p>
-                           <p className="text-xs text-slate-600 leading-relaxed">
-                             Lead ini adalah calon siswa yang sudah menunjukkan minat, tetapi belum tentu menjadi siswa aktif. Jika sudah siap ikut program, gunakan Convert to Student atau arahkan ke pendaftaran paket.
-                           </p>
-                         </div>
-                       </div>
-                     </div>
-
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Catatan Follow-up Admin</label>
-                       <textarea
-                         value={leadNoteDraft}
-                         onChange={(event) => setLeadNoteDraft(event.target.value)}
-                         className="w-full h-32 px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none text-sm text-slate-600"
-                         placeholder="Contoh: Sudah dihubungi, tertarik paket premium tetapi menunggu diskusi orang tua."
-                       />
-                       <button
-                         onClick={() => {
-                           updateLeadStatus(selectedLead, selectedLead.status, leadNoteDraft);
-                           notify('Catatan lead disimpan.');
-                         }}
-                         className="mt-3 btn-secondary py-2 px-5"
-                       >
-                         <Save size={16} /> Simpan Catatan
-                       </button>
-                     </div>
-                   </div>
-
-                   <div className="space-y-5">
-                     <div className="card-premium p-5 bg-white">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Status Lead</p>
-                       <span className={`inline-flex px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                         selectedLead.status === 'Converted' ? 'bg-emerald-50 text-emerald-600' :
-                         selectedLead.status === 'Lost' ? 'bg-red-50 text-red-600' :
-                         selectedLead.status === 'Qualified' ? 'bg-blue-50 text-brand-blue' :
-                         'bg-amber-50 text-amber-600'
-                       }`}>
-                         {selectedLead.status}
-                       </span>
-                       <p className="text-[10px] text-slate-400 mt-3">Terakhir dihubungi: {selectedLead.lastContactedAt || '-'}</p>
-                     </div>
-
-                     <div className="card-premium p-5 bg-white">
-                       <p className="text-sm font-black text-brand-navy mb-4">Update Pipeline</p>
-                       <div className="grid grid-cols-2 gap-2">
-                         {(['New', 'Contacted', 'Qualified', 'Lost'] as Lead['status'][]).map((status) => (
-                           <button
-                             key={status}
-                             onClick={() => {
-                               updateLeadStatus(selectedLead, status, leadNoteDraft);
-                               notify(`Status lead menjadi ${status}.`);
-                             }}
-                             className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${selectedLead.status === status ? 'bg-brand-blue text-white border-brand-blue' : 'bg-slate-50 text-slate-500 border-slate-100'}`}
-                           >
-                             {status}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-
-                     <div className="card-premium p-5 bg-white space-y-3">
-                       <button onClick={() => openLeadWhatsapp(selectedLead)} className="w-full py-3 rounded-xl bg-emerald-50 text-emerald-600 text-xs font-black uppercase tracking-widest">
-                         Hubungi WhatsApp
-                       </button>
-                       <button onClick={() => setLeadPendingConvert(selectedLead)} className="w-full btn-primary py-3 text-xs uppercase tracking-widest">
-                         <UserPlus size={16} /> Convert to Student
-                       </button>
-                       <button
-                         onClick={() => {
-                           const csv = [
-                             'field,value',
-                             `name,"${selectedLead.name}"`,
-                             `email,"${selectedLead.email}"`,
-                             `phone,"${selectedLead.phone}"`,
-                             `program,"${selectedLead.programOfInterest}"`,
-                             `source,"${selectedLead.source}"`,
-                             `status,"${selectedLead.status}"`,
-                             `note,"${leadNoteDraft}"`
-                           ].join('\n');
-                           downloadTextFile(`lead-${selectedLead.id}.csv`, csv);
-                         }}
-                         className="w-full py-3 rounded-xl bg-slate-50 text-slate-500 text-xs font-black uppercase tracking-widest"
-                       >
-                         Export Detail
-                       </button>
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
+          <AdminLeadDetailDialog domain={leadsDomain} downloadTextFile={downloadTextFile} />
 
           <AdminBlogEditorDialog domain={websiteDomain} />
 
@@ -2778,358 +2115,9 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
 
           <AdminBlogPreviewDialog domain={websiteDomain} />
 
-         {/* Program Editor Modal */}
-         <AnimatePresence>
-           {editingProgram && (
-             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                  className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col my-auto max-h-[90vh]"
-                >
-                   <div className="p-6 bg-brand-navy text-white flex items-center justify-between shrink-0">
-                      <div className="flex items-center gap-3">
-                         <div className="p-2 bg-white/10 rounded-xl">
-                            <Award size={20} className="text-brand-blue" />
-                         </div>
-                         <h3 className="font-bold">Edit Program: {editingProgram.title}</h3>
-                      </div>
-                      <button onClick={() => { setEditingProgram(null); setProgramPendingSave(null); }} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                         <X size={20} />
-                      </button>
-                   </div>
+          <AdminProgramEditorDialog domain={programsDomain} />
 
-                   <div className="p-8 overflow-y-auto">
-                      <div className="grid md:grid-cols-2 gap-10">
-                         {/* Basic Info */}
-                         <div className="space-y-6">
-                            <h4 className="text-xs font-black text-brand-blue uppercase tracking-widest border-b pb-2">Program Details</h4>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                               <div className="col-span-2">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Program Title</label>
-                                  <input 
-                                    className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold text-sm"
-                                    value={editingProgram.title}
-                                    onChange={(e) => setEditingProgram({ ...editingProgram, title: e.target.value })}
-                                  />
-                               </div>
-                               <div>
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Category</label>
-                                  <input 
-                                    className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold text-sm"
-                                    value={editingProgram.category}
-                                    onChange={(e) => setEditingProgram({ ...editingProgram, category: e.target.value })}
-                                  />
-                               </div>
-                               <div>
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Base Price Display</label>
-                                  <input 
-                                    className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold text-sm"
-                                    value={editingProgram.price}
-                                    onChange={(e) => setEditingProgram({ ...editingProgram, price: e.target.value })}
-                                  />
-                               </div>
-                            </div>
-
-                            <div>
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Short Description</label>
-                               <textarea 
-                                  className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm h-20 resize-none"
-                                  value={editingProgram.description}
-                                  onChange={(e) => setEditingProgram({ ...editingProgram, description: e.target.value })}
-                               />
-                            </div>
-
-                            <div>
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Long Description / Detail Program</label>
-                               <textarea 
-                                  className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm h-28 resize-none"
-                                  value={editingProgram.longDescription || ''}
-                                  onChange={(e) => setEditingProgram({ ...editingProgram, longDescription: e.target.value })}
-                                  placeholder="Deskripsi panjang yang muncul di halaman detail program."
-                               />
-                            </div>
-
-                            <div>
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Target Audience</label>
-                               <input 
-                                  className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm font-medium"
-                                  value={editingProgram.target}
-                                  onChange={(e) => setEditingProgram({ ...editingProgram, target: e.target.value })}
-                               />
-                            </div>
-
-                            <div>
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Schedule Text</label>
-                               <input 
-                                  className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm font-medium"
-                                  value={editingProgram.schedule}
-                                  onChange={(e) => setEditingProgram({ ...editingProgram, schedule: e.target.value })}
-                                  placeholder="e.g. Sen & Rab, 19:00"
-                               />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                               <div>
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Image URL</label>
-                                  <input 
-                                     className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-xs"
-                                     value={editingProgram.image}
-                                     onChange={(e) => setEditingProgram({ ...editingProgram, image: e.target.value })}
-                                  />
-                               </div>
-                               <div>
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Theme Color (Tailwind Class)</label>
-                                  <input 
-                                     className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-xs"
-                                     value={editingProgram.color}
-                                     onChange={(e) => setEditingProgram({ ...editingProgram, color: e.target.value })}
-                                     placeholder="bg-blue-600"
-                                  />
-                               </div>
-                            </div>
-
-                            <div>
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Facilities (Comma separated)</label>
-                               <textarea 
-                                  className="w-full px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 outline-none text-xs h-20"
-                                  value={editingProgram.facilities?.join(', ')}
-                                  onChange={(e) => setEditingProgram({ ...editingProgram, facilities: e.target.value.split(',').map(f => f.trim()) })}
-                               />
-                            </div>
-
-                            <div>
-                               <div className="flex items-center justify-between mb-3">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Curriculum</label>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingProgram({
-                                      ...editingProgram,
-                                      curriculum: [
-                                        ...(editingProgram.curriculum || []),
-                                        { week: (editingProgram.curriculum?.length || 0) + 1, topic: 'Topik Baru', description: 'Deskripsi materi.' }
-                                      ]
-                                    })}
-                                    className="text-[10px] font-black text-brand-blue uppercase tracking-widest hover:underline"
-                                  >
-                                    + Add Week
-                                  </button>
-                               </div>
-                               <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                                  {(editingProgram.curriculum || []).map((item, index) => (
-                                    <div key={`${item.week}-${index}`} className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                                      <div className="grid grid-cols-12 gap-2 mb-2">
-                                        <input
-                                          type="number"
-                                          value={item.week}
-                                          onChange={(event) => {
-                                            const next = [...(editingProgram.curriculum || [])];
-                                            next[index] = { ...item, week: Number(event.target.value) || index + 1 };
-                                            setEditingProgram({ ...editingProgram, curriculum: next });
-                                          }}
-                                          className="col-span-2 px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold"
-                                        />
-                                        <input
-                                          value={item.topic}
-                                          onChange={(event) => {
-                                            const next = [...(editingProgram.curriculum || [])];
-                                            next[index] = { ...item, topic: event.target.value };
-                                            setEditingProgram({ ...editingProgram, curriculum: next });
-                                          }}
-                                          className="col-span-9 px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs font-bold"
-                                          placeholder="Topik"
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={() => setEditingProgram({ ...editingProgram, curriculum: editingProgram.curriculum?.filter((_, i) => i !== index) || [] })}
-                                          className="col-span-1 text-slate-300 hover:text-red-500"
-                                        >
-                                          <Trash2 size={14} />
-                                        </button>
-                                      </div>
-                                      <textarea
-                                        value={item.description}
-                                        onChange={(event) => {
-                                          const next = [...(editingProgram.curriculum || [])];
-                                          next[index] = { ...item, description: event.target.value };
-                                          setEditingProgram({ ...editingProgram, curriculum: next });
-                                        }}
-                                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 outline-none text-xs h-16 resize-none"
-                                        placeholder="Deskripsi minggu ini"
-                                      />
-                                    </div>
-                                  ))}
-                               </div>
-                            </div>
-                         </div>
-
-                         {/* Packages Info */}
-                         <div className="space-y-6">
-                            <div className="flex items-center justify-between border-b pb-2">
-                               <h4 className="text-xs font-black text-brand-orange uppercase tracking-widest">Program Packages</h4>
-                               <button 
-                                  onClick={() => {
-                                     const newPackage: ProgramPackage = {
-                                        id: `pkg-${Date.now()}`,
-                                        name: 'New Package',
-                                        price: 'Rp 0',
-                                        duration: '1 Bulan',
-                                        features: []
-                                     };
-                                     setEditingProgram({
-                                        ...editingProgram,
-                                        packages: [...(editingProgram.packages || []), newPackage]
-                                     });
-                                  }}
-                                  className="flex items-center gap-1 text-[10px] font-black text-brand-blue uppercase tracking-widest hover:underline"
-                               >
-                                  <Plus size={14} /> Add Package
-                               </button>
-                            </div>
-
-                            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                               {editingProgram.packages?.map((pkg, pIdx) => (
-                                  <div key={pkg.id} className="p-4 rounded-2xl border border-slate-100 bg-slate-50 relative group">
-                                     <button 
-                                        onClick={() => {
-                                           const newPkgs = editingProgram.packages?.filter((_, i) => i !== pIdx);
-                                           setEditingProgram({ ...editingProgram, packages: newPkgs });
-                                        }}
-                                        className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                     >
-                                        <Trash2 size={14} />
-                                     </button>
-                                     
-                                     <div className="grid grid-cols-2 gap-3 mb-4">
-                                        <div>
-                                           <label className="text-[8px] font-black text-slate-400 uppercase mb-1 block">Package Name</label>
-                                           <input 
-                                              className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 outline-none text-[11px] font-bold"
-                                              value={pkg.name}
-                                              onChange={(e) => {
-                                                 const newPkgs = [...(editingProgram.packages || [])];
-                                                 newPkgs[pIdx] = { ...pkg, name: e.target.value };
-                                                 setEditingProgram({ ...editingProgram, packages: newPkgs });
-                                              }}
-                                           />
-                                        </div>
-                                        <div>
-                                           <label className="text-[8px] font-black text-slate-400 uppercase mb-1 block">Price</label>
-                                           <input 
-                                              className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 outline-none text-[11px] font-bold"
-                                              value={pkg.price}
-                                              onChange={(e) => {
-                                                 const newPkgs = [...(editingProgram.packages || [])];
-                                                 newPkgs[pIdx] = { ...pkg, price: e.target.value };
-                                                 setEditingProgram({ ...editingProgram, packages: newPkgs });
-                                              }}
-                                           />
-                                        </div>
-                                        <div>
-                                           <label className="text-[8px] font-black text-slate-400 uppercase mb-1 block">Duration</label>
-                                           <input 
-                                              className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 outline-none text-[11px] font-bold"
-                                              value={pkg.duration}
-                                              onChange={(e) => {
-                                                 const newPkgs = [...(editingProgram.packages || [])];
-                                                 newPkgs[pIdx] = { ...pkg, duration: e.target.value };
-                                                 setEditingProgram({ ...editingProgram, packages: newPkgs });
-                                              }}
-                                           />
-                                        </div>
-                                        <label className="flex items-center gap-2 mt-5 text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                                           <input
-                                             type="checkbox"
-                                             checked={Boolean(pkg.isPopular)}
-                                             onChange={(e) => {
-                                                const newPkgs = [...(editingProgram.packages || [])].map((item, index) => (
-                                                  index === pIdx ? { ...item, isPopular: e.target.checked } : { ...item, isPopular: false }
-                                                ));
-                                                setEditingProgram({ ...editingProgram, packages: newPkgs });
-                                             }}
-                                             className="rounded border-slate-300"
-                                           />
-                                           Popular
-                                        </label>
-                                     </div>
-
-                                     <div>
-                                        <label className="text-[8px] font-black text-slate-400 uppercase mb-1 block">Features (Line separated)</label>
-                                        <textarea 
-                                           className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 outline-none text-[10px] h-20"
-                                           value={pkg.features.join('\n')}
-                                           onChange={(e) => {
-                                              const newPkgs = [...(editingProgram.packages || [])];
-                                              newPkgs[pIdx] = { ...pkg, features: e.target.value.split('\n').filter(f => f.trim()) };
-                                              setEditingProgram({ ...editingProgram, packages: newPkgs });
-                                           }}
-                                        />
-                                     </div>
-                                  </div>
-                               ))}
-                            </div>
-                         </div>
-                      </div>
-                   </div>
-
-                   <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 shrink-0">
-                      <button 
-                         onClick={() => { setEditingProgram(null); setProgramPendingSave(null); }}
-                         className="px-6 py-2.5 rounded-xl text-xs font-black text-slate-500 uppercase tracking-widest hover:bg-slate-200 transition-colors"
-                      >
-                         Discard
-                      </button>
-                      <button 
-                         onClick={() => setProgramPendingSave(editingProgram)}
-                         className="btn-primary py-2.5 px-8 shadow-xl shadow-blue-500/20"
-                      >
-                         <Save size={18} />
-                         Update Program
-                      </button>
-                   </div>
-                </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
-
-         <AnimatePresence>
-           {programPendingSave && (
-             <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-               <motion.div
-                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                 className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8"
-               >
-                 <div className="w-14 h-14 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center mb-6">
-                   <Save size={26} />
-                 </div>
-                 <h3 className="text-xl font-black text-brand-navy mb-2">Simpan Perubahan Program?</h3>
-                 <p className="text-sm text-slate-500 leading-relaxed mb-8">
-                   Perubahan pada <span className="font-bold text-brand-blue">{programPendingSave.title}</span> akan tersinkron ke menu program, detail program, form pendaftaran, dan pembayaran.
-                 </p>
-                 <div className="grid grid-cols-2 gap-3">
-                   <button
-                     type="button"
-                     onClick={() => setProgramPendingSave(null)}
-                     className="px-6 py-3 rounded-xl border-2 border-slate-100 text-slate-500 text-xs font-black uppercase tracking-widest hover:bg-slate-50"
-                   >
-                     Tidak
-                   </button>
-                   <button
-                     type="button"
-                     onClick={() => saveProgram(programPendingSave)}
-                     className="btn-primary py-3 text-xs uppercase tracking-widest font-black"
-                   >
-                     Ya, Update
-                   </button>
-                 </div>
-               </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
+          <AdminProgramSaveConfirmDialog domain={programsDomain} />
 
          <AnimatePresence>
            {financeMetricDetail && (
