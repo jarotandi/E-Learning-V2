@@ -51,6 +51,7 @@ import {
   paymentTypeFilterOptions,
 } from './adminFinanceData';
 import { readStorageArray } from '../../adminStorage';
+import { isApprovedStudentRecord, userFromStudentRecord } from '../../../users';
 import type { FinanceEntry, FinanceRealization, AssetEntry, FinanceTransaction, PaymentProof } from './adminFinanceTypes';
 
 export type FinanceSubView = 'payments' | 'inputs' | 'realization' | 'assets' | 'accounting' | 'reports' | 'audit';
@@ -60,7 +61,7 @@ export interface UseAdminFinanceDomainOptions {
   /** Canonical users list (from Users domain) for student auto-create. */
   users: UserAccount[];
   /** Canonical users persistence adapter (from Users domain). */
-  persistUsers: (users: any[]) => void;
+  persistUsers: (users: UserAccount[]) => void;
   /** Toast adapter (shared, stays owned by AdminDashboard). */
   notify: (message: string) => void;
   /** Audit adapter (shared, stays owned by AdminDashboard). */
@@ -139,6 +140,7 @@ export interface UseAdminFinanceDomainResult {
   // Constants
   FINANCE_SUBVIEWS: typeof import('./adminFinanceData').FINANCE_SUBVIEWS;
   FINANCIAL_REPORT_PERIODS: typeof import('./adminFinanceData').FINANCIAL_REPORT_PERIODS;
+  paymentStatusOptions: string[];
   paymentTypeFilterOptions: string[];
   budgetDirections: typeof import('./adminFinanceData').budgetDirections;
   nonDepreciableFixedAssetCategories: string[];
@@ -212,10 +214,6 @@ export function useAdminFinanceDomain({
     note: '',
   });
 
-  // --- Shared adapters (re-exposed for dialogs) ---
-  const [auditEvents] = useState(() => readStorageArray('theprams_demo_audit_events'));
-  const [notificationEvents] = useState(() => readStorageArray('theprams_demo_notifications'));
-
   // --- Derived data ---
   const financeRows = useMemo(() => {
     const demoRows = demoFinanceRows;
@@ -270,30 +268,27 @@ export function useAdminFinanceDomain({
       const isScholarship = String(tx.status).toLowerCase().includes('scholarship');
       const isFree = String(tx.status).toLowerCase().includes('free') || String(tx.type).toLowerCase() === 'free';
       return {
-        id: `ledger-${tx.invoiceNumber || tx.id}`,
+        id: `ledger-${tx.id || tx.invoiceNumber}`,
         date: tx.createdAt || tx.date || '-',
         source: tx.invoiceNumber || tx.id || '-',
         description: `Pendaftaran ${tx.program || '-'} - ${tx.packageName || '-'}`,
-        income: amount > 0 && !isScholarship && !isFree,
         account: isScholarship ? 'Piutang/Kuota Beasiswa' : isFree ? 'Akun Gratis' : 'Pendapatan Kelas',
         debit: amount > 0 && !isScholarship && !isFree ? amount : 0,
         credit: 0,
+        status: tx.status || '-',
       };
     });
 
-    const realizationRows = financeRealizations.map((r) => {
-      const entry = financeEntries.find((e) => e.id === r.financeEntryId);
-      const isFixed = entry?.type === 'fixed';
-      const isBudget = entry?.type === 'budget';
+    const realizationRows = financeRealizations.map((row) => {
+      const entry = financeEntries.find((e) => e.id === row.financeEntryId);
       return {
-        id: `ledger-real-${r.id}`,
-        date: r.date,
-        source: r.financeEntryId,
-        description: `Realisasi ${r.name}`,
-        income: false,
-        account: isFixed ? `Realisasi Biaya Tetap - ${r.category}` : `Realisasi Biaya Variabel - ${r.category}`,
-        debit: 0,
-        credit: r.amount,
+        id: `ledger-real-${row.id}`,
+        date: row.date,
+        source: row.id,
+        description: `${row.name}${row.note ? ` - ${row.note}` : ''}`,
+        account: entry?.type === 'budget' ? `Realisasi Anggaran - ${row.category}` : entry?.type === 'fixed' ? `Realisasi Biaya Tetap - ${row.category}` : `Realisasi Biaya Variabel - ${row.category}`,
+        credit: row.amount,
+        status: 'Realized',
       };
     });
 
@@ -303,21 +298,20 @@ export function useAdminFinanceDomain({
         date: asset.acquisitionDate,
         source: asset.id,
         description: `Pencatatan Aset: ${asset.name}`,
-        income: false,
-        account: 'Aset Tetap',
+        account: asset.type === 'fixed_asset' ? `Aset Tetap - ${asset.category}` : `Aset Lancar - ${asset.category}`,
         debit: asset.currentValue,
         credit: 0,
+        status: 'Asset Registered',
       }];
       if (asset.type === 'fixed_asset' && asset.depreciationPerMonth > 0 && !nonDepreciableFixedAssetCategories.includes(asset.category)) {
         rows.push({
-          id: `ledger-depr-${asset.id}`,
+          id: `ledger-dep-${asset.id}`,
           date: new Date().toISOString().slice(0, 10),
           source: asset.id,
-          description: `Depresiasi ${asset.name}`,
-          income: false,
-          account: `Depresiasi ${asset.category}`,
-          debit: 0,
+          description: `Depresiasi bulanan ${asset.name}`,
+          account: `Beban Depresiasi - ${asset.category}`,
           credit: asset.depreciationPerMonth,
+          status: 'Depreciation',
         });
       }
       return rows;
@@ -327,35 +321,59 @@ export function useAdminFinanceDomain({
   }, [financeRows, financeRealizations, assetEntries, financeEntries]);
 
   const financialReports = useMemo(() => {
+    const now = new Date();
     const revenue = financeRows
       .filter((tx) => !String(tx.status).toLowerCase().includes('scholarship') && !String(tx.status).toLowerCase().includes('free') && parseRupiah(tx.amount) > 0)
       .reduce((sum, tx) => sum + parseRupiah(tx.amount), 0);
+    const realizedExpenses = financeRealizations.reduce((sum, row) => sum + row.amount, 0);
+    const depreciationExpense = assetEntries
+      .filter((a) => a.type === 'fixed_asset' && a.depreciationPerMonth > 0 && !nonDepreciableFixedAssetCategories.includes(a.category))
+      .reduce((sum, a) => sum + a.depreciationPerMonth, 0);
+    const fixedAssets = assetEntries
+      .filter((a) => a.type === 'fixed_asset')
+      .reduce((sum, a) => sum + a.currentValue, 0);
+    const currentAssets = assetEntries
+      .filter((a) => a.type === 'current_asset')
+      .reduce((sum, a) => sum + a.currentValue, 0);
     const pendingReceivable = financeRows.filter((tx) => String(tx.status).toLowerCase().includes('pending')).reduce((sum, tx) => sum + parseRupiah(tx.amount), 0);
+    const scholarshipReserve = financeEntries.filter((entry) => entry.type === 'budget' && entry.category.toLowerCase().includes('beasiswa')).reduce((sum, entry) => sum + entry.amount, 0);
+    const totalExpenses = realizedExpenses + depreciationExpense;
+    const netIncome = revenue - totalExpenses;
+    const totalAssets = currentAssets + fixedAssets + pendingReceivable;
     const liabilities = financeSummary.pendingRevenue;
-    const equity = financeSummary.paidRevenue - financeSummary.fixedCost - financeSummary.variableCost;
+    const equity = totalAssets - liabilities;
+
+    let periodLabel: string;
+    if (financialReportPeriod === 'monthly') {
+      periodLabel = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    } else if (financialReportPeriod === 'quarterly') {
+      periodLabel = `Kuartal ${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`;
+    } else {
+      periodLabel = `Tahun ${now.getFullYear()}`;
+    }
 
     return {
-      periodLabel: financialReportPeriod === 'monthly' ? 'Bulan Ini' : financialReportPeriod === 'quarterly' ? 'Kuartal Ini' : 'Tahun Ini',
+      periodLabel,
       incomeStatement: [
         { label: 'Pendapatan Kelas Berbayar', amount: revenue },
-        { label: 'Realisasi Biaya & Anggaran', amount: -(financeSummary.fixedCost + financeSummary.variableCost) },
-        { label: 'Beban Depresiasi Aset Tetap', amount: -assetEntries.filter((a) => a.type === 'fixed_asset' && a.depreciationPerMonth > 0).reduce((sum, a) => sum + a.depreciationPerMonth, 0) },
-        { label: 'Laba/Rugi Bersih', amount: financeSummary.netProfit, total: true },
+        { label: 'Realisasi Biaya & Anggaran', amount: -realizedExpenses },
+        { label: 'Beban Depresiasi Aset Tetap', amount: -depreciationExpense },
+        { label: 'Laba/Rugi Bersih', amount: netIncome, total: true },
       ],
       balanceSheet: [
-        { label: 'Aset Lancar', amount: assetEntries.filter((a) => a.type === 'current_asset').reduce((sum, a) => sum + a.currentValue, 0) },
+        { label: 'Aset Lancar', amount: currentAssets },
         { label: 'Piutang/Pending Payment', amount: pendingReceivable },
-        { label: 'Aset Tetap Bersih', amount: assetEntries.filter((a) => a.type === 'fixed_asset').reduce((sum, a) => sum + a.currentValue, 0) },
-        { label: 'Total Aset', amount: assetEntries.reduce((sum, a) => sum + a.currentValue, 0), total: true },
+        { label: 'Aset Tetap Bersih', amount: fixedAssets },
+        { label: 'Total Aset', amount: totalAssets, total: true },
         { label: 'Kewajiban/Pending Operasional', amount: liabilities },
-        { label: 'Cadangan Beasiswa', amount: financeRows.filter((tx) => String(tx.status).toLowerCase().includes('scholarship')).reduce((sum, tx) => sum + parseRupiah(tx.amount), 0) },
+        { label: 'Cadangan Beasiswa', amount: scholarshipReserve },
         { label: 'Ekuitas Demo', amount: equity, total: true },
       ],
       cashFlow: [
         { label: 'Kas Masuk dari Pembayaran', amount: financeRows.filter((tx) => parseRupiah(tx.amount) > 0).reduce((sum, tx) => sum + parseRupiah(tx.amount), 0) },
-        { label: 'Kas Keluar Realisasi Biaya', amount: -financeRealizations.reduce((sum, r) => sum + r.amount, 0) },
+        { label: 'Kas Keluar Realisasi Biaya', amount: -realizedExpenses },
         { label: 'Investasi/Pencatatan Aset', amount: -assetEntries.reduce((sum, a) => sum + a.acquisitionValue, 0) },
-        { label: 'Arus Kas Bersih Demo', amount: financeRows.filter((tx) => parseRupiah(tx.amount) > 0).reduce((sum, tx) => sum + parseRupiah(tx.amount), 0) - financeRealizations.reduce((sum, r) => sum + r.amount, 0) - assetEntries.reduce((sum, a) => sum + a.acquisitionValue, 0), total: true },
+        { label: 'Arus Kas Bersih Demo', amount: financeRows.filter((tx) => parseRupiah(tx.amount) > 0).reduce((sum, tx) => sum + parseRupiah(tx.amount), 0) - totalExpenses - assetEntries.reduce((sum, a) => sum + a.acquisitionValue, 0), total: true },
       ],
     };
   }, [financialReportPeriod, financeRows, financeRealizations, assetEntries, financeEntries, financeSummary.pendingRevenue]);
@@ -479,8 +497,8 @@ export function useAdminFinanceDomain({
 
   // --- Invoice / Proof viewers ---
   const openStoredInvoice = (tx: any) => {
-    const invoiceNumber = tx.invoiceNumber || tx.id;
-    const invoiceTime = new Date(tx.createdAt || tx.date || Date.now()).toLocaleString('id-ID');
+    const invoiceNumber = tx.invoiceNumber || tx.id || 'INV/DEMO/TP/00000';
+    const invoiceTime = tx.invoiceTime || tx.date || new Date().toLocaleString('id-ID');
     const methodLabel = tx.method || 'Manual/Admin';
     const amount = formatRupiah(parseRupiah(tx.amount));
     const program = tx.program || '-';
@@ -488,9 +506,10 @@ export function useAdminFinanceDomain({
     const email = tx.email || '-';
     const phone = tx.phone || '-';
     const student = tx.student || '-';
+    const total = formatRupiah(parseRupiah(tx.amount));
     const invoiceHtml = tx.invoiceHtml || `
       <html>
-        <head><title>Invoice ${invoiceNumber}</title><style>
+        <head><title>${invoiceNumber}</title><style>
           body { font-family: sans-serif; padding: 20px; }
           .brand { font-weight: bold; font-size: 1.2em; color: #1e3a8a; }
           .muted { color: #64748b; font-size: 0.9em; }
@@ -505,14 +524,17 @@ export function useAdminFinanceDomain({
           <div class="muted">WhatsApp: <strong>${phone}</strong></div>
           <table><thead><tr><th>Program</th><th>Paket</th><th>Metode</th><th>Nominal</th></tr></thead>
           <tbody><tr><td>${program}</td><td>${packageName}</td><td>${methodLabel}</td><td>${amount}</td></tr></tbody></table>
+          <div class="box"><div class="muted">No. Invoice</div><div><strong>${invoiceNumber}</strong></div>
+          <div class="muted">Tanggal</div><div><strong>${invoiceTime}</strong></div></div>
           <div class="box">Status: <strong>${tx.status || '-'}</strong></div>
+          <div class="box">Total: <strong>${total}</strong></div>
           <button onclick="window.print()">Cetak / Simpan PDF</button>
         </body>
       </html>
     `;
     const w = window.open('', '_blank');
     if (w) {
-      w.document.write(invoiceHtml);
+      w.document.write(tx.invoiceHtml || invoiceHtml);
       w.document.close();
     }
   };
@@ -522,9 +544,10 @@ export function useAdminFinanceDomain({
       notify('Dokumen hanya tersedia sebagai metadata file.');
       return;
     }
-    if (proof.fileData.startsWith('data:application/pdf')) {
+    if (String(proof.fileType).includes('pdf')) {
       const w = window.open('', '_blank');
       if (w) w.document.write(`<iframe src="${proof.fileData}" style="border:0;width:100%;height:100vh"></iframe>`);
+      w.document.close();
     } else {
       const w = window.open('', '_blank');
       if (w) w.document.write(`<img src="${proof.fileData}" style="max-width:100%;height:auto" alt="${proof.fileName || 'Bukti pembayaran'}" />`);
@@ -546,23 +569,69 @@ export function useAdminFinanceDomain({
     localStorage.setItem(FINANCE_STORAGE_KEYS.PAYMENT_PROOFS, JSON.stringify(nextProofs));
 
     if (selectedFinanceRecord) {
-      setSelectedFinanceRecord((prev) => prev ? { ...prev, tx: { ...prev.tx, status: nextStatus } } : null);
+      setSelectedFinanceRecord((prev) => prev ? { ...prev, tx: { ...prev.tx, status: nextStatus }, proof: prev.proof ? { ...prev.proof, status: nextStatus } : prev.proof } : null);
     }
+
+    const updatedTx = financeTransactions.find((tx) => (tx.invoiceNumber || tx.id) === invoiceId) || selectedFinanceRecord?.tx;
+
     recordAudit('Payment Workflow', 'Update Status', `${invoiceId} -> ${nextStatus}`);
+
+    if (nextStatus === 'Needs Revision') {
+      const template = buildReviewTemplate({ ...updatedTx, status: nextStatus });
+      if (updatedTx?.email) {
+        queueNotification('Email', updatedTx.email, 'Review Ulang Data Pendaftaran The Prams', template);
+      }
+      if (updatedTx?.phone) {
+        queueNotification('WhatsApp', updatedTx.phone, 'Review Ulang Data Pendaftaran The Prams', template);
+      }
+    }
+
+    if (nextStatus.includes('Approved')) {
+      const template = `Halo ${updatedTx?.student || 'Calon Siswa'}, status kamu sudah diperbarui menjadi ${nextStatus}. Silakan lanjut mengikuti arahan admin The Prams.`;
+      if (updatedTx?.email) {
+        queueNotification('Email', updatedTx.email, 'Pendaftaran The Prams Disetujui', template);
+      }
+
+      const approvedTx = {
+        ...updatedTx,
+        status: nextStatus,
+      };
+
+      if (updatedTx && isApprovedStudentRecord(approvedTx)) {
+        const studentUser = userFromStudentRecord(approvedTx, 'tx');
+        const existing = users.find((u) => u.id === studentUser.id || (u.email && u.program && u.packageName && u.email === studentUser.email && u.program === studentUser.program && u.packageName === studentUser.packageName));
+        if (!existing) {
+          persistUsers([studentUser, ...users]);
+          recordAudit('User & Roles', 'Auto Create Student', `${studentUser.name} - ${studentUser.accountType}`);
+        }
+      }
+    }
   };
 
   // --- Review notification workflow ---
   const buildReviewTemplate = (tx: any) => {
+    const isScholarship = String(tx.status || '').toLowerCase().includes('scholarship') || String(tx.packageName || '').toLowerCase().includes('beasiswa');
+    const documentLabel = isScholarship ? 'dokumen beasiswa' : 'bukti pembayaran';
+    const invoiceId = tx.invoiceNumber || tx.id || '-';
     return `Halo ${tx.student || '-'},
 Terima kasih telah mendaftar di The Prams. Kami telah meninjau pendaftaran Anda.
 
-Status: ${tx.status}
-Program: ${tx.program}
-Paket: ${tx.packageName}
-Nominal: ${formatRupiah(parseRupiah(tx.amount))}
-Invoice: ${tx.invoiceNumber || tx.id}
+Setelah pengecekan oleh admin, data pendaftaran kamu perlu direview ulang dengan detail berikut:
+
+- No. Invoice: ${invoiceId}
+- Program: ${tx.program}
+- Paket: ${tx.packageName}
+- Nominal: ${formatRupiah(parseRupiah(tx.amount))}
+- Status saat ini: ${tx.status}
+- Dokumen yang perlu diperbaiki: ${documentLabel}
 
 Silakan periksa data Anda. Jika ada yang perlu diperbaiki, silakan balas email ini atau hubungi admin via WhatsApp.
+
+Checklist verifikasi:
+- Nama dan email sesuai dengan data pendaftaran
+- WhatsApp nomor yang bisa dihubungi
+- Dokumen ${documentLabel} sudah jelas dan valid
+- Nomor invoice dan program/paket sesuai dengan pilihan
 
 Salam,
 Tim The Prams`;
@@ -570,18 +639,17 @@ Tim The Prams`;
 
   const openReviewEmail = (tx: any) => {
     const template = buildReviewTemplate(tx);
-    const subject = 'Review Ulang Data Pendaftaran The Prams';
-    const mailto = `mailto:${tx.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(template)}`;
+    const subject = encodeURIComponent('Review Ulang Data Pendaftaran The Prams');
+    const body = encodeURIComponent(template);
+    const mailto = `mailto:${tx.email}?subject=${subject}&body=${body}`;
     window.open(mailto, '_blank');
   };
 
   const openReviewWhatsapp = (tx: any) => {
-    const phone = String(tx.phone || '').replace(/\D/g, '').replace(/^0/, '62');
+    const phone = String(tx.phone || '').replace(/\D/g, '').replace(/^0/, '62') || '6281234567890';
     const template = buildReviewTemplate(tx);
-    window.open(`https://wa.me/${phone || '6281234567890'}?text=${encodeURIComponent(template)}`, '_blank');
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(template)}`, '_blank');
   };
-
-  // --- CSV export ---
 
   // --- Return ---
   return {
@@ -645,10 +713,12 @@ Tim The Prams`;
     openReviewWhatsapp,
 
     // Export
+    downloadTextFile,
 
     // Constants
     FINANCE_SUBVIEWS,
     FINANCIAL_REPORT_PERIODS,
+    paymentStatusOptions,
     paymentTypeFilterOptions,
     budgetDirections,
     nonDepreciableFixedAssetCategories,
@@ -660,6 +730,5 @@ Tim The Prams`;
     notify,
     recordAudit,
     queueNotification,
-    downloadTextFile,
   };
 }

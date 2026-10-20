@@ -661,6 +661,12 @@ const financeTypesSrc = safeReadAdminFeature('commerce/finance/adminFinanceTypes
 const financeBarrelSrc = safeReadAdminFeature('commerce/finance/index.ts');
 
 const financeDomainCode = stripComments(financeHookSrc);
+const financePageCode = stripComments(financePageSrc);
+const financeHookCode = stripComments(financeHookSrc);
+const financeDataCode = stripComments(financeDataSrc);
+const financeTypesCode = stripComments(financeTypesSrc);
+const financeMetricDialogCode = stripComments(financeMetricDialogSrc);
+const financeRecordDialogCode = stripComments(financeDialogSrc);
 
 const programsPageCode = stripComments(programsPageSrc);
 const programsHookCode = stripComments(programsHookSrc);
@@ -2828,6 +2834,363 @@ check('routing frozen: exactly the two canonical Commerce paths (programs + lead
     allAdminPaths().filter((p) => p.startsWith('/admin/commerce/')).length === 4);
 
 /* ------------------------------------------------------------------ */
+/* B1.4D-T8 ADDITIONS                                                   */
+/* ================================================================== */
+
+/* ------------------------------------------------------------------ */
+/* CO. Finance module presence                                          */
+/* ------------------------------------------------------------------ */
+
+section('CO. T8 Finance modules + composition wiring');
+
+check('AdminFinancePage module exists', financePageSrc.length > 0);
+check('useAdminFinanceDomain module exists', financeHookSrc.length > 0);
+check('AdminFinanceRecordDialog module exists', financeDialogSrc.length > 0);
+check('AdminFinanceMetricDialog module exists', financeMetricDialogSrc.length > 0);
+check('adminFinanceData module exists', financeDataSrc.length > 0);
+check('adminFinanceTypes module exists', financeTypesSrc.length > 0);
+check('finance barrel exists',
+  /AdminFinancePage/.test(financeBarrelSrc) &&
+  /useAdminFinanceDomain/.test(financeBarrelSrc));
+check('AdminDashboard renders AdminFinancePage for the finance tab',
+  /\{activeTab === 'finance' && \([\s\S]{0,200}<AdminFinancePage/.test(adminDashCode));
+check('AdminFinancePage receives the canonical domain surface',
+  /domain=\{financeDomain\}/.test(adminDashCode));
+check('AdminFinancePage receives read-only audit/notification events',
+  /auditEvents=\{auditEvents\} notificationEvents=\{notificationEvents\}/.test(adminDashCode));
+
+/* ------------------------------------------------------------------ */
+/* CP. Single Finance authority                                         */
+/* ------------------------------------------------------------------ */
+
+section('CP. T8 single Finance authority (one hook, no duplicate state)');
+
+check('AdminDashboard invokes useAdminFinanceDomain exactly once',
+  (adminDashCode.match(/useAdminFinanceDomain\(/g) || []).length === 1);
+check('the Finance PAGE does not invoke the hook (view only)',
+  !/useAdminFinanceDomain\(/.test(financePageCode));
+check('the Finance page owns no canonical useState',
+  !/useState/.test(financePageCode));
+check('no import cycle: the Finance domain never imports AdminDashboard',
+  !/AdminDashboard/.test(financeDomainCode) &&
+    !/LegacyAppStateProvider/.test(financeDomainCode));
+check('the Finance domain injects only users/persistUsers/notify/recordAudit/queueNotification/downloadTextFile',
+  /users: UserAccount\[\];/.test(financeHookCode) &&
+    /persistUsers: \(users: UserAccount\[\]\) => void/.test(financeHookCode) &&
+    /notify: \(message: string\) => void/.test(financeHookCode) &&
+    /recordAudit: \(module: string, action: string, detail: string\) => void/.test(financeHookCode) &&
+    /queueNotification: \(/.test(financeHookCode) &&
+    /downloadTextFile: \(filename: string, content: string, mime\?: string\) => void/.test(financeHookCode));
+
+/* ------------------------------------------------------------------ */
+/* CQ. Exact five Finance storage keys                                  */
+/* ------------------------------------------------------------------ */
+
+section('CQ. T8 exact five Finance storage keys');
+
+check('the canonical Finance keys are declared in the finance data module',
+  /FINANCE_STORAGE_KEYS = \{/.test(financeDataCode) &&
+    /TRANSACTIONS: 'theprams_demo_transactions'/.test(financeDataCode) &&
+    /PAYMENT_PROOFS: 'theprams_demo_payment_proofs'/.test(financeDataCode) &&
+    /FINANCE_ENTRIES: 'theprams_demo_finance_entries'/.test(financeDataCode) &&
+    /FINANCE_REALIZATIONS: 'theprams_demo_finance_realizations'/.test(financeDataCode) &&
+    /ASSETS: 'theprams_demo_assets'/.test(financeDataCode));
+check('each Finance key has exactly ONE logical owner across the admin tree',
+  ([financeDataCode].join('\n').match(/theprams_demo_transactions/g) || []).length === 1 &&
+    ([financeDataCode].join('\n').match(/theprams_demo_payment_proofs/g) || []).length === 1 &&
+    ([financeDataCode].join('\n').match(/theprams_demo_finance_entries/g) || []).length === 1 &&
+    ([financeDataCode].join('\n').match(/theprams_demo_finance_realizations/g) || []).length === 1 &&
+    ([financeDataCode].join('\n').match(/theprams_demo_assets/g) || []).length === 1);
+check('the monolith no longer mentions Finance state keys',
+  !/\bfinanceTransactions\b/.test(adminDashCode) &&
+    !/\bfinanceEntries\b/.test(adminDashCode) &&
+    !/\bfinanceRealizations\b/.test(adminDashCode) &&
+    !/\bassetEntries\b/.test(adminDashCode) &&
+    !/\bpaymentProofs\b/.test(adminDashCode));
+check('Finance owns ZERO audit/notification keys',
+  !/theprams_demo_audit_events/.test(financeDomainCode) &&
+    !/theprams_demo_notifications/.test(financeDomainCode));
+
+/* ------------------------------------------------------------------ */
+/* CR. Shared audit/outbox boundary                                     */
+/* ------------------------------------------------------------------ */
+
+section('CR. T8 shared audit/outbox boundary — AdminDashboard owns');
+
+check('AdminDashboard owns auditEvents state',
+  /useState<.*AuditEvent.*\[\]>/.test(adminDashCode) ||
+    /readStorageArray\('theprams_demo_audit_events'\)/.test(adminDashCode));
+check('AdminDashboard owns notificationEvents state',
+  /readStorageArray\('theprams_demo_notifications'\)/.test(adminDashCode));
+check('AdminDashboard owns recordAudit adapter',
+  /const recordAudit = \(/.test(adminDashCode));
+check('AdminDashboard owns queueNotification adapter',
+  /const queueNotification = \(/.test(adminDashCode));
+check('Finance hook does NOT declare local auditEvents state',
+  !/useState\(\(\) => readStorageArray\('theprams_demo_audit_events'\)\)/.test(financeHookCode));
+check('Finance hook does NOT declare local notificationEvents state',
+  !/useState\(\(\) => readStorageArray\('theprams_demo_notifications'\)\)/.test(financeHookCode));
+check('Finance source does not read/write audit/notification keys (comments excluded)',
+  !/theprams_demo_audit_events/.test(stripComments(financeHookCode)) &&
+    !/theprams_demo_notifications/.test(stripComments(financeHookCode)));
+
+/* ------------------------------------------------------------------ */
+/* CS. Finance data / money contract                                    */
+/* ------------------------------------------------------------------ */
+
+section('CS. T8 Finance data / money contract');
+
+check('financeTransactions state declared',
+  /useState<any\[\]>\(\(\)\s*=>\s*readStorageArray\(FINANCE_STORAGE_KEYS\.TRANSACTIONS\)/.test(financeHookCode));
+check('paymentProofs state declared',
+  /useState<any\[\]>\(\(\)\s*=>\s*readStorageArray\(FINANCE_STORAGE_KEYS\.PAYMENT_PROOFS\)/.test(financeHookCode));
+check('financeEntries state declared with default',
+  /useState<any\[\]>\(\(\)\s*=>\s*readStorageArray\(FINANCE_STORAGE_KEYS\.FINANCE_ENTRIES/.test(financeHookCode));
+check('financeRealizations state declared',
+  /useState<any\[\]>\(\(\)\s*=>\s*readStorageArray\(FINANCE_STORAGE_KEYS\.FINANCE_REALIZATIONS\)/.test(financeHookCode));
+check('assetEntries state declared with default',
+  /useState<any\[\]>\(\(\)\s*=>\s*readStorageArray\(FINANCE_STORAGE_KEYS\.ASSETS/.test(financeHookCode));
+check('parseRupiah helper preserved',
+  /export const parseRupiah = /.test(financeDataCode));
+check('formatRupiah helper preserved',
+  /export const formatRupiah = /.test(financeDataCode));
+
+/* ------------------------------------------------------------------ */
+/* CT. Plans / realization / assets                                     */
+/* ------------------------------------------------------------------ */
+
+section('CT. T8 Finance plans / realization / assets');
+
+check('defaultFinanceEntries preserved',
+  /defaultFinanceEntries = \[/.test(financeDataCode) &&
+    /id: 'fixed-mentor'/.test(financeDataCode) &&
+    /id: 'budget-scholarship'/.test(financeDataCode));
+check('defaultAssetEntries preserved',
+  /defaultAssetEntries = \[/.test(financeDataCode) &&
+    /id: 'asset-laptop'/.test(financeDataCode));
+check('nonDepreciableFixedAssetCategories preserved',
+  /nonDepreciableFixedAssetCategories = \['Tanah\/Bangunan'\]/.test(financeDataCode));
+check('budgetDirections preserved',
+  /budgetDirections = \[/.test(financeDataCode) &&
+    /value: 'Marketing'/.test(financeDataCode));
+check('saveFinanceEntries persists to localStorage',
+  /localStorage\.setItem\(FINANCE_STORAGE_KEYS\.FINANCE_ENTRIES/.test(financeHookCode));
+check('addFinanceEntry validates + audits + toasts',
+  /if \(!financeForm\.name\.trim\(\)/.test(financeHookCode) &&
+    /recordAudit\('Financial Center', 'Create Finance Plan'/.test(financeHookCode));
+check('saveFinanceRealizations persists to localStorage',
+  /localStorage\.setItem\(FINANCE_STORAGE_KEYS\.FINANCE_REALIZATIONS/.test(financeHookCode));
+check('addFinanceRealization audits + toasts',
+  /recordAudit\('Financial Center', 'Realize Budget\/Cost'/.test(financeHookCode) &&
+    /notify\('Realisasi biaya\/anggaran masuk pembukuan otomatis\.'\)/.test(financeHookCode));
+check('saveAssetEntries persists to localStorage',
+  /localStorage\.setItem\(FINANCE_STORAGE_KEYS\.ASSETS/.test(financeHookCode));
+check('addAssetEntry audits + toasts',
+  /recordAudit\('Financial Center', 'Register Asset'/.test(financeHookCode) &&
+    /notify\('Aset berhasil ditambahkan ke pembukuan\.'\)/.test(financeHookCode));
+
+/* ------------------------------------------------------------------ */
+/* CW. T8 Finance derived accounting / reports                          */
+/* ------------------------------------------------------------------ */
+
+section('CW. T8 Finance derived accounting / reports');
+
+check('accountingRows realization rows use legacy semantics',
+  financeHookCode.length > 0 && financeHookCode.includes('ledger-real'));
+check('accountingRows asset rows exclude non-depreciable',
+  financeHookCode.length > 0 && /!nonDepreciableFixedAssetCategories\.includes\(asset\.category\)/.test(financeHookCode));
+check('accountingRows depreciation rows',
+  financeHookCode.length > 0 && /ledger-dep-\$\{asset\.id\}/.test(financeHookCode) && /Depresiasi bulanan \$\{asset\.name\}/.test(financeHookCode));
+check('financialReports periodLabel legacy formats',
+  financeHookCode.length > 0 && financeHookCode.includes('toLocaleDateString(') && financeHookCode.includes('Kuartal ${') && financeHookCode.includes('Tahun ${'));
+check('financialReports excludes scholarship + free from revenue',
+  financeHookCode.includes("!String(tx.status).toLowerCase().includes('scholarship')") && financeHookCode.includes("!String(tx.status).toLowerCase().includes('free')"));
+
+/* ------------------------------------------------------------------ */
+/* CU. Payment table / filter / viewers                                 */
+/* ------------------------------------------------------------------ */
+
+section('CU. T8 Finance payment table / filter / viewers');
+
+check('filteredFinanceRows derived from financeRows',
+  /filteredFinanceRows = useMemo/.test(financeHookCode));
+check('paymentStatusOptions derived from financeRows',
+  /paymentStatusOptions = useMemo/.test(financeHookCode));
+check('openStoredInvoice fallback invoiceNumber',
+  /tx\.invoiceNumber \|\| tx\.id \|\| 'INV\/DEMO\/TP\/00000'/.test(financeHookCode));
+check('openStoredInvoice fallback invoiceTime',
+  /tx\.invoiceTime \|\| tx\.date/.test(financeHookCode));
+check('openStoredInvoice fallback method',
+  /tx\.method \|\| 'Manual\/Admin'/.test(financeHookCode));
+check('openStoredInvoice includes Total row',
+  /Total.*<strong>\$\{total\}<\/strong>/.test(financeHookCode));
+check('openStoredProof uses proof.fileType for PDF detection',
+  /String\(proof\.fileType\)\.includes\('pdf'\)/.test(financeHookCode));
+check('openStoredProof document.close() preserved',
+  /w\.document\.close\(\)/.test(financeHookCode));
+
+/* ------------------------------------------------------------------ */
+/* CV. Status workflow + canonical Users                                */
+/* ------------------------------------------------------------------ */
+
+section('CV. T8 Finance status workflow + canonical Users');
+
+check('updateFinanceRecordStatus updates transactions + proof',
+  /nextTransactions = financeTransactions\.map/.test(financeHookCode) &&
+    /nextProofs = paymentProofs\.map/.test(financeHookCode));
+check('updateFinanceRecordStatus persists to localStorage',
+  /localStorage\.setItem\(FINANCE_STORAGE_KEYS\.TRANSACTIONS/.test(financeHookCode) &&
+    /localStorage\.setItem\(FINANCE_STORAGE_KEYS\.PAYMENT_PROOFS/.test(financeHookCode));
+check('updateFinanceRecordStatus records audit',
+  /recordAudit\('Payment Workflow', 'Update Status'/.test(financeHookCode));
+check('Needs Revision queues Email + WhatsApp',
+  /nextStatus === 'Needs Revision'/.test(financeHookCode) &&
+    /queueNotification\('Email'/.test(financeHookCode) &&
+    /queueNotification\('WhatsApp'/.test(financeHookCode));
+check('Approved queues Email',
+  /nextStatus\.includes\('Approved'\)/.test(financeHookCode) &&
+    /queueNotification\('Email', updatedTx\.email, 'Pendaftaran The Prams Disetujui'/.test(financeHookCode));
+check('canonical Users auto-create via isApprovedStudentRecord',
+  /isApprovedStudentRecord\(approvedTx\)/.test(financeHookCode) &&
+    /userFromStudentRecord\(approvedTx, 'tx'\)/.test(financeHookCode));
+check('persistUsers used for student auto-create',
+  /persistUsers\(\[studentUser, \.\.\.users\]\)/.test(financeHookCode));
+check('auto-create audit record',
+  /recordAudit\('User \& Roles', 'Auto Create Student'/.test(financeHookCode));
+check('dedup by id OR email-program-packageName',
+  /u\.email && u\.program && u\.packageName/.test(financeHookCode));
+check('isApprovedStudentRecord imported from Users domain',
+  /isApprovedStudentRecord/.test(financeHookCode));
+check('userFromStudentRecord imported from Users domain',
+  /userFromStudentRecord/.test(financeHookCode));
+
+/* ------------------------------------------------------------------ */
+/* CW. Derived accounting / reports                                     */
+/* ------------------------------------------------------------------ */
+
+section('CW. T8 Finance derived accounting / reports');
+
+check('accountingRows payment rows use legacy IDs/accounts',
+  /id: `ledger-\$\{tx\.id \|\| tx\.invoiceNumber\}`/.test(financeHookCode) &&
+    /account: isScholarship \? 'Piutang\/Kuota Beasiswa' : isFree \? 'Akun Gratis' : 'Pendapatan Kelas'/.test(financeHookCode));
+check('accountingRows realization rows use legacy semantics',
+  /id: `ledger-real-\$\{row\.id\}`/.test(financeHookCode) &&
+    /account: entry\?.type === 'budget' \? `Realisasi Anggaran - [\$]\{row\.category\}\)/.test(financeHookCode));
+check('accountingRows asset rows exclude non-depreciable',
+  /!nonDepreciableFixedAssetCategories\.includes\(asset\.category\)/.test(financeHookCode));
+check('accountingRows depreciation rows',
+  /id: `ledger-dep-\$\{asset\.id\}`/.test(financeHookCode) &&
+    /description: `Depresiasi bulanan \$\{asset\.name\}`/.test(financeHookCode));
+check('financialReports periodLabel legacy formats',
+  /monthly \? now\.toLocaleDateString\('id-ID', \{ month: 'long', year: 'numeric' \}\)/.test(financeHookCode) &&
+    /quarterly \? `Kuartal \$\{Math\.floor\(now\.getMonth\(\) \/ 3\) \+ 1\} \$\{now\.getFullYear\(\)\}\)/.test(financeHookCode) &&
+    /yearly \? `Tahun \$\{now\.getFullYear\(\)\}\)/.test(financeHookCode));
+check('financialReports revenue excludes scholarship + free',
+  /\.filter\(\(tx\) => !String\(tx\.status\)\.toLowerCase\(\)\.includes\('scholarship'\) && !String\(tx\.status\)\.toLowerCase\(\)\.includes\('free'\)/.test(financeHookCode));
+check('financialReports excludes scholarship + free from revenue',
+  /\$\{tx\.invoiceNumber \|\| tx\.id\} \|\| 'INV\/DEMO\/TP\/00000'/.test(financeHookCode));
+
+/* ------------------------------------------------------------------ */
+/* CX. Composition / 7 complete subviews / dialogs                      */
+/* ------------------------------------------------------------------ */
+
+section('CX. T8 Finance composition / 7 subviews / dialogs');
+
+check('AdminFinancePage imports AdminFinanceMetricDialog',
+  /import AdminFinanceMetricDialog/.test(financePageSrc));
+check('AdminFinancePage imports AdminFinanceRecordDialog',
+  /import AdminFinanceRecordDialog/.test(financePageSrc));
+check('AdminFinanceMetricDialog is rendered',
+  /<AdminFinanceMetricDialog/.test(financePageCode));
+check('AdminFinanceRecordDialog is rendered',
+  /<AdminFinanceRecordDialog/.test(financePageCode));
+check('Payments subview is not a placeholder',
+  !/implementation continues/.test(financePageCode));
+check('Inputs subview is not a placeholder',
+  !/implementation continues/.test(financePageCode));
+check('Realization subview is not a placeholder',
+  !/implementation continues/.test(financePageCode));
+check('Assets subview is not a placeholder',
+  !/implementation continues/.test(financePageCode));
+check('Accounting subview is not a placeholder',
+  !/implementation continues/.test(financePageCode));
+check('Reports subview is not a placeholder',
+  !/implementation continues/.test(financePageCode));
+check('Audit subview is not a placeholder',
+  !/implementation continues/.test(financePageCode));
+check('Payments subview has search/filter',
+  /paymentSearchTerm/.test(financePageCode) &&
+    /paymentStatusFilter/.test(financePageCode) &&
+    /paymentTypeFilter/.test(financePageCode));
+check('Realization subview has form + history',
+  /Realisasi Anggaran \/ Biaya/.test(financePageCode) &&
+    /Riwayat Realisasi/.test(financePageCode));
+check('Assets subview has form + list',
+  /Input Aset/.test(financePageCode) &&
+    /Daftar Aset/.test(financePageCode));
+check('Accounting subview has debit/credit/saldo',
+  /Debit Otomatis/.test(financePageCode) &&
+    /Kredit Otomatis/.test(financePageCode) &&
+    /Saldo Akuntansi Demo/.test(financePageCode) &&
+    /Jurnal Pembukuan Otomatis/.test(financePageCode));
+check('Reports subview has Bulanan/Kuartal/Tahunan',
+  financePageCode.includes('Bulanan') &&
+    financePageCode.includes('Kuartal') &&
+    financePageCode.includes('Tahunan'));
+check('Audit subview has audit trail + outbox',
+  /Audit Trail Sistem/.test(financePageCode) &&
+    /Outbox Notifikasi/.test(financePageCode));
+
+/* ------------------------------------------------------------------ */
+/* CY. Accessibility                                                    */
+/* ------------------------------------------------------------------ */
+
+section('CY. T8 Finance accessibility source contract');
+
+check('finance form fields have accessible names',
+  /aria-label=/.test(financePageCode));
+check('seven subview controls have >=44px + aria-pressed',
+  (financePageCode.match(/aria-pressed/g) || []).length >= 7);
+check('period controls have >=44px + accessible selected state',
+  /min-h-\[44px\]/.test(financePageCode));
+check('record/metric close has aria-label + >=44px',
+  /aria-label="Tutup detail metrik"/.test(financeMetricDialogCode) &&
+    /min-w-\[44px\]/.test(financeMetricDialogCode) &&
+    /min-h-\[44px\]/.test(financeMetricDialogCode));
+check('student detail has >=44px practical target',
+  /min-h-\[44px\]/.test(financeRecordDialogCode));
+check('Invoice/proof buttons have >=44px',
+  /min-h-\[44px\]/.test(financePageCode));
+check('finance delete has aria-label + >=44px',
+  /aria-label=/.test(financePageCode) &&
+    /min-w-\[44px\]/.test(financePageCode));
+check('Approve/Tidak/Email Review/WhatsApp Review have >=44px',
+  /min-h-\[44px\]/.test(financeRecordDialogCode));
+check('selected does NOT use bg-brand-blue text-white',
+  !/bg-brand-blue[^"'`]*text-white|text-white[^"'`]*bg-brand-blue/.test(financePageCode));
+
+/* ------------------------------------------------------------------ */
+/* CZ. T9 boundary / security                                           */
+/* ------------------------------------------------------------------ */
+
+section('CZ. T8 T9 boundary / security');
+
+check('T9 adminTeam state still lives in AdminDashboard',
+  /\badminTeam\b/.test(adminDashCode));
+check('T9 Deep Analytics still lives in AdminDashboard',
+  /Deep Analytics/.test(adminDashCode));
+check('T9 General Settings still lives in AdminDashboard',
+  /Settings/.test(adminDashCode));
+check('Finance domain does NOT define T9 state',
+  !/adminTeam|Deep Analytics|Settings/.test(financeDomainCode));
+check('SEC-P1-03 still open: no Supabase/auth/AI/backend in Finance domain',
+  !/@supabase|supabase|GoogleGenAI|@google\/genai|createClient|\bopenai\b|authorization/i.test(financeDomainCode));
+check('Finance domain adds no access-control language',
+  !/\b(?:403|Forbidden|unauthorized|access control)\b/i.test(financeDomainCode));
+check('routing frozen: exactly the Finance path /admin/commerce/finance',
+  allAdminPaths().includes('/admin/commerce/finance'));
+
+/* ------------------------------------------------------------------ */
 /* Report                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -2839,7 +3202,7 @@ if (failures.length) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exit(1);
 }
-console.log('B1.4D-T7A admin workspace contract: PASS');
+console.log('B1.4D-T8 admin workspace contract: PASS');
 process.exit(0);
 
 /* ------------------------------------------------------------------ */
