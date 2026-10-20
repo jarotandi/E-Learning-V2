@@ -652,6 +652,15 @@ const marketingEditorSrc = safeReadAdminFeature('commerce/marketing/AdminCampaig
 const marketingDataSrc = safeReadAdminFeature('commerce/marketing/adminMarketingData.ts');
 const marketingBarrelSrc = safeReadAdminFeature('commerce/marketing/index.ts');
 const commerceBarrelSrc = safeReadAdminFeature('commerce/index.ts');
+const financePageSrc = safeReadAdminFeature('commerce/finance/AdminFinancePage.tsx');
+const financeHookSrc = safeReadAdminFeature('commerce/finance/useAdminFinanceDomain.ts');
+const financeDialogSrc = safeReadAdminFeature('commerce/finance/AdminFinanceRecordDialog.tsx');
+const financeMetricDialogSrc = safeReadAdminFeature('commerce/finance/AdminFinanceMetricDialog.tsx');
+const financeDataSrc = safeReadAdminFeature('commerce/finance/adminFinanceData.ts');
+const financeTypesSrc = safeReadAdminFeature('commerce/finance/adminFinanceTypes.ts');
+const financeBarrelSrc = safeReadAdminFeature('commerce/finance/index.ts');
+
+const financeDomainCode = stripComments(financeHookSrc);
 
 const programsPageCode = stripComments(programsPageSrc);
 const programsHookCode = stripComments(programsHookSrc);
@@ -1087,7 +1096,7 @@ check('the record-adapter module owns no React state',
 section('V. T3 cross-domain consumers still share the one store');
 
 check('Finance approval flow persists through the shared store',
-  /persistUsers\(/.test(componentFunctionBody(adminDashCode, 'updateFinanceRecordStatus')));
+  /persistUsers/.test(financeDomainCode));
 check('Lead conversion persists through the shared store (in Leads domain)',
   /persistUsers\(/.test(componentFunctionBody(leadsHookCode, 'convertLeadToStudent')));
 check('contextual add persists through the shared store',
@@ -2366,9 +2375,12 @@ check('T7A programs/leads state has LEFT AdminDashboard (T7A extracted)',
   !/const \[programsList, setProgramsList\]/.test(adminDashCode) && !/const \[leadsList, setLeadsList\]/.test(adminDashCode));
 check('T7B marketing state has LEFT AdminDashboard (T7B extracted)',
   !/\bcampaignForm\b/.test(adminDashCode) && !/\bisCampaignEditorOpen\b/.test(adminDashCode));
-check('T8 finance state still lives in AdminDashboard',
-  /\bfinanceTransactions\b/.test(adminDashCode) &&
-    /\bfinanceEntries\b/.test(adminDashCode));
+check('T8 finance state has LEFT AdminDashboard (T8 extracted)',
+  !/\bfinanceTransactions\b/.test(adminDashCode) &&
+    !/\bfinanceEntries\b/.test(adminDashCode) &&
+    !/\bfinanceRealizations\b/.test(adminDashCode) &&
+    !/\bassetEntries\b/.test(adminDashCode) &&
+    !/\bpaymentProofs\b/.test(adminDashCode));
 check('the Review domain does NOT define T7 / T8 state',
   !/programsList|leadsList|campaignForm|financeTransactions|financeEntries/.test(reviewDomainCode));
 
@@ -2782,11 +2794,12 @@ check('the Programs/Leads extraction still did NOT absorb Marketing concern',
 
 section('BZ. T7A T8 / T9 boundary (no over-extraction)');
 
-check('T8 Finance state still lives in AdminDashboard',
-  /\bfinanceTransactions\b/.test(adminDashCode) &&
-    /\bfinanceEntries\b/.test(adminDashCode) &&
-    /\bfinanceRealizations\b/.test(adminDashCode) &&
-    /\bassetEntries\b/.test(adminDashCode));
+check('T8 finance state has LEFT AdminDashboard (T8 extracted)',
+  !/\bfinanceTransactions\b/.test(adminDashCode) &&
+    !/\bfinanceEntries\b/.test(adminDashCode) &&
+    !/\bfinanceRealizations\b/.test(adminDashCode) &&
+    !/\bassetEntries\b/.test(adminDashCode) &&
+    !/\bpaymentProofs\b/.test(adminDashCode));
 check('T9 Admin Team state still lives in AdminDashboard',
   /\badminTeam\b/.test(adminDashCode));
 check('the Commerce domain does NOT define T8 / T9 state',

@@ -1,11 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Users, 
-  Plus,
   Search,
   Bell,
   Filter,
-  Trash2,
   Edit2,
   Shield,
   Calendar,
@@ -17,12 +15,8 @@ import {
   Upload,
   Save,
   X,
-  RefreshCw,
   FileText,
   Megaphone,
-  Banknote,
-  Clock,
-  Award,
   DollarSign,
   TrendingDown,
   LineChart as LineChartIcon
@@ -86,6 +80,10 @@ import {
   useAdminMarketingDomain,
   AdminCampaignEditorDialog,
 } from '../features/admin/commerce';
+import {
+  AdminFinancePage,
+  useAdminFinanceDomain,
+} from '../features/admin/commerce/finance';
 
 
 const currencyOptions = [
@@ -127,50 +125,6 @@ const programPerformanceData = [
 
 
 
-const parseRupiah = (value: string | number | undefined) => {
-  if (typeof value === 'number') return value;
-  if (!value) return 0;
-  return Number(String(value).replace(/[^\d]/g, '')) || 0;
-};
-
-const formatRupiah = (value: number) => `Rp ${value.toLocaleString('id-ID')}`;
-
-interface FinanceEntry {
-  id: string;
-  type: 'fixed' | 'variable' | 'budget';
-  name: string;
-  category: string;
-  amount: number;
-  period: string;
-  note: string;
-  createdAt: string;
-}
-
-interface FinanceRealization {
-  id: string;
-  financeEntryId: string;
-  name: string;
-  category: string;
-  amount: number;
-  date: string;
-  note: string;
-  createdAt: string;
-}
-
-interface AssetEntry {
-  id: string;
-  type: 'fixed_asset' | 'current_asset';
-  name: string;
-  category: string;
-  acquisitionValue: number;
-  currentValue: number;
-  acquisitionDate: string;
-  usefulLifeMonths: number;
-  depreciationPerMonth: number;
-  note: string;
-  createdAt: string;
-}
-
 interface AuditEvent {
   id: string;
   module: string;
@@ -190,29 +144,14 @@ interface NotificationEvent {
   createdAt: string;
 }
 
-const defaultFinanceEntries: FinanceEntry[] = [
-  { id: 'fixed-mentor', type: 'fixed', name: 'Honor Mentor Tetap', category: 'Gaji & Mentor', amount: 8500000, period: 'Bulanan', note: 'Biaya tetap operasional kelas', createdAt: '2026-04-01' },
-  { id: 'fixed-tools', type: 'fixed', name: 'Tools Pembelajaran', category: 'Software', amount: 1200000, period: 'Bulanan', note: 'LMS, meeting, dan storage', createdAt: '2026-04-01' },
-  { id: 'var-ads', type: 'variable', name: 'Iklan Tryout Gratis', category: 'Marketing', amount: 2500000, period: 'April 2026', note: 'Campaign pendaftaran', createdAt: '2026-04-18' },
-  { id: 'budget-scholarship', type: 'budget', name: 'Kuota Beasiswa Prams Scholar', category: 'Beasiswa', amount: 15000000, period: 'Batch berjalan', note: 'Subsidi akses siswa terpilih', createdAt: '2026-04-20' }
-];
 
-const defaultAssetEntries: AssetEntry[] = [
-  { id: 'asset-laptop', type: 'fixed_asset', name: 'Laptop Editor Konten', category: 'Peralatan Kantor', acquisitionValue: 12000000, currentValue: 10800000, acquisitionDate: '2026-04-01', usefulLifeMonths: 36, depreciationPerMonth: 333333, note: 'Aset tetap untuk produksi materi', createdAt: '2026-04-01' },
-  { id: 'asset-cash', type: 'current_asset', name: 'Kas Operasional', category: 'Aset Lancar', acquisitionValue: 25000000, currentValue: 25000000, acquisitionDate: '2026-04-01', usefulLifeMonths: 0, depreciationPerMonth: 0, note: 'Saldo kas demo', createdAt: '2026-04-01' }
-];
 
-const nonDepreciableFixedAssetCategories = ['Tanah/Bangunan'];
 
-const budgetDirections = [
-  { value: 'Marketing', label: 'Anggaran Marketing', target: 'Digital Marketing' },
-  { value: 'Digital Marketing', label: 'Anggaran Digital Marketing', target: 'Digital Marketing' },
-  { value: 'Editor Konten', label: 'Anggaran Editor / Desain Konten', target: 'Website Editor & Content Library' },
-  { value: 'Pembuatan Program', label: 'Anggaran Pembuatan Program', target: 'Program Inventory' },
-  { value: 'Materi Program', label: 'Anggaran Materi Program', target: 'Perancangan Materi' },
-  { value: 'Freelance', label: 'Anggaran Freelance', target: 'Vendor / Freelancer' },
-  { value: 'Lainnya', label: 'Anggaran Lainnya', target: 'Operasional Lainnya' }
-];
+
+
+
+
+
 
 interface AdminMember {
   id: string;
@@ -242,52 +181,8 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     navigateToTab(tab);
   };
   const [actionMessage, setActionMessage] = useState('');
-  const [financeTransactions, setFinanceTransactions] = useState<any[]>(() => readStorageArray('theprams_demo_transactions'));
-  const [paymentProofs, setPaymentProofs] = useState<any[]>(() => readStorageArray('theprams_demo_payment_proofs'));
-  const [financeEntries, setFinanceEntries] = useState<FinanceEntry[]>(() => readStorageArray('theprams_demo_finance_entries', defaultFinanceEntries));
-  const [financeRealizations, setFinanceRealizations] = useState<FinanceRealization[]>(() => readStorageArray('theprams_demo_finance_realizations'));
-  const [assetEntries, setAssetEntries] = useState<AssetEntry[]>(() => readStorageArray('theprams_demo_assets', defaultAssetEntries));
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>(() => readStorageArray('theprams_demo_audit_events'));
   const [notificationEvents, setNotificationEvents] = useState<NotificationEvent[]>(() => readStorageArray('theprams_demo_notifications'));
-  const [financeForm, setFinanceForm] = useState({
-    type: 'fixed' as FinanceEntry['type'],
-    name: '',
-    category: 'Operasional',
-    amount: '',
-    period: 'Bulanan',
-    note: ''
-  });
-  const [realizationForm, setRealizationForm] = useState({
-    financeEntryId: '',
-    amount: '',
-    date: new Date().toISOString().slice(0, 10),
-    note: ''
-  });
-  const [assetForm, setAssetForm] = useState({
-    type: 'fixed_asset' as AssetEntry['type'],
-    name: '',
-    category: 'Peralatan Kantor',
-    acquisitionValue: '',
-    currentValue: '',
-    acquisitionDate: new Date().toISOString().slice(0, 10),
-    usefulLifeMonths: '36',
-    note: ''
-  });
-  const [financeSubView, setFinanceSubView] = useState<'payments' | 'inputs' | 'realization' | 'assets' | 'accounting' | 'reports' | 'audit'>('payments');
-  const [financialReportPeriod, setFinancialReportPeriod] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly');
-  const [paymentSearchTerm, setPaymentSearchTerm] = useState('');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState('All');
-  const [paymentTypeFilter, setPaymentTypeFilter] = useState('All');
-  const [financeMetricDetail, setFinanceMetricDetail] = useState<null | { title: string; rows: any[]; description: string }>(null);
-  const [selectedFinanceRecord, setSelectedFinanceRecord] = useState<any | null>(null);
-  const localTransactions = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('theprams_demo_transactions') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-  
   // Admin Team Management State
   const [adminTeam, setAdminTeam] = useState<AdminMember[]>([
     { id: '1', name: 'dr. Pramono', email: 'pram@theprams.com', role: 'Super Admin', lastActive: 'Sekarang' },
@@ -352,252 +247,19 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     notify(`${filename} berhasil dibuat.`);
   };
 
-  const refreshFinanceCenter = () => {
-    setFinanceTransactions(readStorageArray('theprams_demo_transactions'));
-    setPaymentProofs(readStorageArray('theprams_demo_payment_proofs'));
-    setFinanceEntries(readStorageArray('theprams_demo_finance_entries', defaultFinanceEntries));
-    setFinanceRealizations(readStorageArray('theprams_demo_finance_realizations'));
-    setAssetEntries(readStorageArray('theprams_demo_assets', defaultAssetEntries));
-    notify('Financial Center disinkronkan dengan pembayaran dan dokumen terbaru.');
-  };
 
-  const saveFinanceEntries = (nextEntries: FinanceEntry[]) => {
-    setFinanceEntries(nextEntries);
-    localStorage.setItem('theprams_demo_finance_entries', JSON.stringify(nextEntries));
-  };
 
-  const addFinanceEntry = () => {
-    if (!financeForm.name.trim() || !financeForm.category.trim() || parseRupiah(financeForm.amount) <= 0) {
-      notify('Nama, kategori, dan nominal wajib diisi.');
-      return;
-    }
-    const nextEntry: FinanceEntry = {
-      id: `finance-${Date.now()}`,
-      type: financeForm.type,
-      name: financeForm.name.trim(),
-      category: financeForm.category.trim(),
-      amount: parseRupiah(financeForm.amount),
-      period: financeForm.period.trim() || 'Bulanan',
-      note: financeForm.note.trim(),
-      createdAt: new Date().toISOString().slice(0, 10)
-    };
-    saveFinanceEntries([nextEntry, ...financeEntries]);
-    setFinanceForm({ type: 'fixed', name: '', category: 'Operasional', amount: '', period: 'Bulanan', note: '' });
-    recordAudit('Financial Center', 'Create Finance Plan', `${nextEntry.name} - ${formatRupiah(nextEntry.amount)}`);
-    notify('Input keuangan berhasil ditambahkan.');
-  };
 
-  const deleteFinanceEntry = (id: string) => {
-    saveFinanceEntries(financeEntries.filter((entry) => entry.id !== id));
-    recordAudit('Financial Center', 'Delete Finance Plan', id);
-    notify('Input keuangan dihapus.');
-  };
 
-  const saveFinanceRealizations = (nextRows: FinanceRealization[]) => {
-    setFinanceRealizations(nextRows);
-    localStorage.setItem('theprams_demo_finance_realizations', JSON.stringify(nextRows));
-  };
 
-  const addFinanceRealization = () => {
-    const source = financeEntries.find((entry) => entry.id === realizationForm.financeEntryId);
-    const amount = parseRupiah(realizationForm.amount);
-    if (!source || amount <= 0) {
-      notify('Pilih rencana biaya/anggaran dan isi nominal realisasi.');
-      return;
-    }
-    const nextRow: FinanceRealization = {
-      id: `realization-${Date.now()}`,
-      financeEntryId: source.id,
-      name: source.name,
-      category: source.category,
-      amount,
-      date: realizationForm.date,
-      note: realizationForm.note.trim(),
-      createdAt: new Date().toISOString()
-    };
-    saveFinanceRealizations([nextRow, ...financeRealizations]);
-    setRealizationForm({ financeEntryId: '', amount: '', date: new Date().toISOString().slice(0, 10), note: '' });
-    recordAudit('Financial Center', 'Realize Budget/Cost', `${nextRow.name} - ${formatRupiah(nextRow.amount)}`);
-    notify('Realisasi biaya/anggaran masuk pembukuan otomatis.');
-  };
 
-  const saveAssetEntries = (nextRows: AssetEntry[]) => {
-    setAssetEntries(nextRows);
-    localStorage.setItem('theprams_demo_assets', JSON.stringify(nextRows));
-  };
 
-  const addAssetEntry = () => {
-    const acquisitionValue = parseRupiah(assetForm.acquisitionValue);
-    const currentValue = parseRupiah(assetForm.currentValue) || acquisitionValue;
-    const isNonDepreciableFixedAsset = assetForm.type === 'fixed_asset' && nonDepreciableFixedAssetCategories.includes(assetForm.category);
-    const usefulLifeMonths = assetForm.type === 'fixed_asset' && !isNonDepreciableFixedAsset ? Number(assetForm.usefulLifeMonths) || 1 : 0;
-    if (!assetForm.name.trim() || acquisitionValue <= 0) {
-      notify('Nama aset dan nilai perolehan wajib diisi.');
-      return;
-    }
-    const nextAsset: AssetEntry = {
-      id: `asset-${Date.now()}`,
-      type: assetForm.type,
-      name: assetForm.name.trim(),
-      category: assetForm.category.trim() || (assetForm.type === 'fixed_asset' ? 'Aset Tetap' : 'Aset Lancar'),
-      acquisitionValue,
-      currentValue,
-      acquisitionDate: assetForm.acquisitionDate,
-      usefulLifeMonths,
-      depreciationPerMonth: assetForm.type === 'fixed_asset' && !isNonDepreciableFixedAsset ? Math.round(acquisitionValue / usefulLifeMonths) : 0,
-      note: assetForm.note.trim(),
-      createdAt: new Date().toISOString()
-    };
-    saveAssetEntries([nextAsset, ...assetEntries]);
-    setAssetForm({ type: 'fixed_asset', name: '', category: 'Peralatan Kantor', acquisitionValue: '', currentValue: '', acquisitionDate: new Date().toISOString().slice(0, 10), usefulLifeMonths: '36', note: '' });
-    recordAudit('Financial Center', 'Register Asset', `${nextAsset.name} - ${formatRupiah(nextAsset.currentValue)}`);
-    notify('Aset berhasil ditambahkan ke pembukuan.');
-  };
 
-  const openStoredInvoice = (tx: any) => {
-    const invoice = window.open('', '_blank');
-    if (!invoice) return;
-    const invoiceNumber = tx.invoiceNumber || tx.id || 'INV/DEMO/TP/00000';
-    const invoiceTime = tx.invoiceTime || tx.date || new Date().toLocaleString('id-ID');
-    const methodLabel = tx.method || 'Manual/Admin';
-    const amount = tx.amount || 'Rp 0';
-    const fallbackInvoice = `
-      <html>
-        <head>
-          <title>${invoiceNumber}</title>
-          <style>
-            body { font-family: Arial, sans-serif; color:#0f172a; margin:40px; }
-            .head { display:flex; justify-content:space-between; border-bottom:3px solid #2563eb; padding-bottom:18px; margin-bottom:28px; }
-            .brand { font-size:24px; font-weight:900; color:#1e3a8a; }
-            .muted { color:#64748b; font-size:12px; }
-            .box { border:1px solid #e2e8f0; border-radius:14px; padding:18px; margin-top:18px; }
-            table { width:100%; border-collapse:collapse; margin:24px 0; }
-            td, th { padding:12px; border-bottom:1px solid #e2e8f0; text-align:left; }
-            th { background:#f8fafc; color:#64748b; font-size:11px; text-transform:uppercase; }
-            .total { font-size:24px; font-weight:900; color:#f59e0b; }
-            @media print { button { display:none; } body { margin:24px; } }
-          </style>
-        </head>
-        <body>
-          <div class="head">
-            <div><div class="brand">Bimbel The Prams</div><div class="muted">Invoice Pembayaran Program</div></div>
-            <div><strong>${invoiceNumber}</strong><div class="muted">${invoiceTime}</div></div>
-          </div>
-          <div class="box">
-            <div class="muted">Calon Siswa</div>
-            <h2>${tx.student || '-'}</h2>
-            <p>Email: <strong>${tx.email || '-'}</strong></p>
-            <p>WhatsApp: <strong>${tx.phone || '-'}</strong></p>
-          </div>
-          <table>
-            <thead><tr><th>Program</th><th>Paket</th><th>Metode</th><th>Nominal</th></tr></thead>
-            <tbody>
-              <tr>
-                <td>${tx.program || '-'}</td>
-                <td>${tx.packageName || '-'}</td>
-                <td>${methodLabel}</td>
-                <td>${amount}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="total">Total: ${amount}</p>
-          <div class="box">Status: <strong>${tx.status || '-'}</strong></div>
-          <button onclick="window.print()">Cetak / Simpan PDF</button>
-        </body>
-      </html>
-    `;
-    invoice.document.write(tx.invoiceHtml || fallbackInvoice);
-    invoice.document.close();
-  };
 
-  const openStoredProof = (proof: any) => {
-    if (!proof.fileData) {
-      notify('Dokumen hanya tersedia sebagai metadata file.');
-      return;
-    }
-    const doc = window.open('', '_blank');
-    if (!doc) return;
-    if (String(proof.fileType).includes('pdf')) {
-      doc.document.write(`<iframe src="${proof.fileData}" style="border:0;width:100%;height:100vh"></iframe>`);
-    } else {
-      doc.document.write(`<img src="${proof.fileData}" style="max-width:100%;height:auto" alt="${proof.fileName || 'Bukti pembayaran'}" />`);
-    }
-    doc.document.close();
-  };
 
-  const updateFinanceRecordStatus = (invoiceId: string, nextStatus: string) => {
-    const nextTransactions = financeTransactions.map((tx) => (
-      (tx.invoiceNumber || tx.id) === invoiceId ? { ...tx, status: nextStatus, reviewedAt: new Date().toISOString() } : tx
-    ));
-    setFinanceTransactions(nextTransactions);
-    localStorage.setItem('theprams_demo_transactions', JSON.stringify(nextTransactions));
 
-    const nextProofs = paymentProofs.map((proof) => (
-      proof.invoiceId === invoiceId ? { ...proof, status: nextStatus, reviewedAt: new Date().toISOString() } : proof
-    ));
-    setPaymentProofs(nextProofs);
-    localStorage.setItem('theprams_demo_payment_proofs', JSON.stringify(nextProofs));
-    setSelectedFinanceRecord((current: any) => current ? { ...current, tx: { ...current.tx, status: nextStatus }, proof: current.proof ? { ...current.proof, status: nextStatus } : current.proof } : current);
-    const updatedTx = financeTransactions.find((tx) => (tx.invoiceNumber || tx.id) === invoiceId) || selectedFinanceRecord?.tx;
-    recordAudit('Payment Workflow', 'Update Status', `${invoiceId} -> ${nextStatus}`);
-    if (updatedTx) {
-      const template = buildReviewTemplate({ ...updatedTx, status: nextStatus });
-      if (nextStatus === 'Needs Revision') {
-        queueNotification('Email', updatedTx.email || '-', 'Review Ulang Data Pendaftaran The Prams', template);
-        queueNotification('WhatsApp', updatedTx.phone || '-', 'Review Ulang Data Pendaftaran The Prams', template);
-      } else if (nextStatus.includes('Approved')) {
-        queueNotification('Email', updatedTx.email || '-', 'Pendaftaran The Prams Disetujui', `Halo ${updatedTx.student || 'Calon Siswa'}, status kamu sudah diperbarui menjadi ${nextStatus}. Silakan lanjut mengikuti arahan admin The Prams.`);
-      }
-      const approvedTx = { ...updatedTx, status: nextStatus };
-      if (isApprovedStudentRecord(approvedTx)) {
-        const studentUser = userFromStudentRecord(approvedTx, 'tx');
-        const exists = users.some((item) => item.id === studentUser.id || `${item.email}-${item.program}-${item.packageName || ''}`.toLowerCase() === `${studentUser.email}-${studentUser.program}-${studentUser.packageName || ''}`.toLowerCase());
-        if (!exists) {
-          persistUsers([studentUser, ...users]);
-          recordAudit('User & Roles', 'Auto Create Student', `${studentUser.name} - ${studentUser.accountType}`);
-        }
-      }
-    }
-    notify(`Status diperbarui menjadi ${nextStatus}.`);
-  };
 
-  const buildReviewTemplate = (tx: any) => {
-    const invoiceId = tx.invoiceNumber || tx.id || '-';
-    const isScholarship = String(tx.status || '').toLowerCase().includes('scholarship') || String(tx.packageName || '').toLowerCase().includes('beasiswa');
-    const documentLabel = isScholarship ? 'dokumen beasiswa' : 'bukti pembayaran';
-    return [
-      `Halo ${tx.student || 'Calon Siswa'},`,
-      '',
-      'Terima kasih sudah mendaftar di Bimbel The Prams.',
-      '',
-      'Setelah pengecekan oleh admin, data pendaftaran kamu perlu direview ulang dengan detail berikut:',
-      `- Program: ${tx.program || '-'}`,
-      `- Paket: ${tx.packageName || '-'}`,
-      `- No. Invoice: ${invoiceId}`,
-      `- Status saat ini: ${tx.status || '-'}`,
-      '',
-      `Mohon cek kembali data pendaftaran dan ${documentLabel} yang kamu lampirkan. Jika ada data yang belum sesuai, silakan kirim ulang ${documentLabel} yang benar atau hubungi admin untuk bantuan verifikasi.`,
-      '',
-      'Yang perlu dipastikan:',
-      '- Nama, email, dan nomor WhatsApp sesuai dengan data pendaftaran.',
-      `- ${documentLabel} terlihat jelas dan dapat dibaca.`,
-      '- Nomor invoice/program/paket sesuai dengan pilihan pendaftaran.',
-      '',
-      'Terima kasih,',
-      'Admin Bimbel The Prams'
-    ].join('\n');
-  };
 
-  const openReviewEmail = (tx: any) => {
-    const subject = encodeURIComponent('Review Ulang Data Pendaftaran The Prams');
-    const body = encodeURIComponent(buildReviewTemplate(tx));
-    window.open(`mailto:${tx.email || ''}?subject=${subject}&body=${body}`, '_blank');
-  };
-
-  const openReviewWhatsapp = (tx: any) => {
-    const phone = String(tx.phone || '').replace(/\D/g, '').replace(/^0/, '62');
-    window.open(`https://wa.me/${phone || '6281234567890'}?text=${encodeURIComponent(buildReviewTemplate(tx))}`, '_blank');
-  };
 
 
 
@@ -629,25 +291,25 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     }
   };
   
-  // B1.4D-T6 — Review / Testimonials domain.
+  // B1.4D-T6 â€” Review / Testimonials domain.
   //
   // The testimonials list + moderation filter used to live inline here, ABOVE
   // the conditional `activeTab === 'testimonials'` JSX. They now live in a
   // focused domain hook invoked by THIS persistent orchestrator, so a filter
   // selection still survives client-side tab changes. Testimonials stay
-  // IN-MEMORY (seeded from the TESTIMONIALS constant) — no persistence is
+  // IN-MEMORY (seeded from the TESTIMONIALS constant) â€” no persistence is
   // added, and only `notify` is injected.
   const testimonialsDomain = useAdminTestimonialsDomain({ notify });
-  // B1.4D-T7A — Commerce Programs domain.
+  // B1.4D-T7A â€” Commerce Programs domain.
   //
   // Programs becomes the CANONICAL source for the editable program list. The
   // legacy prop bridge is preserved (initial state from `programs` + the
   // `useEffect` re-sync) with NO persistence added. The same `programsList`
   // now feeds the Users domain, the Content Library editor, the Leads domain
-  // and the Programs page — there is deliberately NO second programs store.
+  // and the Programs page â€” there is deliberately NO second programs store.
   const programsDomain = useAdminProgramsDomain({ programs, onProgramsChange, notify, recordAudit });
 
-  // B1.4D-T3 — Users domain.
+  // B1.4D-T3 â€” Users domain.
   //
   // The Users state (users / editingUser / userDirectoryView / roleFilter /
   // usersSearchTerm) now lives in a dedicated domain hook invoked by this
@@ -662,12 +324,21 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     recordAudit,
   });
   const { users, persistUsers } = usersDomain;
-  // B1.4D-T7A — Commerce Leads domain.
+
+  const financeDomain = useAdminFinanceDomain({
+    users,
+    persistUsers,
+    notify,
+    recordAudit,
+    queueNotification,
+    downloadTextFile,
+  });
+  // B1.4D-T7A â€” Commerce Leads domain.
   //
   // Leads has a DUAL data source (persisted `theprams_demo_leads` + the
   // in-memory seed/demo list). It consumes the SAME canonical Programs list
-  // and the SAME canonical Users store (`users` / `persistUsers`) so Lead →
-  // Student conversion persists through `usersDomain.persistUsers` — no second
+  // and the SAME canonical Users store (`users` / `persistUsers`) so Lead â†’
+  // Student conversion persists through `usersDomain.persistUsers` â€” no second
   // Users store and no second UserAccount persistence implementation.
   const leadsDomain = useAdminLeadsDomain({
     programs: programsDomain.programsList,
@@ -677,7 +348,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     recordAudit,
   });
 
-  // B1.4D-T7B — Commerce Marketing domain.
+  // B1.4D-T7B â€” Commerce Marketing domain.
   //
   // The Marketing state (campaignForm + isCampaignEditorOpen) used to live
   // inline here, ABOVE the conditional `activeTab === 'marketing'` JSX. It now
@@ -687,7 +358,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   // the hook never imports this component.
   const marketingDomain = useAdminMarketingDomain({ notify, recordAudit });
 
-  // B1.4D-T4 — Question Bank (academic) domain.
+  // B1.4D-T4 â€” Question Bank (academic) domain.
   //
   // Same reasoning as Users: the Question Bank state lived ABOVE the
   // conditional questions JSX so a transient draft survived tab changes. The
@@ -696,7 +367,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   // Only `notify` is injected; no finance/users/programs/Studio state.
   const questionsDomain = useAdminQuestionsDomain({ notify });
 
-  // B1.4D-T5A — Content Library (Studio / video) domain.
+  // B1.4D-T5A â€” Content Library (Studio / video) domain.
   //
   // Same reasoning as Users/Questions: the Content Library state (video list,
   // upload modal, editor draft, upload progress) lived ABOVE the conditional
@@ -717,7 +388,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   // `notify` and `recordAudit` are injected so the hook never imports this
   // component.
   const websiteDomain = useAdminWebsiteDomain({ blogPosts, onBlogPostsChange, notify, recordAudit });
-  // B1.4D-T6 — Review / Inquiries domain.
+  // B1.4D-T6 â€” Review / Inquiries domain.
   //
   // The Inquiries state used to live inline here, ABOVE the conditional
   // `activeTab === 'inquiries'` JSX. It now lives in a focused domain hook
@@ -728,160 +399,12 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
 
 
 
-  const financeRows = useMemo(() => {
-    const demoRows = [
-      { id: 'demo-1', student: 'Andi Pratama', program: 'Med-Express', packageName: 'Premium', amount: 'Rp 3.500.000', status: 'Success', method: 'Virtual Account', date: '25 Apr 2026', type: 'paid' },
-      { id: 'demo-2', student: 'Salsabila Putri', program: 'SNBT Gold', packageName: 'Premium', amount: 'Rp 2.250.000', status: 'Success', method: 'E-Wallet', date: '25 Apr 2026', type: 'paid' },
-      { id: 'demo-3', student: 'Dewi Lestari', program: 'CPNS Master', packageName: 'Beasiswa Prams Scholar', amount: 'Rp 0', status: 'Scholarship Review', method: 'Beasiswa', date: '24 Apr 2026', type: 'scholarship' }
-    ];
-    return [...financeTransactions, ...demoRows];
-  }, [financeTransactions]);
 
-  const paymentStatusOptions = useMemo(() => ['All', ...Array.from(new Set(financeRows.map((tx) => tx.status || 'Unknown')))], [financeRows]);
-  const filteredFinanceRows = useMemo(() => {
-    const keyword = paymentSearchTerm.toLowerCase();
-    return financeRows.filter((tx) => {
-      const rowType = String(tx.type || (String(tx.status).toLowerCase().includes('scholarship') ? 'scholarship' : String(tx.status).toLowerCase().includes('free') ? 'free' : 'paid'));
-      const matchesSearch = `${tx.student || ''} ${tx.email || ''} ${tx.phone || ''} ${tx.program || ''} ${tx.packageName || ''} ${tx.invoiceNumber || tx.id || ''}`.toLowerCase().includes(keyword);
-      const matchesStatus = paymentStatusFilter === 'All' || tx.status === paymentStatusFilter;
-      const matchesType = paymentTypeFilter === 'All' || rowType === paymentTypeFilter;
-      return matchesSearch && matchesStatus && matchesType;
-    });
-  }, [financeRows, paymentSearchTerm, paymentStatusFilter, paymentTypeFilter]);
 
-  const financeSummary = useMemo(() => {
-    const paidRevenue = financeRows
-      .filter((tx) => !String(tx.status).toLowerCase().includes('scholarship') && !String(tx.status).toLowerCase().includes('free'))
-      .reduce((sum, tx) => sum + parseRupiah(tx.amount), 0);
-    const pendingRevenue = financeRows
-      .filter((tx) => String(tx.status).toLowerCase().includes('pending'))
-      .reduce((sum, tx) => sum + parseRupiah(tx.amount), 0);
-    const scholarshipApplications = financeRows.filter((tx) => String(tx.status).toLowerCase().includes('scholarship')).length;
-    const fixedCost = financeRealizations
-      .filter((row) => financeEntries.find((entry) => entry.id === row.financeEntryId)?.type === 'fixed')
-      .reduce((sum, row) => sum + row.amount, 0);
-    const variableCost = financeRealizations
-      .filter((row) => financeEntries.find((entry) => entry.id === row.financeEntryId)?.type === 'variable')
-      .reduce((sum, row) => sum + row.amount, 0);
-    const budget = financeEntries.filter((entry) => entry.type === 'budget').reduce((sum, entry) => sum + entry.amount, 0);
-    return {
-      paidRevenue,
-      pendingRevenue,
-      scholarshipApplications,
-      fixedCost,
-      variableCost,
-      budget,
-      netProfit: paidRevenue - fixedCost - variableCost
-    };
-  }, [financeRows, financeEntries, financeRealizations]);
 
-  const accountingRows = useMemo(() => {
-    const paymentRows = financeRows.map((tx) => {
-      const amount = parseRupiah(tx.amount);
-      const isIncome = amount > 0 && !String(tx.status).toLowerCase().includes('scholarship') && !String(tx.status).toLowerCase().includes('free');
-      return {
-        id: `ledger-${tx.id || tx.invoiceNumber}`,
-        date: tx.createdAt || tx.date || '-',
-        source: tx.invoiceNumber || tx.id || '-',
-        description: `Pendaftaran ${tx.program || '-'} - ${tx.packageName || '-'}`,
-        account: isIncome ? 'Pendapatan Kelas' : String(tx.status).toLowerCase().includes('scholarship') ? 'Piutang/Kuota Beasiswa' : 'Akun Gratis',
-        debit: isIncome ? amount : 0,
-        credit: 0,
-        status: tx.status || '-'
-      };
-    });
-    const realizationRows = financeRealizations.map((row) => {
-      const source = financeEntries.find((entry) => entry.id === row.financeEntryId);
-      return {
-      id: `ledger-${row.id}`,
-      date: row.date,
-      source: row.id,
-      description: `${row.name}${row.note ? ` - ${row.note}` : ''}`,
-      account: source?.type === 'budget' ? `Realisasi Anggaran - ${row.category}` : source?.type === 'fixed' ? `Realisasi Biaya Tetap - ${row.category}` : `Realisasi Biaya Variabel - ${row.category}`,
-      debit: 0,
-      credit: row.amount,
-      status: 'Realized'
-    };
-    });
-    const assetRows = assetEntries.flatMap((asset) => {
-      const baseRow = {
-        id: `ledger-${asset.id}`,
-        date: asset.acquisitionDate,
-        source: asset.id,
-        description: asset.name,
-        account: asset.type === 'fixed_asset' ? `Aset Tetap - ${asset.category}` : `Aset Lancar - ${asset.category}`,
-        debit: asset.currentValue,
-        credit: 0,
-        status: 'Asset Registered'
-      };
-      if (asset.type !== 'fixed_asset' || asset.depreciationPerMonth <= 0 || nonDepreciableFixedAssetCategories.includes(asset.category)) return [baseRow];
-      return [
-        baseRow,
-        {
-          id: `ledger-dep-${asset.id}`,
-          date: new Date().toISOString().slice(0, 10),
-          source: asset.id,
-          description: `Depresiasi bulanan ${asset.name}`,
-          account: `Beban Depresiasi - ${asset.category}`,
-          debit: 0,
-          credit: asset.depreciationPerMonth,
-          status: 'Depreciation'
-        }
-      ];
-    });
-    return [...paymentRows, ...realizationRows, ...assetRows];
-  }, [financeRows, financeEntries, financeRealizations, assetEntries]);
 
-  const financialReports = useMemo(() => {
-    const now = new Date();
-    const periodLabel = financialReportPeriod === 'monthly'
-      ? now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
-      : financialReportPeriod === 'quarterly'
-        ? `Kuartal ${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`
-        : `Tahun ${now.getFullYear()}`;
-    const revenue = financeRows
-      .filter((tx) => !String(tx.status).toLowerCase().includes('scholarship') && !String(tx.status).toLowerCase().includes('free'))
-      .reduce((sum, tx) => sum + parseRupiah(tx.amount), 0);
-    const realizedExpenses = financeRealizations.reduce((sum, row) => sum + row.amount, 0);
-    const depreciationExpense = assetEntries
-      .filter((asset) => asset.type === 'fixed_asset' && asset.depreciationPerMonth > 0 && !nonDepreciableFixedAssetCategories.includes(asset.category))
-      .reduce((sum, asset) => sum + asset.depreciationPerMonth, 0);
-    const fixedAssets = assetEntries.filter((asset) => asset.type === 'fixed_asset').reduce((sum, asset) => sum + asset.currentValue, 0);
-    const currentAssets = assetEntries.filter((asset) => asset.type === 'current_asset').reduce((sum, asset) => sum + asset.currentValue, 0);
-    const pendingReceivable = financeRows.filter((tx) => String(tx.status).toLowerCase().includes('pending')).reduce((sum, tx) => sum + parseRupiah(tx.amount), 0);
-    const scholarshipReserve = financeEntries.filter((entry) => entry.type === 'budget' && entry.category.toLowerCase().includes('beasiswa')).reduce((sum, entry) => sum + entry.amount, 0);
-    const totalExpenses = realizedExpenses + depreciationExpense;
-    const netIncome = revenue - totalExpenses;
-    const totalAssets = currentAssets + fixedAssets + pendingReceivable;
-    const liabilities = financeSummary.pendingRevenue;
-    const equity = totalAssets - liabilities;
-    return {
-      periodLabel,
-      incomeStatement: [
-        { label: 'Pendapatan Kelas Berbayar', amount: revenue },
-        { label: 'Realisasi Biaya & Anggaran', amount: -realizedExpenses },
-        { label: 'Beban Depresiasi Aset Tetap', amount: -depreciationExpense },
-        { label: 'Laba/Rugi Bersih', amount: netIncome, total: true }
-      ],
-      balanceSheet: [
-        { label: 'Aset Lancar', amount: currentAssets },
-        { label: 'Piutang/Pending Payment', amount: pendingReceivable },
-        { label: 'Aset Tetap Bersih', amount: fixedAssets },
-        { label: 'Total Aset', amount: totalAssets, total: true },
-        { label: 'Kewajiban/Pending Operasional', amount: liabilities },
-        { label: 'Cadangan Beasiswa', amount: scholarshipReserve },
-        { label: 'Ekuitas Demo', amount: equity, total: true }
-      ],
-      cashFlow: [
-        { label: 'Kas Masuk dari Pembayaran', amount: revenue },
-        { label: 'Kas Keluar Realisasi Biaya', amount: -realizedExpenses },
-        { label: 'Investasi/Pencatatan Aset', amount: -assetEntries.reduce((sum, asset) => sum + asset.acquisitionValue, 0) },
-        { label: 'Arus Kas Bersih Demo', amount: revenue - realizedExpenses - assetEntries.reduce((sum, asset) => sum + asset.acquisitionValue, 0), total: true }
-      ]
-    };
-  }, [financialReportPeriod, financeRows, financeRealizations, assetEntries, financeEntries, financeSummary.pendingRevenue]);
   
-  // B1.4D-T5A — the Content Library (video list / upload / editor) state and
+  // B1.4D-T5A â€” the Content Library (video list / upload / editor) state and
   // its helpers were extracted into `useAdminContentDomain`; see `contentDomain`
   // above. No video/upload state may be re-declared here.
 
@@ -954,592 +477,8 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
               />
             )}
             {activeTab === 'finance' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-brand-navy">Pusat Keuangan</h2>
-                    <p className="text-sm text-slate-500">Transaksi pendaftaran, invoice, bukti bayar, beasiswa, biaya, dan anggaran demo.</p>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <button onClick={refreshFinanceCenter} className="btn-secondary py-2 px-5 flex items-center gap-2">
-                      <RefreshCw size={18} /> Sync Data
-                    </button>
-                    <button
-                      onClick={() => {
-                        const rows = [
-                          'type,name,program,package,amount,status,date',
-                          ...financeRows.map((tx) => `transaction,"${tx.student || '-'}","${tx.program || '-'}","${tx.packageName || '-'}","${tx.amount || 0}","${tx.status || '-'}","${tx.date || tx.createdAt || '-'}"`),
-                          ...financeEntries.map((entry) => `${entry.type},"${entry.name}","${entry.category}","${entry.period}",${entry.amount},"${entry.note}","${entry.createdAt}"`),
-                          ...paymentProofs.map((proof) => `document,"${proof.student || '-'}","${proof.program || '-'}","${proof.packageName || '-'}","${proof.fileName || '-'}","${proof.status || '-'}","${proof.createdAt || '-'}"`)
-                        ];
-                        downloadTextFile('finance-center-report.csv', rows.join('\n'));
-                      }}
-                      className="btn-secondary py-2 px-5 flex items-center gap-2"
-                    >
-                      <Download size={18} /> Export Report
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-4 gap-6">
-                  {[
-                    { label: 'Revenue Tercatat', value: formatRupiah(financeSummary.paidRevenue), color: 'text-brand-blue', icon: Banknote, description: 'Transaksi berbayar yang tercatat sebagai pendapatan.', rows: financeRows.filter((tx) => !String(tx.status).toLowerCase().includes('scholarship') && !String(tx.status).toLowerCase().includes('free') && parseRupiah(tx.amount) > 0) },
-                    { label: 'Pending Payment', value: formatRupiah(financeSummary.pendingRevenue), color: 'text-brand-orange', icon: Clock, description: 'Transaksi yang masih menunggu pembayaran atau verifikasi admin.', rows: financeRows.filter((tx) => String(tx.status).toLowerCase().includes('pending')) },
-                    { label: 'Net Profit Demo', value: formatRupiah(financeSummary.netProfit), color: financeSummary.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500', icon: TrendingUp, description: 'Perhitungan demo: revenue tercatat dikurangi biaya tetap dan biaya variabel.', rows: [
-                      { student: 'Revenue Tercatat', program: 'Pendapatan', amount: formatRupiah(financeSummary.paidRevenue), status: 'Debit' },
-                      { student: 'Biaya Tetap', program: 'Pengeluaran', amount: formatRupiah(financeSummary.fixedCost), status: 'Kredit' },
-                      { student: 'Biaya Variabel', program: 'Pengeluaran', amount: formatRupiah(financeSummary.variableCost), status: 'Kredit' },
-                      { student: 'Net Profit Demo', program: 'Saldo', amount: formatRupiah(financeSummary.netProfit), status: financeSummary.netProfit >= 0 ? 'Profit' : 'Loss' }
-                    ] },
-                    { label: 'Pengajuan Beasiswa', value: String(financeSummary.scholarshipApplications), color: 'text-indigo-500', icon: Award, description: 'Semua transaksi dengan status pengajuan atau approval beasiswa.', rows: financeRows.filter((tx) => String(tx.status).toLowerCase().includes('scholarship') || String(tx.packageName || '').toLowerCase().includes('beasiswa')) },
-                  ].map((stat, i) => (
-                    <button key={i} type="button" onClick={() => setFinanceMetricDetail({ title: stat.label, rows: stat.rows, description: stat.description })} className="card-premium p-6 text-left hover:border-brand-blue/40 transition-all">
-                      <stat.icon className={`${stat.color} mb-3`} size={20} />
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
-                      <p className="text-xl font-black text-brand-navy">{stat.value}</p>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-2 p-1.5 bg-white border border-slate-100 rounded-2xl w-fit shadow-sm">
-                  {[
-                    { id: 'payments', label: 'Data Sistem Pembayaran' },
-                    { id: 'inputs', label: 'Input Biaya & Anggaran' },
-                    { id: 'realization', label: 'Realisasi Anggaran & Biaya' },
-                    { id: 'assets', label: 'Aset' },
-                    { id: 'accounting', label: 'Pembukuan Otomatis' },
-                    { id: 'reports', label: 'Laporan Keuangan' },
-                    { id: 'audit', label: 'Audit & Notifikasi' }
-                  ].map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setFinanceSubView(item.id as typeof financeSubView)}
-                      className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${financeSubView === item.id ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-slate-400 hover:text-brand-blue'}`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-
-                {financeSubView === 'payments' && (
-                <>
-                <div className="card-premium overflow-hidden">
-                  <div className="p-8 border-b border-slate-100 flex flex-col gap-5">
-                    <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-bold text-brand-navy">Data Sistem Pembayaran</h3>
-                      <p className="text-xs text-slate-500 mt-1">Semua pendaftaran yang masuk pembayaran akan tercatat di sini.</p>
-                    </div>
-                    <span className="px-3 py-1 rounded-full bg-blue-50 text-brand-blue text-[10px] font-black uppercase tracking-widest">{filteredFinanceRows.length}/{financeRows.length} Records</span>
-                    </div>
-                    <div className="grid md:grid-cols-4 gap-3">
-                      <div className="md:col-span-2 flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100">
-                        <Search size={16} className="text-slate-400" />
-                        <input
-                          value={paymentSearchTerm}
-                          onChange={(event) => setPaymentSearchTerm(event.target.value)}
-                          className="w-full bg-transparent outline-none text-sm font-medium text-slate-600"
-                          placeholder="Cari siswa, invoice, program, paket..."
-                        />
-                      </div>
-                      <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)} className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-600 outline-none">
-                        {paymentStatusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
-                      </select>
-                      <select value={paymentTypeFilter} onChange={(event) => setPaymentTypeFilter(event.target.value)} className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold text-slate-600 outline-none">
-                        <option value="All">Semua Tipe</option>
-                        <option value="paid">Berbayar</option>
-                        <option value="free">Gratis</option>
-                        <option value="scholarship">Beasiswa</option>
-                      </select>
-                    </div>
-                  </div>
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student</th>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Program</th>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Dokumen</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredFinanceRows.map((tx, i) => {
-                        const proof = paymentProofs.find((item) => item.invoiceId === (tx.invoiceNumber || tx.id));
-                        const isScholarship = String(tx.status).toLowerCase().includes('scholarship');
-                        const isFree = String(tx.status).toLowerCase().includes('free') || String(tx.type).toLowerCase() === 'free';
-                        const uploadNotRequired = isScholarship || isFree;
-                        return (
-                        <tr key={tx.id || i} className="hover:bg-slate-50/50 transition-colors align-top">
-                          <td className="px-8 py-4">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedFinanceRecord({ tx, proof })}
-                              className="text-left text-sm font-bold text-brand-navy hover:text-brand-blue hover:underline"
-                            >
-                              {tx.student}
-                            </button>
-                            <p className="text-[10px] text-slate-400">{tx.email || '-'}</p>
-                            <p className="text-[10px] text-slate-400">{tx.phone || '-'}</p>
-                          </td>
-                          <td className="px-8 py-4 text-xs text-slate-500">
-                            {tx.program}
-                            {tx.method && <p className="text-[10px] text-slate-400 mt-1">{tx.method} {tx.packageName ? `- ${tx.packageName}` : ''}</p>}
-                            {tx.registrationData && (
-                              <p className="text-[10px] text-slate-400 mt-1">Sekolah: {tx.registrationData.school || '-'}</p>
-                            )}
-                          </td>
-                          <td className="px-8 py-4 text-sm font-mono font-bold text-brand-navy">{tx.amount}</td>
-                          <td className="px-8 py-4">
-                            <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider ${isScholarship ? 'bg-indigo-50 text-indigo-600' : tx.status === 'Success' || tx.status === 'Free Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                              {tx.status}
-                            </span>
-                            <p className="text-[10px] text-slate-400 mt-2">{tx.date || '-'}</p>
-                          </td>
-                          <td className="px-8 py-4 text-right">
-                            <div className="flex flex-col items-end gap-2">
-                              <button onClick={() => openStoredInvoice(tx)} className="px-3 py-1.5 rounded-lg bg-blue-50 text-brand-blue text-[10px] font-black uppercase tracking-widest">
-                                Invoice
-                              </button>
-                              {proof ? (
-                                <button onClick={() => openStoredProof(proof)} className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
-                                  {isScholarship ? 'Dokumen Beasiswa' : 'Bukti Bayar'}
-                                </button>
-                              ) : uploadNotRequired ? (
-                                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
-                                  Tidak perlu upload
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-bold text-slate-300">Belum upload bukti</span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  {filteredFinanceRows.length === 0 && (
-                    <div className="p-10 text-center text-sm font-bold text-slate-400">
-                      Tidak ada data pembayaran yang cocok dengan filter.
-                    </div>
-                  )}
-                  <div className="p-4 bg-slate-50 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Invoice dan bukti bayar dibaca dari database demo browser.
-                  </div>
-                </div>
-
-                <div className="grid lg:grid-cols-2 gap-6">
-                  <div className="card-premium overflow-hidden">
-                    <div className="p-6 border-b border-slate-100">
-                      <h3 className="font-bold text-brand-navy">Database Dokumen Bukti Pembayaran / Beasiswa</h3>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                      {paymentProofs.length === 0 && <p className="p-6 text-sm text-slate-400 font-bold">Belum ada dokumen yang diupload.</p>}
-                      {paymentProofs.map((proof) => (
-                        <div key={proof.id} className="p-5 flex items-center justify-between gap-4">
-                          <div>
-                            <p className="text-sm font-bold text-brand-navy">{proof.fileName}</p>
-                            <p className="text-[10px] text-slate-400">{proof.student} - {proof.program}</p>
-                            <p className="text-[10px] text-slate-400">{proof.type || 'Payment Proof'} - {Math.ceil((proof.fileSize || 0) / 1024)} KB</p>
-                          </div>
-                          <button onClick={() => openStoredProof(proof)} className="px-3 py-2 rounded-xl bg-slate-50 text-brand-blue text-[10px] font-black uppercase tracking-widest">
-                            Buka
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="card-premium p-6">
-                    <h3 className="font-bold text-brand-navy mb-4">Sistem Beasiswa</h3>
-                    <div className="space-y-4">
-                      {financeRows.filter((tx) => String(tx.status).toLowerCase().includes('scholarship')).map((tx) => {
-                        const proof = paymentProofs.find((item) => item.invoiceId === (tx.invoiceNumber || tx.id));
-                        return (
-                          <div key={tx.id} className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-black text-brand-navy">{tx.student}</p>
-                                <p className="text-xs text-slate-500">{tx.program} - {tx.packageName}</p>
-                                <p className="text-[10px] font-bold text-indigo-600 mt-2">{proof ? 'Dokumen sudah diterima, siap review admin.' : 'Tidak perlu upload dokumen. Review dari data pendaftaran.'}</p>
-                              </div>
-                              <span className="px-2 py-1 rounded-lg bg-white text-indigo-600 text-[10px] font-black uppercase">Review</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {financeRows.filter((tx) => String(tx.status).toLowerCase().includes('scholarship')).length === 0 && (
-                        <p className="text-sm text-slate-400 font-bold">Belum ada pengajuan beasiswa.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                </>
-                )}
-
-                {financeSubView === 'inputs' && (
-                <div className="grid lg:grid-cols-3 gap-6">
-                  <div className="card-premium p-6 lg:col-span-1">
-                    <h3 className="font-bold text-brand-navy mb-5">Input Keuangan Lain</h3>
-                    <div className="space-y-3">
-                      <select value={financeForm.type} onChange={(e) => setFinanceForm({ ...financeForm, type: e.target.value as FinanceEntry['type'] })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                        <option value="fixed">Biaya Tetap</option>
-                        <option value="variable">Biaya Variabel</option>
-                        <option value="budget">Anggaran</option>
-                      </select>
-                      <input value={financeForm.name} onChange={(e) => setFinanceForm({ ...financeForm, name: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Nama item, misal Honor Mentor" />
-                      {financeForm.type === 'budget' ? (
-                        <div className="space-y-2">
-                          <select value={financeForm.category} onChange={(e) => setFinanceForm({ ...financeForm, category: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                            {budgetDirections.map((item) => (
-                              <option key={item.value} value={item.value}>{item.label}</option>
-                            ))}
-                          </select>
-                          <p className="text-[10px] text-slate-500 font-bold px-1">
-                            Arah: {budgetDirections.find((item) => item.value === financeForm.category)?.target || 'Operasional Lainnya'}
-                          </p>
-                        </div>
-                      ) : (
-                        <input value={financeForm.category} onChange={(e) => setFinanceForm({ ...financeForm, category: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Kategori, misal Operasional" />
-                      )}
-                      <input value={financeForm.amount} onChange={(e) => setFinanceForm({ ...financeForm, amount: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Nominal, misal 2500000" inputMode="numeric" />
-                      <input value={financeForm.period} onChange={(e) => setFinanceForm({ ...financeForm, period: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Periode" />
-                      <textarea value={financeForm.note} onChange={(e) => setFinanceForm({ ...financeForm, note: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none h-20 resize-none" placeholder="Catatan" />
-                      <button onClick={addFinanceEntry} className="w-full btn-primary py-3">
-                        <Plus size={18} /> Tambah Input
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="card-premium overflow-hidden lg:col-span-2">
-                    <div className="p-6 border-b border-slate-100">
-                      <h3 className="font-bold text-brand-navy">Biaya Tetap, Biaya Variabel, dan Anggaran</h3>
-                    </div>
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nominal</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {financeEntries.map((entry) => (
-                          <tr key={entry.id}>
-                            <td className="px-6 py-4">
-                              <p className="text-sm font-bold text-brand-navy">{entry.name}</p>
-                              <p className="text-[10px] text-slate-400">{entry.category} - {entry.period}</p>
-                              {entry.note && <p className="text-[10px] text-slate-500 mt-1">{entry.note}</p>}
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${entry.type === 'fixed' ? 'bg-red-50 text-red-500' : entry.type === 'variable' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-brand-blue'}`}>
-                                {entry.type === 'fixed' ? 'Biaya Tetap' : entry.type === 'variable' ? 'Biaya Variabel' : 'Anggaran'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 font-mono text-sm font-black text-brand-navy">{formatRupiah(entry.amount)}</td>
-                            <td className="px-6 py-4 text-right">
-                              <button onClick={() => deleteFinanceEntry(entry.id)} className="p-2 text-slate-400 hover:text-red-500">
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="grid md:grid-cols-3 gap-4 p-6 bg-slate-50">
-                      <div><p className="text-[10px] font-black uppercase text-slate-400">Total Biaya Tetap</p><p className="font-black text-brand-navy">{formatRupiah(financeSummary.fixedCost)}</p></div>
-                      <div><p className="text-[10px] font-black uppercase text-slate-400">Total Biaya Variabel</p><p className="font-black text-brand-navy">{formatRupiah(financeSummary.variableCost)}</p></div>
-                      <div><p className="text-[10px] font-black uppercase text-slate-400">Total Anggaran</p><p className="font-black text-brand-navy">{formatRupiah(financeSummary.budget)}</p></div>
-                    </div>
-                  </div>
-                </div>
-                )}
-
-                {financeSubView === 'realization' && (
-                <div className="grid lg:grid-cols-3 gap-6">
-                  <div className="card-premium p-6">
-                    <h3 className="font-bold text-brand-navy mb-5">Realisasi Anggaran / Biaya</h3>
-                    <div className="space-y-3">
-                      <select value={realizationForm.financeEntryId} onChange={(e) => setRealizationForm({ ...realizationForm, financeEntryId: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                        <option value="">Pilih rencana biaya/anggaran</option>
-                        {financeEntries.map((entry) => (
-                          <option key={entry.id} value={entry.id}>{entry.name} - {entry.type === 'budget' ? 'Anggaran' : entry.type === 'fixed' ? 'Biaya Tetap' : 'Biaya Variabel'}</option>
-                        ))}
-                      </select>
-                      <input value={realizationForm.amount} onChange={(e) => setRealizationForm({ ...realizationForm, amount: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Nominal yang dipakai" inputMode="numeric" />
-                      <input type="date" value={realizationForm.date} onChange={(e) => setRealizationForm({ ...realizationForm, date: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" />
-                      <textarea value={realizationForm.note} onChange={(e) => setRealizationForm({ ...realizationForm, note: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none h-20 resize-none" placeholder="Catatan realisasi" />
-                      <button onClick={addFinanceRealization} className="w-full btn-primary py-3">
-                        <Plus size={18} /> Realisasikan
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-4 leading-relaxed">Input biaya/anggaran tidak masuk pembukuan sampai direalisasikan di halaman ini.</p>
-                  </div>
-                  <div className="card-premium overflow-hidden lg:col-span-2">
-                    <div className="p-6 border-b border-slate-100">
-                      <h3 className="font-bold text-brand-navy">Riwayat Realisasi</h3>
-                    </div>
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nominal</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {financeRealizations.map((row) => (
-                          <tr key={row.id}>
-                            <td className="px-6 py-4"><p className="text-sm font-bold text-brand-navy">{row.name}</p><p className="text-[10px] text-slate-400">{row.category} {row.note ? `- ${row.note}` : ''}</p></td>
-                            <td className="px-6 py-4 text-xs font-bold text-slate-500">{row.date}</td>
-                            <td className="px-6 py-4 font-mono text-sm font-black text-red-500">{formatRupiah(row.amount)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {financeRealizations.length === 0 && <div className="p-10 text-center text-sm font-bold text-slate-400">Belum ada realisasi biaya/anggaran.</div>}
-                  </div>
-                </div>
-                )}
-
-                {financeSubView === 'assets' && (
-                <div className="grid lg:grid-cols-3 gap-6">
-                  <div className="card-premium p-6">
-                    <h3 className="font-bold text-brand-navy mb-5">Input Aset</h3>
-                    <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
-                      <p className="text-xs font-black text-brand-navy mb-2">Aturan pencatatan aset</p>
-                      <ul className="space-y-1 text-[11px] text-slate-600 font-medium leading-relaxed">
-                        <li>Aset lancar tidak memakai depresiasi.</li>
-                        <li>Aset tetap memakai depresiasi bulanan sesuai umur manfaat.</li>
-                        <li>Tanah/Bangunan dicatat sebagai aset tetap tanpa depresiasi.</li>
-                      </ul>
-                    </div>
-                    <div className="space-y-3">
-                      <select value={assetForm.type} onChange={(e) => setAssetForm({ ...assetForm, type: e.target.value as AssetEntry['type'], category: e.target.value === 'fixed_asset' ? 'Peralatan Kantor' : 'Kas/Bank' })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                        <option value="fixed_asset">Aset Tetap</option>
-                        <option value="current_asset">Aset Lancar</option>
-                      </select>
-                      <input value={assetForm.name} onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Nama aset" />
-                      <select value={assetForm.category} onChange={(e) => setAssetForm({ ...assetForm, category: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                        {assetForm.type === 'fixed_asset' ? (
-                          <>
-                            <option>Kendaraan</option>
-                            <option>Tanah/Bangunan</option>
-                            <option>Peralatan Kantor</option>
-                            <option>Perlengkapan Kantor</option>
-                          </>
-                        ) : (
-                          <>
-                            <option>Kas/Bank</option>
-                            <option>Piutang</option>
-                            <option>Persediaan Modul</option>
-                          </>
-                        )}
-                      </select>
-                      <input value={assetForm.acquisitionValue} onChange={(e) => setAssetForm({ ...assetForm, acquisitionValue: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Nilai perolehan" inputMode="numeric" />
-                      <input value={assetForm.currentValue} onChange={(e) => setAssetForm({ ...assetForm, currentValue: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Nilai saat ini" inputMode="numeric" />
-                      <input type="date" value={assetForm.acquisitionDate} onChange={(e) => setAssetForm({ ...assetForm, acquisitionDate: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" />
-                      {assetForm.type === 'fixed_asset' && !nonDepreciableFixedAssetCategories.includes(assetForm.category) && (
-                        <input value={assetForm.usefulLifeMonths} onChange={(e) => setAssetForm({ ...assetForm, usefulLifeMonths: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Umur manfaat bulan" inputMode="numeric" />
-                      )}
-                      {assetForm.type === 'fixed_asset' && nonDepreciableFixedAssetCategories.includes(assetForm.category) && (
-                        <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs font-bold text-brand-blue">
-                          Tanah/Bangunan dicatat sebagai aset tetap tanpa depresiasi.
-                        </div>
-                      )}
-                      {assetForm.type === 'current_asset' && (
-                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-xs font-bold text-emerald-700">
-                          Aset lancar masuk neraca tanpa depresiasi. Penyesuaian nilai dilakukan sebagai koreksi persediaan/piutang bila diperlukan.
-                        </div>
-                      )}
-                      <textarea value={assetForm.note} onChange={(e) => setAssetForm({ ...assetForm, note: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none h-20 resize-none" placeholder="Catatan aset" />
-                      <button onClick={addAssetEntry} className="w-full btn-primary py-3">
-                        <Plus size={18} /> Tambah Aset
-                      </button>
-                    </div>
-                  </div>
-                  <div className="card-premium overflow-hidden lg:col-span-2">
-                    <div className="p-6 border-b border-slate-100">
-                      <h3 className="font-bold text-brand-navy">Daftar Aset</h3>
-                    </div>
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aset</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nilai</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Depresiasi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {assetEntries.map((asset) => (
-                          <tr key={asset.id}>
-                            <td className="px-6 py-4"><p className="text-sm font-bold text-brand-navy">{asset.name}</p><p className="text-[10px] text-slate-400">{asset.type === 'fixed_asset' ? 'Aset Tetap' : 'Aset Lancar'} - {asset.category}</p></td>
-                            <td className="px-6 py-4"><p className="font-mono text-sm font-black text-brand-navy">{formatRupiah(asset.currentValue)}</p><p className="text-[10px] text-slate-400">Perolehan {formatRupiah(asset.acquisitionValue)}</p></td>
-                            <td className="px-6 py-4 text-sm font-mono font-bold text-red-500">
-                              {asset.type === 'fixed_asset'
-                                ? asset.depreciationPerMonth > 0 ? formatRupiah(asset.depreciationPerMonth) : 'Tanpa depresiasi'
-                                : 'Tidak didepresiasi'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                )}
-
-                {financeSubView === 'accounting' && (
-                <div className="space-y-6">
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="card-premium p-6">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Debit Otomatis</p>
-                      <p className="text-2xl font-black text-emerald-600">{formatRupiah(accountingRows.reduce((sum, row) => sum + row.debit, 0))}</p>
-                    </div>
-                    <div className="card-premium p-6">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Kredit Otomatis</p>
-                      <p className="text-2xl font-black text-red-500">{formatRupiah(accountingRows.reduce((sum, row) => sum + row.credit, 0))}</p>
-                    </div>
-                    <div className="card-premium p-6">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Saldo Akuntansi Demo</p>
-                      <p className="text-2xl font-black text-brand-navy">{formatRupiah(accountingRows.reduce((sum, row) => sum + row.debit - row.credit, 0))}</p>
-                    </div>
-                  </div>
-                  <div className="card-premium overflow-hidden">
-                    <div className="p-6 border-b border-slate-100">
-                      <h3 className="font-bold text-brand-navy">Jurnal Pembukuan Otomatis</h3>
-                      <p className="text-xs text-slate-500 mt-1">Dibentuk otomatis dari transaksi pembayaran, pengajuan beasiswa, biaya tetap, biaya variabel, dan anggaran.</p>
-                    </div>
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Akun</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Keterangan</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Debit</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Kredit</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {accountingRows.map((row) => (
-                          <tr key={row.id}>
-                            <td className="px-6 py-4 text-xs font-bold text-slate-500">{row.date}</td>
-                            <td className="px-6 py-4 text-sm font-black text-brand-navy">{row.account}</td>
-                            <td className="px-6 py-4 text-xs text-slate-500">{row.description}<p className="text-[10px] text-slate-400 mt-1">{row.source} - {row.status}</p></td>
-                            <td className="px-6 py-4 font-mono text-sm font-bold text-emerald-600">{row.debit ? formatRupiah(row.debit) : '-'}</td>
-                            <td className="px-6 py-4 font-mono text-sm font-bold text-red-500">{row.credit ? formatRupiah(row.credit) : '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                )}
-
-                {financeSubView === 'reports' && (
-                <div className="space-y-6">
-                  <div className="card-premium p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-bold text-brand-navy">Laporan Keuangan</h3>
-                      <p className="text-xs text-slate-500 mt-1">Neraca, Laba Rugi, dan Arus Kas untuk periode {financialReports.periodLabel}.</p>
-                    </div>
-                    <div className="flex gap-2 p-1.5 bg-slate-50 rounded-2xl">
-                      {[
-                        { id: 'monthly', label: 'Bulanan' },
-                        { id: 'quarterly', label: 'Kuartal' },
-                        { id: 'yearly', label: 'Tahunan' }
-                      ].map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => setFinancialReportPeriod(item.id as typeof financialReportPeriod)}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${financialReportPeriod === item.id ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-400'}`}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid lg:grid-cols-3 gap-6">
-                    {[
-                      { title: 'Laporan Laba Rugi', rows: financialReports.incomeStatement, color: 'text-emerald-600' },
-                      { title: 'Neraca', rows: financialReports.balanceSheet, color: 'text-brand-blue' },
-                      { title: 'Laporan Arus Kas', rows: financialReports.cashFlow, color: 'text-brand-orange' }
-                    ].map((report) => (
-                      <div key={report.title} className="card-premium overflow-hidden">
-                        <div className="p-6 border-b border-slate-100">
-                          <h4 className="font-black text-brand-navy">{report.title}</h4>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{financialReports.periodLabel}</p>
-                        </div>
-                        <div className="divide-y divide-slate-100">
-                          {report.rows.map((row) => (
-                            <div key={row.label} className={`p-5 flex items-center justify-between gap-4 ${row.total ? 'bg-slate-50' : ''}`}>
-                              <span className={`text-sm ${row.total ? 'font-black text-brand-navy' : 'font-bold text-slate-600'}`}>{row.label}</span>
-                              <span className={`font-mono text-sm font-black ${row.total ? report.color : row.amount < 0 ? 'text-red-500' : 'text-brand-navy'}`}>
-                                {row.amount < 0 ? `(${formatRupiah(Math.abs(row.amount))})` : formatRupiah(row.amount)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                )}
-
-                {financeSubView === 'audit' && (
-                <div className="grid lg:grid-cols-2 gap-6">
-                  <div className="card-premium overflow-hidden">
-                    <div className="p-6 border-b border-slate-100">
-                      <h3 className="font-bold text-brand-navy">Audit Trail Sistem</h3>
-                      <p className="text-xs text-slate-500 mt-1">Riwayat aksi admin untuk pembayaran, biaya, realisasi, aset, dan approval.</p>
-                    </div>
-                    <div className="divide-y divide-slate-100 max-h-[560px] overflow-y-auto">
-                      {auditEvents.length === 0 && <p className="p-6 text-sm text-slate-400 font-bold">Belum ada audit trail.</p>}
-                      {auditEvents.map((event) => (
-                        <div key={event.id} className="p-5">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="text-sm font-black text-brand-navy">{event.action}</p>
-                              <p className="text-xs text-slate-500 mt-1">{event.detail}</p>
-                              <p className="text-[10px] text-slate-400 mt-2">{event.module} - {event.actor}</p>
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">{event.createdAt}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="card-premium overflow-hidden">
-                    <div className="p-6 border-b border-slate-100">
-                      <h3 className="font-bold text-brand-navy">Outbox Notifikasi</h3>
-                      <p className="text-xs text-slate-500 mt-1">Draft/queue pesan email, WhatsApp, dan sistem dari workflow admin.</p>
-                    </div>
-                    <div className="divide-y divide-slate-100 max-h-[560px] overflow-y-auto">
-                      {notificationEvents.length === 0 && <p className="p-6 text-sm text-slate-400 font-bold">Belum ada notifikasi.</p>}
-                      {notificationEvents.map((event) => (
-                        <div key={event.id} className="p-5">
-                          <div className="flex items-start justify-between gap-4 mb-2">
-                            <div>
-                              <p className="text-sm font-black text-brand-navy">{event.subject}</p>
-                              <p className="text-[10px] text-slate-400 mt-1">{event.channel} ke {event.recipient}</p>
-                            </div>
-                            <span className="px-2 py-1 rounded-lg bg-blue-50 text-brand-blue text-[10px] font-black uppercase">{event.status}</span>
-                          </div>
-                          <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line line-clamp-4">{event.message}</p>
-                          <p className="text-[10px] text-slate-400 mt-3">{event.createdAt}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'programs' && (
+              <AdminFinancePage domain={financeDomain} auditEvents={auditEvents} notificationEvents={notificationEvents} />
+            )}            {activeTab === 'programs' && (
               <AdminProgramsPage domain={programsDomain} onNewProgram={runContextualAdd} />
             )}
 
@@ -1886,188 +825,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
           <AdminProgramEditorDialog domain={programsDomain} />
 
           <AdminProgramSaveConfirmDialog domain={programsDomain} />
-
-         <AnimatePresence>
-           {financeMetricDetail && (
-             <div className="fixed inset-0 z-[135] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-               <motion.div
-                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                 className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col"
-               >
-                 <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                   <div>
-                     <p className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1">Detail Metrik</p>
-                     <h3 className="text-xl font-black">{financeMetricDetail.title}</h3>
-                     <p className="text-xs text-white/60 mt-1">{financeMetricDetail.description}</p>
-                   </div>
-                   <button onClick={() => setFinanceMetricDetail(null)} className="p-2 rounded-full hover:bg-white/10">
-                     <X size={20} />
-                   </button>
-                 </div>
-                 <div className="overflow-y-auto">
-                   <table className="w-full text-left">
-                     <thead className="bg-slate-50 sticky top-0">
-                       <tr>
-                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama / Item</th>
-                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Program / Kategori</th>
-                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nominal</th>
-                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                       </tr>
-                     </thead>
-                     <tbody className="divide-y divide-slate-100">
-                       {financeMetricDetail.rows.map((row, index) => (
-                         <tr key={row.id || `${row.student}-${index}`} className="hover:bg-slate-50">
-                           <td className="px-6 py-4">
-                             <p className="text-sm font-bold text-brand-navy">{row.student || row.name || '-'}</p>
-                             <p className="text-[10px] text-slate-400">{row.email || row.invoiceNumber || row.id || ''}</p>
-                           </td>
-                           <td className="px-6 py-4 text-xs font-bold text-slate-600">{row.program || row.category || '-'}</td>
-                           <td className="px-6 py-4 text-sm font-mono font-black text-brand-navy">{typeof row.amount === 'number' ? formatRupiah(row.amount) : row.amount || 'Rp 0'}</td>
-                           <td className="px-6 py-4">
-                             <span className="px-2 py-1 rounded-lg bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest">{row.status || '-'}</span>
-                           </td>
-                         </tr>
-                       ))}
-                     </tbody>
-                   </table>
-                   {financeMetricDetail.rows.length === 0 && (
-                     <div className="p-10 text-center text-sm font-bold text-slate-400">
-                       Belum ada data untuk metrik ini.
-                     </div>
-                   )}
-                 </div>
-               </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
-
-         <AnimatePresence>
-           {selectedFinanceRecord && (
-             <div className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-               <motion.div
-                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                 className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-               >
-                 <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                   <div>
-                     <p className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1">Detail Calon Siswa</p>
-                     <h3 className="text-xl font-black">{selectedFinanceRecord.tx.student}</h3>
-                   </div>
-                   <button onClick={() => setSelectedFinanceRecord(null)} className="p-2 rounded-full hover:bg-white/10">
-                     <X size={20} />
-                   </button>
-                 </div>
-
-                 <div className="p-8 overflow-y-auto grid lg:grid-cols-2 gap-6">
-                   <div className="space-y-5">
-                     <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100">
-                       <h4 className="font-black text-brand-navy mb-4">Informasi Pendaftaran</h4>
-                       {[
-                         ['Nama', selectedFinanceRecord.tx.registrationData?.name || selectedFinanceRecord.tx.student],
-                         ['Email', selectedFinanceRecord.tx.registrationData?.email || selectedFinanceRecord.tx.email],
-                         ['WhatsApp', selectedFinanceRecord.tx.registrationData?.phone || selectedFinanceRecord.tx.phone],
-                         ['Sekolah', selectedFinanceRecord.tx.registrationData?.school || '-'],
-                         ['Alamat', selectedFinanceRecord.tx.registrationData?.address || '-'],
-                         ['Target', selectedFinanceRecord.tx.registrationData?.targetPTN || '-'],
-                         ['Alasan Bergabung', selectedFinanceRecord.tx.registrationData?.joinReason || '-']
-                       ].map(([label, value]) => (
-                         <div key={label} className="flex justify-between gap-4 py-2 border-b border-slate-200/70 last:border-b-0">
-                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
-                           <span className="text-xs font-bold text-brand-navy text-right">{value || '-'}</span>
-                         </div>
-                       ))}
-                     </div>
-
-                     <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100">
-                       <h4 className="font-black text-brand-navy mb-4">Program & Pembayaran</h4>
-                       {[
-                         ['Program', selectedFinanceRecord.tx.program],
-                         ['Paket', selectedFinanceRecord.tx.packageName],
-                         ['Nominal', selectedFinanceRecord.tx.amount],
-                         ['Metode', selectedFinanceRecord.tx.method || '-'],
-                         ['Status', selectedFinanceRecord.tx.status],
-                         ['Invoice', selectedFinanceRecord.tx.invoiceNumber || selectedFinanceRecord.tx.id],
-                         ['Tanggal', selectedFinanceRecord.tx.date || '-']
-                       ].map(([label, value]) => (
-                         <div key={label} className="flex justify-between gap-4 py-2 border-b border-blue-100 last:border-b-0">
-                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</span>
-                           <span className="text-xs font-bold text-brand-navy text-right">{value || '-'}</span>
-                         </div>
-                       ))}
-                       <button onClick={() => openStoredInvoice(selectedFinanceRecord.tx)} className="w-full mt-4 btn-secondary py-3">
-                         <FileText size={18} /> Buka Invoice
-                       </button>
-                     </div>
-                   </div>
-
-                   <div className="space-y-5">
-                     <div className="p-5 rounded-2xl bg-white border border-slate-200">
-                       <h4 className="font-black text-brand-navy mb-4">Dokumen Lampiran</h4>
-                       {selectedFinanceRecord.proof ? (
-                         <div className="space-y-4">
-                           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                             <p className="text-sm font-black text-brand-navy">{selectedFinanceRecord.proof.fileName}</p>
-                             <p className="text-[10px] text-slate-400 mt-1">{selectedFinanceRecord.proof.type || 'Payment Proof'} - {Math.ceil((selectedFinanceRecord.proof.fileSize || 0) / 1024)} KB</p>
-                             <p className="text-[10px] font-bold text-slate-500 mt-2">Status: {selectedFinanceRecord.proof.status || '-'}</p>
-                           </div>
-                           <button onClick={() => openStoredProof(selectedFinanceRecord.proof)} className="w-full btn-secondary py-3">
-                             <Upload size={18} /> Buka Lampiran
-                           </button>
-                         </div>
-                       ) : (String(selectedFinanceRecord.tx.status || '').toLowerCase().includes('scholarship') || String(selectedFinanceRecord.tx.status || '').toLowerCase().includes('free') || String(selectedFinanceRecord.tx.type || '').toLowerCase() === 'free') ? (
-                         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs font-bold text-emerald-800">
-                           Paket gratis/beasiswa tidak memerlukan upload bukti pembayaran. Review dilakukan dari data pendaftaran.
-                         </div>
-                       ) : (
-                         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-xs font-bold text-amber-800">
-                           Calon siswa belum melampirkan bukti pembayaran/dokumen beasiswa.
-                         </div>
-                       )}
-                     </div>
-
-                     <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100">
-                       <h4 className="font-black text-brand-navy mb-4">Aksi Admin</h4>
-                       {(selectedFinanceRecord.proof || String(selectedFinanceRecord.tx.status || '').toLowerCase().includes('scholarship') || String(selectedFinanceRecord.tx.status || '').toLowerCase().includes('free') || String(selectedFinanceRecord.tx.type || '').toLowerCase() === 'free') ? (
-                         <div className="grid grid-cols-2 gap-3">
-                           <button
-                             onClick={() => updateFinanceRecordStatus(selectedFinanceRecord.tx.invoiceNumber || selectedFinanceRecord.tx.id, String(selectedFinanceRecord.tx.status).toLowerCase().includes('scholarship') ? 'Scholarship Approved' : 'Payment Approved')}
-                             className="py-3 rounded-xl bg-emerald-500 text-white text-xs font-black uppercase tracking-widest hover:bg-emerald-600"
-                           >
-                             Approve
-                           </button>
-                           <button
-                             onClick={() => updateFinanceRecordStatus(selectedFinanceRecord.tx.invoiceNumber || selectedFinanceRecord.tx.id, 'Needs Revision')}
-                             className="py-3 rounded-xl bg-red-500 text-white text-xs font-black uppercase tracking-widest hover:bg-red-600"
-                           >
-                             Tidak
-                           </button>
-                         </div>
-                       ) : (
-                         <p className="text-xs text-slate-500 font-bold leading-relaxed">Approve/tolak tersedia setelah lampiran diterima.</p>
-                       )}
-
-                       <div className="grid grid-cols-2 gap-3 mt-4">
-                         <button onClick={() => openReviewEmail(selectedFinanceRecord.tx)} className="py-3 rounded-xl bg-white border border-slate-200 text-brand-blue text-xs font-black uppercase tracking-widest">
-                           Email Review
-                         </button>
-                         <button onClick={() => openReviewWhatsapp(selectedFinanceRecord.tx)} className="py-3 rounded-xl bg-white border border-slate-200 text-emerald-600 text-xs font-black uppercase tracking-widest">
-                           WhatsApp Review
-                         </button>
-                       </div>
-                       <p className="text-[10px] text-slate-400 mt-3 leading-relaxed">
-                         Gunakan tombol review jika data ditolak atau lampiran belum sesuai. Pesan akan mengarahkan calon siswa untuk memverifikasi ulang data/dokumen.
-                       </p>
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
 
       </div>
   );
