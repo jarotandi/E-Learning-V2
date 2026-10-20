@@ -646,6 +646,11 @@ const leadsConvertSrc = safeReadAdminFeature('commerce/leads/AdminLeadConvertDia
 const leadsDetailSrc = safeReadAdminFeature('commerce/leads/AdminLeadDetailDialog.tsx');
 const leadsDataSrc = safeReadAdminFeature('commerce/leads/adminLeadsData.ts');
 const leadsBarrelSrc = safeReadAdminFeature('commerce/leads/index.ts');
+const marketingPageSrc = safeReadAdminFeature('commerce/marketing/AdminMarketingPage.tsx');
+const marketingHookSrc = safeReadAdminFeature('commerce/marketing/useAdminMarketingDomain.ts');
+const marketingEditorSrc = safeReadAdminFeature('commerce/marketing/AdminCampaignEditorDialog.tsx');
+const marketingDataSrc = safeReadAdminFeature('commerce/marketing/adminMarketingData.ts');
+const marketingBarrelSrc = safeReadAdminFeature('commerce/marketing/index.ts');
 const commerceBarrelSrc = safeReadAdminFeature('commerce/index.ts');
 
 const programsPageCode = stripComments(programsPageSrc);
@@ -667,7 +672,9 @@ const programsDomainSrc = [programsPageSrc, programsHookSrc, programsEditorSrc, 
 const programsDomainCode = stripComments(programsDomainSrc);
 const leadsDomainSrc = [leadsPageSrc, leadsHookSrc, leadsEditorSrc, leadsConvertSrc, leadsDetailSrc, leadsDataSrc, leadsBarrelSrc].join('\n');
 const leadsDomainCode = stripComments(leadsDomainSrc);
-const commerceDomainSrc = [programsDomainSrc, leadsDomainSrc, commerceBarrelSrc].join('\n');
+const marketingDomainSrc = [marketingPageSrc, marketingHookSrc, marketingEditorSrc, marketingDataSrc, marketingBarrelSrc].join('\n');
+const marketingDomainCode = stripComments(marketingDomainSrc);
+const commerceDomainSrc = [programsDomainSrc, leadsDomainSrc, marketingDomainSrc, commerceBarrelSrc].join('\n');
 const commerceDomainCode = stripComments(commerceDomainSrc);
 
 /**
@@ -2353,10 +2360,12 @@ check('the Website extraction still owns the blog-asset key alone',
 /* BK. T6 T7 / T8 boundary                                             */
 /* ------------------------------------------------------------------ */
 
-section('BK. T6 T7 / T8 boundary (no over-extraction)');
+section('BK. T7 T7A/T7B / T8 boundary (no over-extraction)');
 
-check('T7B marketing state still lives in AdminDashboard (T7A extracted programs/leads)',
-  /\bcampaignForm\b/.test(adminDashCode));
+check('T7A programs/leads state has LEFT AdminDashboard (T7A extracted)',
+  !/const \[programsList, setProgramsList\]/.test(adminDashCode) && !/const \[leadsList, setLeadsList\]/.test(adminDashCode));
+check('T7B marketing state has LEFT AdminDashboard (T7B extracted)',
+  !/\bcampaignForm\b/.test(adminDashCode) && !/\bisCampaignEditorOpen\b/.test(adminDashCode));
 check('T8 finance state still lives in AdminDashboard',
   /\bfinanceTransactions\b/.test(adminDashCode) &&
     /\bfinanceEntries\b/.test(adminDashCode));
@@ -2742,23 +2751,30 @@ check('Programs / Leads migrated surfaces avoid raw brand / weak contrast tokens
   !/text-brand-blue|text-brand-orange|text-emerald-600|text-amber-600|text-red-600/.test(commerceDomainCode));
 
 /* ------------------------------------------------------------------ */
-/* BY. T7A T7B Marketing freeze                                         */
+/* BY. T7A T7B Marketing freeze — RESCOPED by T7B (inverse)             */
 /* ------------------------------------------------------------------ */
 
-section('BY. T7A T7B Marketing freeze (Marketing state/helpers/JSX/modal stay in AdminDashboard)');
+section('BY. T7A T7B Marketing freeze — RESCOPED by T7B (inverse)');
 
-check('Marketing state still lives in AdminDashboard',
-  /\bisCampaignEditorOpen\b/.test(adminDashCode) &&
-    /\bcampaignForm\b/.test(adminDashCode) &&
-    /\bcampaignTotalBudget\b/.test(adminDashCode));
-check('Marketing helpers still in AdminDashboard',
-  /\bcurrencyOptions\b/.test(adminDashCode) &&
-    /\bparseCurrencyAmount\b/.test(adminDashCode) &&
-    /\bformatCurrencyAmount\b/.test(adminDashCode));
-check('the Commerce domain does NOT define Marketing state',
-  !/isCampaignEditorOpen|campaignForm|campaignTotalBudget|campaignDailyBudget|campaignEstimatedDays|currencyOptions|parseCurrencyAmount|formatCurrencyAmount/.test(commerceDomainCode));
-check('AdminDashboard still renders Marketing & Campaigns JSX',
-  /Marketing & Campaigns/.test(adminDashCode));
+// At T7A this section proved the Marketing surface had NOT been taken.
+// T7B legitimately supersedes that freeze: the surface is now extracted into
+// `features/admin/commerce/marketing`. These checks assert the INVERSE, so the
+// T7A claim cannot silently come back.
+check('Marketing state has LEFT AdminDashboard (T7B inverse)',
+  !/isCampaignEditorOpen/.test(adminDashCode) &&
+    !/campaignForm/.test(adminDashCode) &&
+    !/campaignTotalBudget/.test(adminDashCode));
+check('Marketing helpers have LEFT AdminDashboard (T7B inverse)',
+  // Only Marketing-specific helpers should leave; shared currency utils may stay
+  !/campaignTotalBudget|campaignDailyBudget|campaignEstimatedDays|campaignForm|isCampaignEditorOpen/.test(adminDashCode));
+check('the Commerce domain NOW owns the Marketing state (T7B inverse)',
+  /isCampaignEditorOpen|campaignForm|campaignTotalBudget|campaignDailyBudget|campaignEstimatedDays/.test(commerceDomainCode) &&
+    /currencyOptions|parseCurrencyAmount|formatCurrencyAmount/.test(commerceDomainCode));
+check('AdminDashboard NO LONGER renders Marketing & Campaigns JSX',
+  !/Marketing & Campaigns/.test(adminDashCode));
+check('the Programs/Leads extraction still did NOT absorb Marketing concern',
+  !/isCampaignEditorOpen|campaignForm|campaignTotalBudget|campaignDailyBudget|campaignEstimatedDays|currencyOptions|parseCurrencyAmount|formatCurrencyAmount/.test(programsDomainCode) &&
+    !/isCampaignEditorOpen|campaignForm|campaignTotalBudget|campaignDailyBudget|campaignEstimatedDays|currencyOptions|parseCurrencyAmount|formatCurrencyAmount/.test(leadsDomainCode));
 
 /* ------------------------------------------------------------------ */
 /* BZ. T7A T8 / T9 boundary                                             */

@@ -82,7 +82,27 @@ import {
   AdminLeadEditorDialog,
   AdminLeadConvertDialog,
   AdminLeadDetailDialog,
+  AdminMarketingPage,
+  useAdminMarketingDomain,
+  AdminCampaignEditorDialog,
 } from '../features/admin/commerce';
+
+
+const currencyOptions = [
+  { code: 'IDR', label: 'Rupiah Indonesia', symbol: 'Rp', locale: 'id-ID' },
+  { code: 'USD', label: 'US Dollar', symbol: '$', locale: 'en-US' },
+  { code: 'SGD', label: 'Singapore Dollar', symbol: 'S$', locale: 'en-SG' },
+  { code: 'MYR', label: 'Malaysian Ringgit', symbol: 'RM', locale: 'ms-MY' },
+];
+
+const parseCurrencyAmount = (value: string | number): number =>
+  Number(String(value).replace(/[^\d]/g, '')) || 0;
+
+const formatCurrencyAmount = (value: string | number, currencyCode = 'IDR'): string => {
+  const currency = currencyOptions.find((item) => item.code === currencyCode) || currencyOptions[0];
+  const amount = typeof value === 'number' ? value : parseCurrencyAmount(value);
+  return `${currency.symbol} ${amount.toLocaleString(currency.locale)}`;
+};
 
 
 const revenueData = [
@@ -103,20 +123,8 @@ const programPerformanceData = [
   { name: 'Poltekkes', active: 154, leads: 280, revenue: 185 },
 ];
 
-const currencyOptions = [
-  { code: 'IDR', label: 'Rupiah Indonesia', symbol: 'Rp', locale: 'id-ID' },
-  { code: 'USD', label: 'US Dollar', symbol: '$', locale: 'en-US' },
-  { code: 'SGD', label: 'Singapore Dollar', symbol: 'S$', locale: 'en-SG' },
-  { code: 'MYR', label: 'Malaysian Ringgit', symbol: 'RM', locale: 'ms-MY' }
-];
 
-const parseCurrencyAmount = (value: string) => Number(String(value).replace(/[^\d]/g, '')) || 0;
 
-const formatCurrencyAmount = (value: string | number, currencyCode = 'IDR') => {
-  const currency = currencyOptions.find((item) => item.code === currencyCode) || currencyOptions[0];
-  const amount = typeof value === 'number' ? value : parseCurrencyAmount(value);
-  return `${currency.symbol} ${amount.toLocaleString(currency.locale)}`;
-};
 
 
 const parseRupiah = (value: string | number | undefined) => {
@@ -234,20 +242,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     navigateToTab(tab);
   };
   const [actionMessage, setActionMessage] = useState('');
-  const [isCampaignEditorOpen, setIsCampaignEditorOpen] = useState(false);
-  const [campaignForm, setCampaignForm] = useState({
-    name: 'Campaign Tryout Gratis',
-    objective: 'Lead Generation',
-    channel: 'Meta Ads',
-    audience: 'Siswa kelas 12 dan gap year',
-    currency: 'IDR',
-    totalBudget: '5000000',
-    dailyBudget: '250000',
-    startDate: new Date().toISOString().slice(0, 10),
-    endDate: '',
-    landingPage: '/tryout-gratis',
-    note: 'Fokus akuisisi lead WhatsApp dan pendaftaran tryout gratis.'
-  });
   const [financeTransactions, setFinanceTransactions] = useState<any[]>(() => readStorageArray('theprams_demo_transactions'));
   const [paymentProofs, setPaymentProofs] = useState<any[]>(() => readStorageArray('theprams_demo_payment_proofs'));
   const [financeEntries, setFinanceEntries] = useState<FinanceEntry[]>(() => readStorageArray('theprams_demo_finance_entries', defaultFinanceEntries));
@@ -312,9 +306,6 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
   const rolePermissions: Record<AdminRole, AdminTab[]> = ADMIN_ROLE_PERMISSIONS;
 
   const isTabAllowed = (tab: AdminTab) => isAdminTabAllowed(adminRole, tab);
-  const campaignTotalBudget = parseCurrencyAmount(campaignForm.totalBudget);
-  const campaignDailyBudget = parseCurrencyAmount(campaignForm.dailyBudget);
-  const campaignEstimatedDays = campaignDailyBudget > 0 ? Math.max(1, Math.floor(campaignTotalBudget / campaignDailyBudget)) : 0;
 
   const notify = (message: string) => {
     setActionMessage(message);
@@ -632,7 +623,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     } else if (activeTab === 'content') {
       contentDomain.openUpload();
     } else if (activeTab === 'marketing') {
-      setIsCampaignEditorOpen(true);
+      marketingDomain.openCampaignEditor();
     } else {
       notify(`Aksi tambah untuk tab ${activeTab} tersedia di mode demo.`);
     }
@@ -685,6 +676,16 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
     notify,
     recordAudit,
   });
+
+  // B1.4D-T7B — Commerce Marketing domain.
+  //
+  // The Marketing state (campaignForm + isCampaignEditorOpen) used to live
+  // inline here, ABOVE the conditional `activeTab === 'marketing'` JSX. It now
+  // lives in a focused domain hook invoked by THIS persistent orchestrator, so
+  // an in-progress campaign draft survives client-side tab changes. Campaign
+  // state is IN-MEMORY (no persistence). `notify`/`recordAudit` are injected so
+  // the hook never imports this component.
+  const marketingDomain = useAdminMarketingDomain({ notify, recordAudit });
 
   // B1.4D-T4 — Question Bank (academic) domain.
   //
@@ -943,84 +944,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
             )}
 
             {activeTab === 'marketing' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-2xl font-bold text-brand-navy">Marketing & Campaigns</h2>
-                    <p className="text-sm text-slate-500">Manage landing pages and monitor conversion funnels</p>
-                  </div>
-                  <button onClick={() => setIsCampaignEditorOpen(true)} className="btn-primary py-2 px-6 flex items-center gap-2">
-                    <Plus size={18} /> New Campaign
-                  </button>
-                </div>
-
-                <div className="grid md:grid-cols-4 gap-4">
-                  {[
-                    { title: 'Campaign Setup', desc: 'Buat nama campaign, objective, channel, audience, landing page, dan catatan eksekusi.', icon: Megaphone },
-                    { title: 'Budget Fleksibel', desc: 'Budget total dan budget harian bisa diisi bebas dengan mata uang default IDR atau mata uang lain.', icon: Wallet },
-                    { title: 'Daily Control', desc: 'Estimasi durasi campaign dihitung otomatis dari total budget dibagi budget harian.', icon: Calendar },
-                    { title: 'Draft Mode', desc: 'Campaign baru tersimpan sebagai draft demo sebelum dieksekusi ke channel iklan.', icon: FileText },
-                  ].map((item) => (
-                    <div key={item.title} className="card-premium p-5 bg-white">
-                      <item.icon size={20} className="text-brand-blue mb-3" />
-                      <p className="text-sm font-black text-brand-navy mb-1">{item.title}</p>
-                      <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div className="card-premium p-6">
-                    <TrendingUp className="text-emerald-500 mb-4" size={24} />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Conversion Rate</p>
-                    <p className="text-3xl font-black text-brand-navy">4.8%</p>
-                    <p className="text-[10px] text-emerald-500 font-bold mt-2">+0.5% from last week</p>
-                  </div>
-                  <div className="card-premium p-6">
-                    <Users className="text-brand-blue mb-4" size={24} />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Leads</p>
-                    <p className="text-3xl font-black text-brand-navy">2,450</p>
-                    <p className="text-[10px] text-brand-blue font-bold mt-2">Organic: 65% | Paid: 35%</p>
-                  </div>
-                  <div className="card-premium p-6">
-                    <Target className="text-brand-orange mb-4" size={24} />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total ROI</p>
-                    <p className="text-3xl font-black text-brand-navy">3.2x</p>
-                    <p className="text-[10px] text-brand-orange font-bold mt-2">Target ROI: 4.0x</p>
-                  </div>
-                </div>
-
-                <div className="card-premium p-8">
-                  <h3 className="font-bold text-brand-navy mb-6">Landing Page Management</h3>
-                  <div className="space-y-4">
-                    {[
-                      { name: 'SNBT Intensive 2025', url: '/snbt-2025', status: 'Active', hits: '12k' },
-                      { name: 'Kedokteran Special', url: '/kedokteran', status: 'Active', hits: '8.5k' },
-                      { name: 'CPNS Masterclass', url: '/cpns', status: 'Draft', hits: '0' },
-                    ].map((page, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-white shadow-sm rounded-xl"><Layout size={18} className="text-slate-400" /></div>
-                          <div>
-                            <p className="text-sm font-bold text-brand-navy">{page.name}</p>
-                            <p className="text-[10px] text-slate-400 font-mono">{page.url}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-8">
-                          <div className="text-right">
-                            <p className="text-xs font-bold text-brand-navy">{page.hits}</p>
-                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">Views</p>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${page.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                            {page.status}
-                          </span>
-                          <button onClick={() => notify(`Landing page ${page.name} dibuka di editor.`)} className="p-2 text-slate-300 hover:text-brand-blue"><Edit2 size={16} /></button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <AdminMarketingPage domain={marketingDomain} />
             )}
 
             {activeTab === 'website' && (
@@ -1941,163 +1865,7 @@ export const AdminDashboard: React.FC<{ logout: () => void, setView?: (v: any) =
          </div>
 
          {/* Program Editor Modal */}
-         <AnimatePresence>
-           {isCampaignEditorOpen && (
-             <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-               <motion.div
-                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
-                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                 className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-               >
-                 <div className="p-6 bg-brand-navy text-white flex items-center justify-between">
-                   <div>
-                     <h3 className="font-bold">New Campaign</h3>
-                     <p className="text-xs text-white/60 mt-1">Buat campaign digital marketing dengan budget fleksibel sesuai mata uang default.</p>
-                   </div>
-                   <button onClick={() => setIsCampaignEditorOpen(false)} className="p-2 hover:bg-white/10 rounded-full">
-                     <X size={20} />
-                   </button>
-                 </div>
-
-                 <div className="p-8 overflow-y-auto grid lg:grid-cols-[1fr_300px] gap-8">
-                   <div className="space-y-5">
-                     <div className="grid md:grid-cols-2 gap-4">
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nama Campaign</label>
-                         <input value={campaignForm.name} onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none" />
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Objective</label>
-                         <select value={campaignForm.objective} onChange={(e) => setCampaignForm({ ...campaignForm, objective: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                           <option>Lead Generation</option>
-                           <option>Traffic</option>
-                           <option>Conversion</option>
-                           <option>Brand Awareness</option>
-                           <option>Retargeting</option>
-                         </select>
-                       </div>
-                     </div>
-
-                     <div className="grid md:grid-cols-2 gap-4">
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Channel</label>
-                         <select value={campaignForm.channel} onChange={(e) => setCampaignForm({ ...campaignForm, channel: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none">
-                           <option>Meta Ads</option>
-                           <option>Google Ads</option>
-                           <option>TikTok Ads</option>
-                           <option>Instagram Organic</option>
-                           <option>WhatsApp Broadcast</option>
-                           <option>Email Campaign</option>
-                         </select>
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Landing Page</label>
-                         <input value={campaignForm.landingPage} onChange={(e) => setCampaignForm({ ...campaignForm, landingPage: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none" />
-                       </div>
-                     </div>
-
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Audience</label>
-                       <input value={campaignForm.audience} onChange={(e) => setCampaignForm({ ...campaignForm, audience: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" placeholder="Contoh: siswa kelas 12, gap year, calon CPNS" />
-                     </div>
-
-                     <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100">
-                       <div className="flex items-center gap-2 mb-4">
-                         <Wallet size={18} className="text-brand-blue" />
-                         <div>
-                           <p className="text-sm font-black text-brand-navy">Budget Campaign</p>
-                           <p className="text-xs text-slate-500">Isi angka bebas. Format tampilan mengikuti mata uang yang dipilih.</p>
-                         </div>
-                       </div>
-                       <div className="grid md:grid-cols-3 gap-4">
-                         <div>
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Mata Uang Default</label>
-                           <select value={campaignForm.currency} onChange={(e) => setCampaignForm({ ...campaignForm, currency: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-white border border-blue-100 text-sm font-bold outline-none">
-                             {currencyOptions.map((currency) => (
-                               <option key={currency.code} value={currency.code}>{currency.code} - {currency.label}</option>
-                             ))}
-                           </select>
-                         </div>
-                         <div>
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Total Budget</label>
-                           <input inputMode="numeric" value={campaignForm.totalBudget} onChange={(e) => setCampaignForm({ ...campaignForm, totalBudget: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-white border border-blue-100 text-sm font-bold outline-none" placeholder="5000000" />
-                           <p className="text-[10px] text-brand-blue font-black mt-1">{formatCurrencyAmount(campaignForm.totalBudget, campaignForm.currency)}</p>
-                         </div>
-                         <div>
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Budget Harian</label>
-                           <input inputMode="numeric" value={campaignForm.dailyBudget} onChange={(e) => setCampaignForm({ ...campaignForm, dailyBudget: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-white border border-blue-100 text-sm font-bold outline-none" placeholder="250000" />
-                           <p className="text-[10px] text-brand-blue font-black mt-1">{formatCurrencyAmount(campaignForm.dailyBudget, campaignForm.currency)} / hari</p>
-                         </div>
-                       </div>
-                     </div>
-
-                     <div className="grid md:grid-cols-2 gap-4">
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Start Date</label>
-                         <input type="date" value={campaignForm.startDate} onChange={(e) => setCampaignForm({ ...campaignForm, startDate: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none" />
-                       </div>
-                       <div>
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">End Date Opsional</label>
-                         <input type="date" value={campaignForm.endDate} onChange={(e) => setCampaignForm({ ...campaignForm, endDate: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm font-bold outline-none" />
-                       </div>
-                     </div>
-
-                     <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Catatan Campaign</label>
-                       <textarea value={campaignForm.note} onChange={(e) => setCampaignForm({ ...campaignForm, note: e.target.value })} className="w-full h-24 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none" />
-                     </div>
-                   </div>
-
-                   <div className="space-y-4">
-                     <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5">
-                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Preview Budget</p>
-                       <div className="space-y-4">
-                         <div>
-                           <p className="text-xs text-slate-500 font-bold">Total Budget</p>
-                           <p className="text-2xl font-black text-brand-navy">{formatCurrencyAmount(campaignTotalBudget, campaignForm.currency)}</p>
-                         </div>
-                         <div>
-                           <p className="text-xs text-slate-500 font-bold">Budget Harian</p>
-                           <p className="text-xl font-black text-brand-blue">{formatCurrencyAmount(campaignDailyBudget, campaignForm.currency)}</p>
-                         </div>
-                         <div className="p-4 rounded-xl bg-white border border-slate-200">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estimasi Durasi</p>
-                           <p className="text-lg font-black text-brand-navy mt-1">{campaignEstimatedDays || '-'} hari</p>
-                           <p className="text-[10px] text-slate-500 mt-1">Dihitung dari total budget / budget harian.</p>
-                         </div>
-                       </div>
-                     </div>
-
-                     <div className="rounded-2xl bg-white border border-slate-200 p-5">
-                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Rincian Draft</p>
-                       <div className="space-y-2 text-xs">
-                         <div className="flex justify-between gap-3"><span className="text-slate-500">Channel</span><span className="font-black text-brand-navy text-right">{campaignForm.channel}</span></div>
-                         <div className="flex justify-between gap-3"><span className="text-slate-500">Objective</span><span className="font-black text-brand-navy text-right">{campaignForm.objective}</span></div>
-                         <div className="flex justify-between gap-3"><span className="text-slate-500">Landing</span><span className="font-mono font-black text-brand-blue text-right">{campaignForm.landingPage}</span></div>
-                         <div className="flex justify-between gap-3"><span className="text-slate-500">Currency</span><span className="font-black text-brand-navy text-right">{campaignForm.currency}</span></div>
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-
-                 <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                   <button onClick={() => setIsCampaignEditorOpen(false)} className="px-6 py-2.5 rounded-xl text-xs font-black text-slate-500 uppercase tracking-widest hover:bg-slate-100">Batal</button>
-                   <button
-                     onClick={() => {
-                       recordAudit('Digital Marketing', 'Create Campaign Draft', `${campaignForm.name} - ${formatCurrencyAmount(campaignTotalBudget, campaignForm.currency)}`);
-                       setIsCampaignEditorOpen(false);
-                       notify('Campaign baru tersimpan sebagai draft dengan budget fleksibel.');
-                     }}
-                     className="btn-primary py-2.5 px-8"
-                   >
-                     <Save size={18} /> Simpan Draft Campaign
-                   </button>
-                 </div>
-               </motion.div>
-             </div>
-           )}
-         </AnimatePresence>
+          <AdminCampaignEditorDialog domain={marketingDomain} />
 
           <AdminWebsiteSaveConfirmDialog domain={websiteDomain} />
 
